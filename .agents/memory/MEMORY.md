@@ -1,1 +1,3 @@
 - [e-Magang TELPP Backend](emagang-backend.md) — Go backend selesai dibangun; 32 file .go, struktur lengkap siap compile lokal
+- [WebSocket Auth Pattern](emagang-ws-auth.md) — WS endpoint adalah public route, token via ?token= query param; browser tidak bisa set custom header saat WS upgrade
+- [Notification Service Pattern](emagang-notif-routing.md) — selalu pakai KirimKeUser() bukan Kirim(); payload berisi route yang sudah dihitung RouteForRole() sesuai role penerima

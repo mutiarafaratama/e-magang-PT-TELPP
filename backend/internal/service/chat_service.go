@@ -11,10 +11,10 @@ import (
 )
 
 type ChatService struct {
-	repo      *repository.ChatRepository
-	notifSvc  *NotifikasiService
-	userRepo  *repository.UserRepository
-	hub       *ws.Hub
+	repo     *repository.ChatRepository
+	notifSvc *NotifikasiService
+	userRepo *repository.UserRepository
+	hub      *ws.Hub
 }
 
 func NewChatService(repo *repository.ChatRepository, notifSvc *NotifikasiService, userRepo *repository.UserRepository, hub *ws.Hub) *ChatService {
@@ -40,24 +40,22 @@ func (s *ChatService) BuatTiket(ctx context.Context, userID uuid.UUID, req model
 	}
 	s.repo.AddPesan(ctx, pesan)
 
-	// Notif ke semua HRD
+	// Notif ke semua HRD + Admin — route langsung ke detail tiket
 	hrdList, _ := s.userRepo.FindHRDList(ctx)
-	hrdIDs := make([]uuid.UUID, len(hrdList))
-	for i, h := range hrdList {
-		hrdIDs[i] = h.ID
+	for _, h := range hrdList {
+		s.notifSvc.KirimKeUser(ctx, h.ID, h.Role,
+			"Tiket Chat Baru",
+			"Tiket "+tiket.NomorTiket+": "+req.Subjek,
+			string(models.NotifChat), &tiket.ID)
 	}
-	s.notifSvc.KirimKeRole(ctx, models.RoleHRD,
-		"Tiket Chat Baru",
-		"Tiket baru "+tiket.NomorTiket+": "+req.Subjek,
-		"chat", &tiket.ID, hrdIDs)
 
-	// Push badge update ke semua HRD
-	s.hub.SendToRole(models.RoleHRD, "chat_badge", map[string]interface{}{
-		"count": s.repo.CountMenunggu(ctx),
-	})
-	s.hub.SendToRole(models.RoleAdmin, "chat_badge", map[string]interface{}{
-		"count": s.repo.CountMenunggu(ctx),
-	})
+	// Push badge_update ke semua HRD/Admin yang online
+	chatBadge := models.BadgeWsPayload{ChatMenunggu: s.repo.CountMenunggu(ctx)}
+	s.hub.SendToRoles(
+		[]models.UserRole{models.RoleHRD, models.RoleAdmin},
+		"badge_update",
+		chatBadge,
+	)
 
 	return s.repo.FindTiketByID(ctx, tiket.ID)
 }
@@ -86,37 +84,31 @@ func (s *ChatService) KirimPesan(ctx context.Context, tiketID uuid.UUID, senderI
 		return nil, err
 	}
 
-	// Notif ke pihak lain
 	if senderRole == models.RolePeserta {
-		// Peserta kirim → notif ke HRD yg assigned
+		// Peserta kirim → notif ke HRD yang assigned, atau semua HRD jika belum assigned
 		if tiket.AssignedTo != nil {
-			s.notifSvc.Kirim(ctx, *tiket.AssignedTo,
+			s.notifSvc.KirimKeUser(ctx, *tiket.AssignedTo, models.RoleHRD,
 				"Pesan Baru dari Peserta",
-				"Tiket "+tiket.NomorTiket+": ada pesan baru",
-				"chat", &tiketID)
+				"["+tiket.NomorTiket+"] "+req.Pesan,
+				string(models.NotifChat), &tiketID)
 		} else {
-			// Broadcast ke semua HRD
 			hrdList, _ := s.userRepo.FindHRDList(ctx)
 			for _, h := range hrdList {
-				s.hub.SendToUser(h.ID, "chat_new_message", map[string]interface{}{
-					"tiket_id": tiketID,
-					"nomor":    tiket.NomorTiket,
-				})
+				s.notifSvc.KirimKeUser(ctx, h.ID, h.Role,
+					"Pesan Baru dari Peserta",
+					"["+tiket.NomorTiket+"] "+req.Pesan,
+					string(models.NotifChat), &tiketID)
 			}
 		}
 	} else {
-		// HRD/Admin kirim → notif ke peserta
-		s.notifSvc.Kirim(ctx, tiket.UserID,
+		// HRD/Admin kirim → notif ke peserta pemilik tiket
+		s.notifSvc.KirimKeUser(ctx, tiket.UserID, models.RolePeserta,
 			"Balasan Chat dari HRD",
-			"Tiket "+tiket.NomorTiket+" telah dibalas",
-			"chat", &tiketID)
-		s.hub.SendToUser(tiket.UserID, "chat_new_message", map[string]interface{}{
-			"tiket_id": tiketID,
-			"nomor":    tiket.NomorTiket,
-		})
+			"["+tiket.NomorTiket+"] "+req.Pesan,
+			string(models.NotifChat), &tiketID)
 	}
 
-	// Ambil detail pesan dengan sender info
+	// Ambil pesan terakhir dengan info sender
 	pesanList, err := s.repo.FindPesanByTiketID(ctx, tiketID)
 	if err != nil || len(pesanList) == 0 {
 		return nil, err

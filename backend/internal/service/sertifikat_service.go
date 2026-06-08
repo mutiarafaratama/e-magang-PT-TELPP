@@ -82,11 +82,11 @@ func (s *SertifikatService) Generate(ctx context.Context, pelaksanaanID uuid.UUI
                 return "", err
         }
 
-        // Notif ke peserta
-        s.notifSvc.Kirim(ctx, pengajuan.UserID,
+        // Notif ke peserta — penerima sertifikat selalu peserta
+        s.notifSvc.KirimKeUser(ctx, pengajuan.UserID, models.RolePeserta,
                 "Sertifikat Magang Siap",
                 "Sertifikat magang Anda telah tersedia dan siap untuk didownload",
-                "sertifikat", &pelaksanaanID)
+                string(models.NotifSertifikat), &pelaksanaanID)
 
         return savePath, nil
 }

@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -19,9 +21,10 @@ var upgrader = websocket.Upgrader{
 	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	HandshakeTimeout: 10 * time.Second,
 }
 
-// Client merepresentasikan satu koneksi WebSocket
+// Client merepresentasikan satu koneksi WebSocket aktif
 type Client struct {
 	Hub    *Hub
 	Conn   *websocket.Conn
@@ -30,7 +33,7 @@ type Client struct {
 	Role   models.UserRole
 }
 
-// WsMessage adalah format pesan yang dikirim lewat WebSocket
+// WsMessage adalah format standar semua pesan WebSocket
 type WsMessage struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload"`
@@ -63,7 +66,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.clients[client.UserID] = client
 			h.mu.Unlock()
-			log.Printf("🔗 WebSocket: user %s terhubung (role: %s)", client.UserID, client.Role)
+			log.Printf("🔗 WS terhubung: user=%s role=%s (online: %d)", client.UserID, client.Role, h.OnlineCount())
 
 		case client := <-h.unregister:
 			h.mu.Lock()
@@ -72,7 +75,7 @@ func (h *Hub) Run() {
 				close(client.Send)
 			}
 			h.mu.Unlock()
-			log.Printf("🔌 WebSocket: user %s terputus", client.UserID)
+			log.Printf("🔌 WS terputus: user=%s (online: %d)", client.UserID, h.OnlineCount())
 
 		case message := <-h.broadcast:
 			data, _ := json.Marshal(message)
@@ -90,29 +93,46 @@ func (h *Hub) Run() {
 	}
 }
 
-// SendToUser kirim pesan ke user tertentu
-func (h *Hub) SendToUser(userID uuid.UUID, msgType string, payload interface{}) {
+// OnlineCount jumlah koneksi aktif saat ini
+func (h *Hub) OnlineCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.clients)
+}
+
+// IsOnline cek apakah user sedang terhubung
+func (h *Hub) IsOnline(userID uuid.UUID) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	_, ok := h.clients[userID]
+	return ok
+}
+
+// SendToUser kirim pesan ke user tertentu — return false jika tidak online
+func (h *Hub) SendToUser(userID uuid.UUID, msgType string, payload interface{}) bool {
 	h.mu.RLock()
 	client, ok := h.clients[userID]
 	h.mu.RUnlock()
 
 	if !ok {
-		return
+		return false
 	}
 
 	msg := &WsMessage{Type: msgType, Payload: payload}
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return
+		return false
 	}
 
 	select {
 	case client.Send <- data:
+		return true
 	default:
 		h.mu.Lock()
 		delete(h.clients, userID)
 		close(client.Send)
 		h.mu.Unlock()
+		return false
 	}
 }
 
@@ -134,19 +154,54 @@ func (h *Hub) SendToRole(role models.UserRole, msgType string, payload interface
 	}
 }
 
+// SendToRoles kirim ke beberapa role sekaligus
+func (h *Hub) SendToRoles(roles []models.UserRole, msgType string, payload interface{}) {
+	roleSet := make(map[models.UserRole]bool)
+	for _, r := range roles {
+		roleSet[r] = true
+	}
+
+	msg := &WsMessage{Type: msgType, Payload: payload}
+	data, _ := json.Marshal(msg)
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for _, client := range h.clients {
+		if roleSet[client.Role] {
+			select {
+			case client.Send <- data:
+			default:
+			}
+		}
+	}
+}
+
 func (c *Client) writePump() {
+	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
+		ticker.Stop()
 		c.Conn.Close()
 	}()
 
 	for {
-		message, ok := <-c.Send
-		if !ok {
-			c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-			return
-		}
-		if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
-			return
+		select {
+		case message, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
+
+		case <-ticker.C:
+			// Ping untuk jaga koneksi tetap hidup
+			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -157,6 +212,13 @@ func (c *Client) readPump() {
 		c.Conn.Close()
 	}()
 
+	c.Conn.SetReadLimit(512)
+	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetPongHandler(func(string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
 	for {
 		_, _, err := c.Conn.ReadMessage()
 		if err != nil {
@@ -165,30 +227,67 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+		// Reset deadline setiap ada pesan masuk
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	}
 }
 
-// Handler: endpoint WebSocket
+// ServeWS — HTTP handler untuk upgrade ke WebSocket
+// Token bisa dikirim via:
+//   1. Header: Authorization: Bearer <token>
+//   2. Query param: ?token=<token>  ← dipakai browser karena JS WS API tidak support custom header
 func ServeWS(hub *Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Ambil token: coba dari query param dulu, lalu dari header
+		token := c.Query("token")
+		if token == "" {
+			authHeader := c.GetHeader("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				token = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token diperlukan untuk koneksi WebSocket"})
+			return
+		}
+
+		// Validasi token JWT
+		claims, err := middleware.ParseToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token tidak valid atau sudah kedaluwarsa"})
+			return
+		}
+
+		// Upgrade ke WebSocket
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			log.Printf("WebSocket upgrade error: %v", err)
 			return
 		}
 
-		userID := middleware.GetUserID(c)
-		role := middleware.GetUserRole(c)
-
 		client := &Client{
 			Hub:    hub,
 			Conn:   conn,
 			Send:   make(chan []byte, 256),
-			UserID: userID,
-			Role:   role,
+			UserID: claims.UserID,
+			Role:   claims.Role,
 		}
 
 		hub.register <- client
+
+		// Kirim konfirmasi koneksi berhasil
+		welcome := &WsMessage{
+			Type: "connected",
+			Payload: map[string]interface{}{
+				"user_id": claims.UserID,
+				"role":    claims.Role,
+				"message": "Koneksi WebSocket berhasil",
+			},
+		}
+		if data, err := json.Marshal(welcome); err == nil {
+			client.Send <- data
+		}
 
 		go client.writePump()
 		go client.readPump()

@@ -11,9 +11,9 @@ import (
 )
 
 type PengajuanService struct {
-	repo        *repository.PengajuanRepository
-	notifSvc    *NotifikasiService
-	userRepo    *repository.UserRepository
+	repo      *repository.PengajuanRepository
+	notifSvc  *NotifikasiService
+	userRepo  *repository.UserRepository
 }
 
 func NewPengajuanService(repo *repository.PengajuanRepository, notifSvc *NotifikasiService, userRepo *repository.UserRepository) *PengajuanService {
@@ -21,14 +21,14 @@ func NewPengajuanService(repo *repository.PengajuanRepository, notifSvc *Notifik
 }
 
 func (s *PengajuanService) Submit(ctx context.Context, userID uuid.UUID, req1 models.PengajuanStep1Request, req2 models.PengajuanStep2Request) (*models.PengajuanMagang, error) {
-	// Cek apakah sudah pernah mengajukan (status aktif)
+	// Cek apakah sudah pernah mengajukan dengan status aktif
 	existing, err := s.repo.FindByUserID(ctx, userID)
 	if err == nil && existing != nil {
 		activeStatuses := []models.StatusPengajuan{
 			models.StatusDiajukan, models.StatusMenungguVerifikasi, models.StatusDiproses,
 		}
-		for _, s := range activeStatuses {
-			if existing.Status == s {
+		for _, st := range activeStatuses {
+			if existing.Status == st {
 				return nil, errors.New("anda sudah memiliki pengajuan yang sedang diproses")
 			}
 		}
@@ -59,16 +59,14 @@ func (s *PengajuanService) Submit(ctx context.Context, userID uuid.UUID, req1 mo
 		return nil, err
 	}
 
-	// Notif ke semua HRD
+	// Notif ke semua HRD — route langsung ke detail pengajuan
 	hrdList, _ := s.userRepo.FindHRDList(ctx)
-	hrdIDs := make([]uuid.UUID, len(hrdList))
-	for i, h := range hrdList {
-		hrdIDs[i] = h.ID
+	for _, h := range hrdList {
+		s.notifSvc.KirimKeUser(ctx, h.ID, h.Role,
+			"Pengajuan Magang Baru",
+			p.NamaLengkap+" ("+string(p.KategoriMagang)+") dari "+p.AsalInstitusi,
+			string(models.NotifPengajuan), &p.ID)
 	}
-	s.notifSvc.KirimKeRole(ctx, models.RoleHRD,
-		"Pengajuan Magang Baru",
-		p.NamaLengkap+" telah mengajukan permohonan magang",
-		"pengajuan", &p.ID, hrdIDs)
 
 	return p, nil
 }
@@ -107,23 +105,33 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 		return err
 	}
 
-	// Notif ke peserta
-	pesanMap := map[models.StatusPengajuan]string{
-		models.StatusMenungguVerifikasi: "Pengajuan Anda sedang menunggu verifikasi berkas",
-		models.StatusDiproses:           "Berkas Anda sedang diproses oleh HRD",
-		models.StatusDiterima:           "Selamat! Pengajuan magang Anda diterima",
-		models.StatusDitolak:            "Pengajuan magang Anda tidak dapat kami terima saat ini",
+	// Notif ke peserta — route berdasarkan status
+	type notifData struct{ judul, pesan, tipe string }
+	notifMap := map[models.StatusPengajuan]notifData{
+		models.StatusMenungguVerifikasi: {
+			"Status Pengajuan Diperbarui",
+			"Pengajuan Anda sedang menunggu verifikasi berkas oleh HRD",
+			string(models.NotifPengajuan),
+		},
+		models.StatusDiproses: {
+			"Berkas Sedang Diproses",
+			"Berkas pengajuan Anda sedang diproses oleh tim HRD",
+			string(models.NotifPengajuan),
+		},
+		models.StatusDiterima: {
+			"Pengajuan Magang Diterima! 🎉",
+			"Selamat! Permohonan magang Anda di PT TanjungEnim Lestari telah diterima",
+			string(models.NotifPelaksanaan),
+		},
+		models.StatusDitolak: {
+			"Pengajuan Tidak Dapat Diterima",
+			"Permohonan magang Anda belum dapat kami terima saat ini. Silakan periksa catatan HRD",
+			string(models.NotifPengajuan),
+		},
 	}
 
-	judulMap := map[models.StatusPengajuan]string{
-		models.StatusMenungguVerifikasi: "Status Pengajuan Diperbarui",
-		models.StatusDiproses:           "Berkas Sedang Diproses",
-		models.StatusDiterima:           "Pengajuan Diterima! 🎉",
-		models.StatusDitolak:            "Pengajuan Tidak Diterima",
-	}
-
-	if pesan, ok := pesanMap[status]; ok {
-		s.notifSvc.Kirim(ctx, p.UserID, judulMap[status], pesan, "pengajuan", &id)
+	if nd, ok := notifMap[status]; ok {
+		s.notifSvc.KirimKeUser(ctx, p.UserID, models.RolePeserta, nd.judul, nd.pesan, nd.tipe, &id)
 	}
 
 	return nil

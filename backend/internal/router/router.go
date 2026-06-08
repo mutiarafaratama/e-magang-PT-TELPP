@@ -78,6 +78,11 @@ func Setup() *gin.Engine {
                 public.GET("/landing/content", landingH.GetContent)
                 public.GET("/landing/faq", landingH.GetFAQ)
                 public.GET("/landing/periode", landingH.GetPeriodeAktif)
+
+                // WebSocket — autentikasi ditangani sendiri via query param ?token=
+                // Browser JS tidak bisa kirim custom header saat upgrade WS
+                // Contoh: new WebSocket("ws://localhost:8080/api/ws?token=<jwt>")
+                public.GET("/ws", ws.ServeWS(hub))
         }
 
         // ============================================================
@@ -89,9 +94,6 @@ func Setup() *gin.Engine {
                 // Auth
                 api.GET("/auth/me", authH.Me)
                 api.POST("/auth/change-password", authH.ChangePassword)
-
-                // WebSocket — realtime notif & chat
-                api.GET("/ws", ws.ServeWS(hub))
 
                 // Notifikasi
                 api.GET("/notifikasi", notifH.GetAll)
