@@ -1,0 +1,1 @@
+- [e-Magang TELPP Backend](emagang-backend.md) — Go backend selesai dibangun; 32 file .go, struktur lengkap siap compile lokal
