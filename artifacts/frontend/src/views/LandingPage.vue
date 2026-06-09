@@ -18,8 +18,8 @@
         </div>
 
         <div class="navbar__actions">
-          <button class="btn-ghost">Masuk</button>
-          <button class="btn-primary">Daftar Sekarang</button>
+          <router-link to="/login" class="btn-ghost">Masuk</router-link>
+          <router-link to="/register" class="btn-primary">Daftar Sekarang</router-link>
         </div>
       </div>
     </nav>
@@ -47,7 +47,7 @@
             </div>
           </div>
           <div class="hero__cta">
-            <button class="btn-primary btn-lg">Daftar Sekarang</button>
+            <router-link to="/register" class="btn-primary btn-lg">Daftar Sekarang</router-link>
             <button class="btn-outline-white btn-lg">Panduan Sistem</button>
           </div>
         </div>
@@ -216,7 +216,7 @@
         <h2>Siap Memulai Perjalananmu?</h2>
         <p>Bergabunglah bersama ratusan mahasiswa dan siswa SMK yang telah menjalani pengalaman magang berharga di PT TELPP.</p>
         <div class="cta-banner__btns">
-          <button class="btn-white">Daftar Gratis Sekarang</button>
+          <router-link to="/register" class="btn-white">Daftar Gratis Sekarang</router-link>
           <button class="btn-outline-white">Lihat Panduan</button>
         </div>
       </div>
@@ -357,12 +357,14 @@ const footerCols = [
   background: #48AF4A; color: #fff; border: none; border-radius: 100px;
   padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer;
   font-family: "Poppins", sans-serif; transition: opacity 0.15s;
+  text-decoration: none; display: inline-flex; align-items: center;
 }
 .btn-primary:hover { opacity: 0.9; }
 .btn-primary.btn-lg { padding: 13px 32px; font-size: 15px; }
 .btn-ghost {
   background: none; border: none; color: #48AF4A; font-size: 14px;
   font-weight: 600; cursor: pointer; font-family: "Poppins", sans-serif; padding: 8px 12px;
+  text-decoration: none; display: inline-flex; align-items: center;
 }
 .btn-outline {
   background: none; border: 2px solid #48AF4A; color: #48AF4A;
@@ -378,7 +380,8 @@ const footerCols = [
 .btn-white {
   background: #fff; color: #48AF4A; border: none; border-radius: 100px;
   padding: 13px 32px; font-size: 15px; font-weight: 700; cursor: pointer;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", sans-serif; text-decoration: none;
+  display: inline-flex; align-items: center;
 }
 
 /* ── HERO ── */
