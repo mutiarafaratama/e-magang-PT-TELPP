@@ -219,9 +219,9 @@ CREATE TABLE faq (
 -- PENTING: Ganti password ini setelah pertama kali login!
 INSERT INTO users (nama_lengkap, email, password_hash, role) VALUES
   ('Super Admin', 'admin@telpp.co.id',
-   '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFHwFqBLMqb8mWe', 'admin'),
+   '$2b$12$sbQOEPRpHccBYe3XaQhLWu4G8J364qHhmuDSiYHylRKULhMF9gMAW', 'admin'),
   ('Staff HRD', 'hrd@telpp.co.id',
-   '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewFHwFqBLMqb8mWe', 'hrd');
+   '$2b$12$sbQOEPRpHccBYe3XaQhLWu4G8J364qHhmuDSiYHylRKULhMF9gMAW', 'hrd');
 
 -- Seed knowledge base
 INSERT INTO chat_knowledge (pertanyaan, jawaban, urutan) VALUES
