@@ -22,6 +22,12 @@ if (storedUser) {
   }
 }
 
+function dashboardRouteForRole(role: string) {
+  if (role === "admin") return "/dashboard/admin";
+  if (role === "hrd") return "/dashboard/hrd";
+  return "/dashboard/peserta";
+}
+
 export function useAuth() {
   const router = useRouter();
 
@@ -39,14 +45,7 @@ export function useAuth() {
       localStorage.setItem("access_token", data.access_token);
       user.value = data.user;
       localStorage.setItem("user", JSON.stringify(data.user));
-
-      if (data.user.role === "admin") {
-        router.push("/admin/landing-settings");
-      } else if (data.user.role === "hrd") {
-        router.push("/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push(dashboardRouteForRole(data.user.role));
     } catch (err: any) {
       error.value =
         err.response?.data?.message || "Login gagal. Periksa email dan password.";
@@ -91,5 +90,6 @@ export function useAuth() {
     login,
     register,
     logout,
+    dashboardRouteForRole,
   };
 }
