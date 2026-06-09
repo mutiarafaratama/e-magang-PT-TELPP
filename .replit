@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16", "go-1.21", "go-1.25"]
+modules = ["nodejs-20", "go-1.21", "vue-node-20", "web", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -49,7 +49,7 @@ waitForPort = 18130
 outputType = "webview"
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
@@ -70,3 +70,13 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+PORT = "8080"
+APP_ENV = "development"
+JWT_EXPIRY = "24h"
+REFRESH_EXPIRY = "168h"
+UPLOAD_DIR = "./uploads"
+MAX_UPLOAD_SIZE = "104857600"
