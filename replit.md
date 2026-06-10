@@ -50,7 +50,12 @@ Frontend (Vue 3):
 
 ## User preferences
 
-_Belum ada preferensi eksplisit yang tercatat._
+- **DB lokal**: User pakai PostgreSQL lokal di mesin sendiri. Replit hanya untuk testing. Setiap ada perubahan schema (tabel baru, kolom baru, dll), beritahu SQL-nya agar bisa dijalankan di lokal juga.
+- **Inform dulu sebelum eksekusi**: Setiap ada perubahan penting atau file baru, beritahu user lebih dulu sebelum mengeksekusi/membuat.
+- **Struktur lokal berbeda dengan Replit**:
+  - Lokal: `E-MAGANG PT TELPP/backend/` (Go) dan `E-MAGANG PT TELPP/frontend/` (Vue 3, langsung di root)
+  - Replit: Go backend di `backend/`, Vue 3 frontend di `artifacts/frontend/`
+  - Semua perubahan relevan harus bisa diterapkan ke struktur lokal user.
 
 ## Gotchas
 

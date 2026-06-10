@@ -50,3 +50,12 @@ Hash bcrypt cost 12 di migration.
 Lihat backend/README.md untuk tutorial lengkap.
 
 **Why**: Proyek ini berjalan di mesin lokal user (bukan Replit), sehingga tidak ada workflow Replit untuk backend Go.
+
+## Workflow Preferences User
+
+- **DB**: User pakai PostgreSQL lokal. Replit hanya untuk testing/preview. Setiap perubahan schema → beritahu SQL-nya agar bisa dijalankan lokal.
+- **Inform sebelum eksekusi**: Setiap file baru atau perubahan penting → beritahu user dulu sebelum dieksekusi.
+- **Struktur lokal vs Replit**:
+  - Lokal: `backend/` (Go) dan `frontend/` (Vue 3, di root project)
+  - Replit: `backend/` (Go) dan `artifacts/frontend/` (Vue 3)
+  - Pastikan semua perubahan relevan bisa diterapkan ke struktur lokal.
