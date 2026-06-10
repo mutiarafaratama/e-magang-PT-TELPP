@@ -5,7 +5,7 @@ import fs from "fs";
 import pool from "../lib/db.js";
 import { requireAuth } from "../middlewares/authMiddleware.js";
 import type { AuthRequest } from "../middlewares/authMiddleware.js";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -86,6 +86,55 @@ router.post(
     }
   }
 );
+
+// POST /api/dokumen/upload-publik — upload dokumen dari form publik (tanpa login)
+router.post("/dokumen/upload-publik", upload.single("file"), async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ message: "File tidak ditemukan di request" });
+      return;
+    }
+
+    const { jenis, pengajuan_id } = req.body;
+
+    if (!jenis || !VALID_JENIS.includes(jenis)) {
+      fs.unlinkSync(req.file.path);
+      res.status(400).json({ message: `jenis tidak valid. Pilihan: ${VALID_JENIS.join(", ")}` });
+      return;
+    }
+
+    if (!pengajuan_id) {
+      fs.unlinkSync(req.file.path);
+      res.status(400).json({ message: "pengajuan_id wajib diisi" });
+      return;
+    }
+
+    const check = await pool.query(
+      "SELECT id FROM pengajuan_magang WHERE id = $1",
+      [pengajuan_id]
+    );
+    if (check.rows.length === 0) {
+      fs.unlinkSync(req.file.path);
+      res.status(404).json({ message: "Pengajuan tidak ditemukan" });
+      return;
+    }
+
+    const relativePath = path.relative(process.cwd(), req.file.path);
+
+    const result = await pool.query(
+      `INSERT INTO dokumen (pengajuan_id, jenis, nama_file, path_file, ukuran_bytes, mime_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, jenis, nama_file, uploaded_at`,
+      [pengajuan_id, jenis, req.file.originalname, relativePath, req.file.size, req.file.mimetype]
+    );
+
+    res.status(201).json({ message: "Dokumen berhasil diupload", data: result.rows[0] });
+  } catch (err) {
+    if (req.file) { try { fs.unlinkSync(req.file.path); } catch {} }
+    console.error("POST /api/dokumen/upload-publik error:", err);
+    res.status(500).json({ message: "Terjadi kesalahan server" });
+  }
+});
 
 // GET /api/dokumen/pengajuan/:pengajuan_id — list dokumen untuk satu pengajuan (HRD/admin)
 router.get("/dokumen/pengajuan/:pengajuan_id", requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {

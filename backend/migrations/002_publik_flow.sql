@@ -1,7 +1,8 @@
--- 002: Alur baru — form publik tanpa akun & kirim akun via HRD
--- Jalankan: psql $DATABASE_URL -f backend/migrations/002_publik_flow.sql
+-- e-Magang TELPP — Migration 002: Alur publik tanpa akun
+-- Jalankan: psql -U postgres -d emagang_telpp -f migrations/002_publik_flow.sql
+-- Aman dijalankan berulang kali (idempotent)
 
--- Buat user_id nullable (peserta mendaftar tanpa akun dulu)
+-- user_id nullable: peserta mendaftar lewat form publik SEBELUM akun dibuat
 ALTER TABLE pengajuan_magang ALTER COLUMN user_id DROP NOT NULL;
 
 -- Ganti FK constraint agar SET NULL ketika user dihapus
@@ -11,3 +12,6 @@ ALTER TABLE pengajuan_magang ADD CONSTRAINT pengajuan_magang_user_id_fkey
 
 -- Kolom timestamp ketika HRD mengirimkan akun ke peserta
 ALTER TABLE pengajuan_magang ADD COLUMN IF NOT EXISTS akun_terkirim_at TIMESTAMPTZ;
+
+-- user_id nullable di dokumen: dokumen diupload saat form publik (sebelum akun ada)
+ALTER TABLE dokumen ALTER COLUMN user_id DROP NOT NULL;
