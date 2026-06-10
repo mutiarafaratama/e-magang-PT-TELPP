@@ -113,9 +113,9 @@
                   <div class="status-detail__value">{{ kategoriLabel(pengajuanSaya.kategori_magang) }}</div>
                 </div>
               </div>
-              <div v-if="pengajuanSaya.catatan" class="status-catatan">
+              <div v-if="pengajuanSaya.catatan_hrd" class="status-catatan">
                 <div class="status-catatan__title">Catatan dari HRD:</div>
-                <div class="status-catatan__body">{{ pengajuanSaya.catatan }}</div>
+                <div class="status-catatan__body">{{ pengajuanSaya.catatan_hrd }}</div>
               </div>
               <div class="status-timeline">
                 <div class="status-timeline__item status-timeline__item--done">
@@ -123,13 +123,13 @@
                   <div class="status-timeline__text">Pengajuan dikirim</div>
                   <div class="status-timeline__date">{{ formatTanggal(pengajuanSaya.created_at) }}</div>
                 </div>
-                <div :class="['status-timeline__item', pengajuanSaya.status !== 'menunggu' ? 'status-timeline__item--done' : '']">
+                <div :class="['status-timeline__item', ['diproses','diterima'].includes(pengajuanSaya.status) ? 'status-timeline__item--done' : '']">
                   <div class="status-timeline__dot"></div>
                   <div class="status-timeline__text">Verifikasi berkas HRD</div>
                 </div>
-                <div :class="['status-timeline__item', pengajuanSaya.status === 'disetujui' ? 'status-timeline__item--done' : '']">
+                <div :class="['status-timeline__item', pengajuanSaya.status === 'diterima' ? 'status-timeline__item--done' : '']">
                   <div class="status-timeline__dot"></div>
-                  <div class="status-timeline__text">Pengajuan disetujui</div>
+                  <div class="status-timeline__text">Pengajuan diterima</div>
                 </div>
               </div>
             </div>
@@ -484,24 +484,22 @@ const statusPengajuanLabel = computed(() => {
 
 function statusLabel(status: string) {
   const m: Record<string, string> = {
-    menunggu:    "Menunggu Verifikasi",
-    disetujui:   "Disetujui",
-    ditolak:     "Ditolak",
-    revisi:      "Perlu Revisi",
-    berlangsung: "Sedang Berlangsung",
-    selesai:     "Selesai",
+    diajukan:            "Baru Diajukan",
+    menunggu_verifikasi: "Menunggu Verifikasi",
+    diproses:            "Sedang Diproses",
+    diterima:            "Diterima",
+    ditolak:             "Ditolak",
   };
   return m[status] ?? status;
 }
 
 function statusBadgeClass(status: string) {
   const m: Record<string, string> = {
-    menunggu:    "badge badge--yellow",
-    disetujui:   "badge badge--green",
-    ditolak:     "badge badge--red",
-    revisi:      "badge badge--orange",
-    berlangsung: "badge badge--blue",
-    selesai:     "badge badge--gray",
+    diajukan:            "badge badge--yellow",
+    menunggu_verifikasi: "badge badge--yellow",
+    diproses:            "badge badge--blue",
+    diterima:            "badge badge--green",
+    ditolak:             "badge badge--red",
   };
   return m[status] ?? "badge badge--gray";
 }
