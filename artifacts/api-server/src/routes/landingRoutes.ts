@@ -110,7 +110,7 @@ router.delete(
 router.get("/landing/periode", async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await pool.query(
-      "SELECT * FROM periode_magang WHERE is_aktif = true ORDER BY tanggal_mulai ASC"
+      "SELECT * FROM periode_magang WHERE is_active = true ORDER BY tanggal_buka ASC"
     );
     res.json({ data: result.rows });
   } catch (err) {
