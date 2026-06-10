@@ -25,7 +25,7 @@
           </template>
           <template v-else>
             <router-link to="/login" class="btn-ghost">Masuk</router-link>
-            <router-link to="/daftar" class="btn-primary">Daftar Sekarang</router-link>
+            <router-link to="/daftar" class="btn-primary">Daftar Magang</router-link>
           </template>
         </div>
       </div>
@@ -228,7 +228,7 @@
         <h2>Siap Memulai Perjalananmu?</h2>
         <p>Bergabunglah bersama ratusan mahasiswa dan siswa SMK yang telah menjalani pengalaman magang berharga di PT TELPP.</p>
         <div class="cta-banner__btns">
-          <router-link v-if="!currentUser" to="/daftar" class="btn-white">Daftar Gratis Sekarang</router-link>
+          <router-link v-if="!currentUser" to="/daftar" class="btn-white">Ajukan Magang Sekarang</router-link>
           <router-link v-else :to="`/dashboard/${currentUser.role}`" class="btn-white">Buka Dashboard →</router-link>
           <button class="btn-outline-white">Lihat Panduan</button>
         </div>

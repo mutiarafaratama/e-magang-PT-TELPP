@@ -31,7 +31,26 @@
     </div>
 
     <!-- ── MAIN FORM ── -->
-    <div v-else class="fp-wrap">
+    <template v-else>
+
+    <!-- Navbar -->
+    <nav class="fp-nav">
+      <div class="fp-nav__inner">
+        <router-link to="/" class="fp-nav__brand">
+          <img src="/logotel.png" alt="TELPP" class="fp-nav__logo" />
+          <span>e-Magang <strong>PT TELPP</strong></span>
+        </router-link>
+        <div class="fp-nav__right">
+          <router-link to="/" class="fp-nav__link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Beranda
+          </router-link>
+          <router-link to="/login" class="fp-nav__btn">Sudah punya akun? Masuk</router-link>
+        </div>
+      </div>
+    </nav>
+
+    <div class="fp-wrap">
       <!-- Header hijau -->
       <div class="fp-header">
         <div class="fp-header__inner">
@@ -355,7 +374,7 @@
         <!-- Error banner -->
         <div v-if="submitError" class="fp-error">{{ submitError }}</div>
 
-        <!-- ── FOOTER ── -->
+        <!-- ── FOOTER / AKSI ── -->
         <div class="fp-footer">
           <button v-if="step > 0" class="fp-btn-back" @click="step--" :disabled="submitting">Kembali</button>
           <div v-else class="fp-footer__spacer"></div>
@@ -379,6 +398,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -568,6 +588,38 @@ async function submitForm() {
   font-size: 14px;
   color: #111827;
 }
+
+/* ── navbar ── */
+.fp-nav {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky; top: 0; z-index: 40;
+}
+.fp-nav__inner {
+  max-width: 900px; margin: 0 auto;
+  padding: 0 24px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.fp-nav__brand {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none; font-size: 14px; font-weight: 700; color: #111827;
+}
+.fp-nav__brand strong { color: #16a34a; }
+.fp-nav__logo { height: 26px; width: auto; }
+.fp-nav__right { display: flex; align-items: center; gap: 16px; }
+.fp-nav__link {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 500; color: #6b7280;
+  text-decoration: none; transition: color 0.15s;
+}
+.fp-nav__link:hover { color: #1a3f28; }
+.fp-nav__btn {
+  font-size: 13px; font-weight: 600; color: #1a3f28;
+  text-decoration: none; border: 1.5px solid #1a3f28;
+  border-radius: 7px; padding: 6px 14px;
+  transition: all 0.15s;
+}
+.fp-nav__btn:hover { background: #1a3f28; color: #fff; }
 
 /* ── success ── */
 .fp-success {
