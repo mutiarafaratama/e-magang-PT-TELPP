@@ -367,6 +367,29 @@
           </div>
           <div v-if="actionError" class="action-error">{{ actionError }}</div>
         </div>
+
+        <!-- Kirim Akun footer (status diterima) -->
+        <div v-if="detailData && detailData.status === 'diterima'" class="drawer-footer drawer-footer--kirim">
+          <template v-if="detailData.akun_terkirim_at">
+            <div class="kirim-akun-sent">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#16a34a"/><path d="M8 12l3 3 5-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Akun sudah dikirim pada {{ new Date(detailData.akun_terkirim_at).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) }}
+            </div>
+          </template>
+          <template v-else>
+            <div class="kirim-akun-info">
+              <div class="kirim-akun-info__title">Kirim Akun Login ke Peserta</div>
+              <div class="kirim-akun-info__sub">Akun baru akan dibuat dan kredensial dikirim ke <strong>{{ detailData.email }}</strong></div>
+            </div>
+            <button class="btn-kirim-akun" :disabled="kirimAkunLoading" @click="kirimAkun">
+              <div v-if="kirimAkunLoading" class="spinner spinner--sm spinner--white"></div>
+              <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              {{ kirimAkunLoading ? 'Mengirim…' : 'Kirim Akun & Kredensial' }}
+            </button>
+            <div v-if="kirimAkunError" class="action-error">{{ kirimAkunError }}</div>
+            <div v-if="kirimAkunDone" class="action-success">✓ Akun berhasil dibuat dan email dikirim!</div>
+          </template>
+        </div>
       </div>
     </div>
   </Teleport>
@@ -402,6 +425,7 @@ interface Pengajuan {
   kategori_magang: string;
   status: string;
   catatan_hrd: string | null;
+  akun_terkirim_at?: string | null;
   created_at: string;
 }
 
@@ -435,6 +459,11 @@ const actionCatatan = ref("");
 const actionLoading = ref(false);
 const pendingAction = ref<string>("");
 const actionError = ref<string | null>(null);
+
+// ── kirim akun state ──────────────────────────────────────────────
+const kirimAkunLoading = ref(false);
+const kirimAkunDone    = ref(false);
+const kirimAkunError   = ref<string | null>(null);
 
 // ── upload state ──────────────────────────────────────────────────
 const uploadFile = ref<File | null>(null);
@@ -503,6 +532,9 @@ async function openDetail(id: string) {
   uploadFile.value = null;
   uploadSuccess.value = false;
   uploadError.value = null;
+  kirimAkunLoading.value = false;
+  kirimAkunDone.value = false;
+  kirimAkunError.value = null;
   try {
     const res = await api.get(`/api/pengajuan/${id}`);
     detailData.value = res.data.data ?? res.data;
@@ -553,6 +585,25 @@ async function submitAction(type: string) {
   } finally {
     actionLoading.value = false;
     pendingAction.value = "";
+  }
+}
+
+async function kirimAkun() {
+  if (!detailData.value) return;
+  kirimAkunLoading.value = true;
+  kirimAkunError.value = null;
+  kirimAkunDone.value = false;
+  try {
+    await api.post(`/api/pengajuan/${detailData.value.id}/kirim-akun`);
+    kirimAkunDone.value = true;
+    // Refresh detail agar akun_terkirim_at terisi
+    const res = await api.get(`/api/pengajuan/${detailData.value.id}`);
+    detailData.value = res.data.data ?? res.data;
+    await fetchPengajuan();
+  } catch (e: any) {
+    kirimAkunError.value = e.response?.data?.message ?? "Gagal mengirim akun. Coba lagi.";
+  } finally {
+    kirimAkunLoading.value = false;
   }
 }
 
@@ -838,6 +889,14 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 
 /* ── drawer footer ───────────────────────────────────────────────── */
 .drawer-footer { flex-shrink: 0; padding: 16px 24px; border-top: 1px solid #f0faf0; background: #fff; display: flex; flex-direction: column; gap: 12px; }
+.drawer-footer--kirim { background: #f0fdf4; border-top: 1px solid #bbf7d0; }
+.kirim-akun-sent { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #16a34a; font-weight: 600; }
+.kirim-akun-info__title { font-size: 13px; font-weight: 700; color: #0d2818; margin-bottom: 3px; }
+.kirim-akun-info__sub { font-size: 11.5px; color: #6b7280; line-height: 1.5; }
+.btn-kirim-akun { background: #0d2818; color: #fff; border: none; border-radius: 9px; padding: 10px 18px; font-size: 13px; font-weight: 600; font-family: "Poppins", sans-serif; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; width: 100%; justify-content: center; }
+.btn-kirim-akun:hover:not(:disabled) { background: #1a5c20; }
+.btn-kirim-akun:disabled { opacity: 0.6; cursor: not-allowed; }
+.action-success { background: #dcfce7; border: 1px solid #86efac; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #16a34a; font-weight: 600; }
 .catatan-label { font-size: 11.5px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px; }
 .catatan-input { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-family: inherit; color: #374151; resize: none; outline: none; box-sizing: border-box; }
 .catatan-input:focus { border-color: #48AF4A; }

@@ -18,6 +18,51 @@ func NewPengajuanHandler(svc *service.PengajuanService) *PengajuanHandler {
 	return &PengajuanHandler{svc: svc}
 }
 
+// POST /api/pengajuan/publik — form publik tanpa login
+func (h *PengajuanHandler) SubmitPublik(c *gin.Context) {
+	var body struct {
+		Step1 models.PengajuanStep1Request `json:"step1" binding:"required"`
+		Step2 models.PengajuanStep2Request `json:"step2" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: err.Error()})
+		return
+	}
+
+	p, err := h.svc.SubmitPublik(c.Request.Context(), body.Step1, body.Step2)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "submit_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, models.SuccessResponse{
+		Message: "Pengajuan berhasil dikirim! Tim HRD akan menghubungi Anda via email setelah verifikasi selesai.",
+		Data:    p,
+	})
+}
+
+// POST /api/hrd/pengajuan/:id/kirim-akun — HRD buat akun & kirim kredensial
+func (h *PengajuanHandler) KirimAkun(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+		return
+	}
+
+	if err := h.svc.KirimAkun(c.Request.Context(), id); err != nil {
+		status := http.StatusBadRequest
+		if err.Error() == "pengajuan tidak ditemukan" {
+			status = http.StatusNotFound
+		}
+		c.JSON(status, models.ErrorResponse{Error: "kirim_akun_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.SuccessResponse{
+		Message: "Akun berhasil dibuat dan kredensial telah dikirim ke email peserta",
+	})
+}
+
 // POST /api/pengajuan — peserta submit pengajuan magang
 func (h *PengajuanHandler) Submit(c *gin.Context) {
 	var body struct {

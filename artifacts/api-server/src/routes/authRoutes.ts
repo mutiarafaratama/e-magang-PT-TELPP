@@ -6,34 +6,6 @@ import { requireAuth, AuthRequest } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
-router.post("/auth/register", async (req: Request, res: Response): Promise<void> => {
-  const { nama_lengkap, email, password } = req.body;
-  if (!nama_lengkap || !email || !password) {
-    res.status(400).json({ error: "validation_error", message: "nama_lengkap, email, dan password wajib diisi" });
-    return;
-  }
-  if (password.length < 8) {
-    res.status(400).json({ error: "validation_error", message: "Password minimal 8 karakter" });
-    return;
-  }
-  try {
-    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
-    if (existing.rows.length > 0) {
-      res.status(409).json({ error: "email_exists", message: "Email sudah terdaftar" });
-      return;
-    }
-    const hash = await bcrypt.hash(password, 12);
-    const result = await pool.query(
-      "INSERT INTO users (nama_lengkap, email, password_hash, role) VALUES ($1, $2, $3, 'peserta') RETURNING id, nama_lengkap, email, role",
-      [nama_lengkap, email, hash]
-    );
-    res.status(201).json({ message: "Akun berhasil dibuat", data: result.rows[0] });
-  } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ error: "server_error", message: "Terjadi kesalahan server" });
-  }
-});
-
 router.post("/auth/login", async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
   if (!email || !password) {

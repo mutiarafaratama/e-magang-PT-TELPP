@@ -36,42 +36,42 @@ const (
 type StatusPengajuan string
 
 const (
-	StatusDiajukan            StatusPengajuan = "diajukan"
-	StatusMenungguVerifikasi  StatusPengajuan = "menunggu_verifikasi"
-	StatusDiproses            StatusPengajuan = "diproses"
-	StatusDiterima            StatusPengajuan = "diterima"
-	StatusDitolak             StatusPengajuan = "ditolak"
+	StatusDiajukan           StatusPengajuan = "diajukan"
+	StatusMenungguVerifikasi StatusPengajuan = "menunggu_verifikasi"
+	StatusDiproses           StatusPengajuan = "diproses"
+	StatusDiterima           StatusPengajuan = "diterima"
+	StatusDitolak            StatusPengajuan = "ditolak"
 )
 
 type JenisDokumen string
 
 const (
-	DokumenProposal    JenisDokumen = "proposal_magang"
-	DokumenKTP         JenisDokumen = "ktp"
-	DokumenKTM         JenisDokumen = "ktm"
-	DokumenPasfoto     JenisDokumen = "pasfoto"
-	DokumenBPJS        JenisDokumen = "bpjs_kis"
-	DokumenSuratBalas  JenisDokumen = "surat_balasan"
-	DokumenLaporan     JenisDokumen = "laporan_magang"
-	DokumenSertifikat  JenisDokumen = "sertifikat"
+	DokumenProposal   JenisDokumen = "proposal_magang"
+	DokumenKTP        JenisDokumen = "ktp"
+	DokumenKTM        JenisDokumen = "ktm"
+	DokumenPasfoto    JenisDokumen = "pasfoto"
+	DokumenBPJS       JenisDokumen = "bpjs_kis"
+	DokumenSuratBalas JenisDokumen = "surat_balasan"
+	DokumenLaporan    JenisDokumen = "laporan_magang"
+	DokumenSertifikat JenisDokumen = "sertifikat"
 )
 
 type StatusPelaksanaan string
 
 const (
-	StatusMenungguMulai  StatusPelaksanaan = "menunggu_mulai"
-	StatusAktif          StatusPelaksanaan = "aktif"
-	StatusUploadLaporan  StatusPelaksanaan = "upload_laporan"
-	StatusPenilaian      StatusPelaksanaan = "penilaian"
-	StatusSelesai        StatusPelaksanaan = "selesai"
+	StatusMenungguMulai StatusPelaksanaan = "menunggu_mulai"
+	StatusAktif         StatusPelaksanaan = "aktif"
+	StatusUploadLaporan StatusPelaksanaan = "upload_laporan"
+	StatusPenilaian     StatusPelaksanaan = "penilaian"
+	StatusSelesai       StatusPelaksanaan = "selesai"
 )
 
 type StatusTiket string
 
 const (
-	TiketMenunggu  StatusTiket = "menunggu"
-	TiketDiproses  StatusTiket = "diproses"
-	TiketSelesai   StatusTiket = "selesai"
+	TiketMenunggu StatusTiket = "menunggu"
+	TiketDiproses StatusTiket = "diproses"
+	TiketSelesai  StatusTiket = "selesai"
 )
 
 // ============================================================
@@ -111,13 +111,13 @@ type RefreshToken struct {
 // ============================================================
 
 type PeriodeMagang struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	Nama           string    `json:"nama" db:"nama"`
-	TanggalBuka    time.Time `json:"tanggal_buka" db:"tanggal_buka"`
-	TanggalTutup   time.Time `json:"tanggal_tutup" db:"tanggal_tutup"`
-	Kuota          *int      `json:"kuota" db:"kuota"`
-	IsActive       bool      `json:"is_active" db:"is_active"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	ID           uuid.UUID `json:"id" db:"id"`
+	Nama         string    `json:"nama" db:"nama"`
+	TanggalBuka  time.Time `json:"tanggal_buka" db:"tanggal_buka"`
+	TanggalTutup time.Time `json:"tanggal_tutup" db:"tanggal_tutup"`
+	Kuota        *int      `json:"kuota" db:"kuota"`
+	IsActive     bool      `json:"is_active" db:"is_active"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }
 
 // ============================================================
@@ -143,18 +143,19 @@ type PengajuanMagang struct {
 	CatatanHRD     *string         `json:"catatan_hrd" db:"catatan_hrd"`
 	VerifiedBy     *uuid.UUID      `json:"verified_by" db:"verified_by"`
 	VerifiedAt     *time.Time      `json:"verified_at" db:"verified_at"`
+	AkunTerkirimAt *time.Time      `json:"akun_terkirim_at" db:"akun_terkirim_at"`
 	CreatedAt      time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type StatusHistory struct {
-	ID          uuid.UUID       `json:"id" db:"id"`
-	PengajuanID uuid.UUID       `json:"pengajuan_id" db:"pengajuan_id"`
+	ID          uuid.UUID        `json:"id" db:"id"`
+	PengajuanID uuid.UUID        `json:"pengajuan_id" db:"pengajuan_id"`
 	StatusLama  *StatusPengajuan `json:"status_lama" db:"status_lama"`
-	StatusBaru  StatusPengajuan `json:"status_baru" db:"status_baru"`
-	ChangedBy   *uuid.UUID      `json:"changed_by" db:"changed_by"`
-	Catatan     *string         `json:"catatan" db:"catatan"`
-	CreatedAt   time.Time       `json:"created_at" db:"created_at"`
+	StatusBaru  StatusPengajuan  `json:"status_baru" db:"status_baru"`
+	ChangedBy   *uuid.UUID       `json:"changed_by" db:"changed_by"`
+	Catatan     *string          `json:"catatan" db:"catatan"`
+	CreatedAt   time.Time        `json:"created_at" db:"created_at"`
 }
 
 // ============================================================
@@ -178,24 +179,24 @@ type Dokumen struct {
 // ============================================================
 
 type PelaksanaanMagang struct {
-	ID                    uuid.UUID          `json:"id" db:"id"`
-	PengajuanID           uuid.UUID          `json:"pengajuan_id" db:"pengajuan_id"`
-	UserID                uuid.UUID          `json:"user_id" db:"user_id"`
-	PeriodeID             *uuid.UUID         `json:"periode_id" db:"periode_id"`
-	TanggalMulai          time.Time          `json:"tanggal_mulai" db:"tanggal_mulai"`
-	TanggalSelesai        time.Time          `json:"tanggal_selesai" db:"tanggal_selesai"`
-	Divisi                *string            `json:"divisi" db:"divisi"`
-	PembimbingID          *uuid.UUID         `json:"pembimbing_id" db:"pembimbing_id"`
-	Status                StatusPelaksanaan  `json:"status" db:"status"`
-	Nilai                 *float64           `json:"nilai" db:"nilai"`
-	CatatanNilai          *string            `json:"catatan_nilai" db:"catatan_nilai"`
-	DinilaiOleh           *uuid.UUID         `json:"dinilai_oleh" db:"dinilai_oleh"`
-	DinilaiAt             *time.Time         `json:"dinilai_at" db:"dinilai_at"`
-	SertifikatGenerated   bool               `json:"sertifikat_generated" db:"sertifikat_generated"`
-	SertifikatPath        *string            `json:"sertifikat_path" db:"sertifikat_path"`
-	SertifikatGeneratedAt *time.Time         `json:"sertifikat_generated_at" db:"sertifikat_generated_at"`
-	CreatedAt             time.Time          `json:"created_at" db:"created_at"`
-	UpdatedAt             time.Time          `json:"updated_at" db:"updated_at"`
+	ID                    uuid.UUID         `json:"id" db:"id"`
+	PengajuanID           uuid.UUID         `json:"pengajuan_id" db:"pengajuan_id"`
+	UserID                uuid.UUID         `json:"user_id" db:"user_id"`
+	PeriodeID             *uuid.UUID        `json:"periode_id" db:"periode_id"`
+	TanggalMulai          time.Time         `json:"tanggal_mulai" db:"tanggal_mulai"`
+	TanggalSelesai        time.Time         `json:"tanggal_selesai" db:"tanggal_selesai"`
+	Divisi                *string           `json:"divisi" db:"divisi"`
+	PembimbingID          *uuid.UUID        `json:"pembimbing_id" db:"pembimbing_id"`
+	Status                StatusPelaksanaan `json:"status" db:"status"`
+	Nilai                 *float64          `json:"nilai" db:"nilai"`
+	CatatanNilai          *string           `json:"catatan_nilai" db:"catatan_nilai"`
+	DinilaiOleh           *uuid.UUID        `json:"dinilai_oleh" db:"dinilai_oleh"`
+	DinilaiAt             *time.Time        `json:"dinilai_at" db:"dinilai_at"`
+	SertifikatGenerated   bool              `json:"sertifikat_generated" db:"sertifikat_generated"`
+	SertifikatPath        *string           `json:"sertifikat_path" db:"sertifikat_path"`
+	SertifikatGeneratedAt *time.Time        `json:"sertifikat_generated_at" db:"sertifikat_generated_at"`
+	CreatedAt             time.Time         `json:"created_at" db:"created_at"`
+	UpdatedAt             time.Time         `json:"updated_at" db:"updated_at"`
 }
 
 // ============================================================
@@ -203,18 +204,18 @@ type PelaksanaanMagang struct {
 // ============================================================
 
 type Absensi struct {
-	ID             uuid.UUID  `json:"id" db:"id"`
-	PelaksanaanID  uuid.UUID  `json:"pelaksanaan_id" db:"pelaksanaan_id"`
-	Tanggal        time.Time  `json:"tanggal" db:"tanggal"`
-	JamMasuk       *string    `json:"jam_masuk" db:"jam_masuk"`
-	JamKeluar      *string    `json:"jam_keluar" db:"jam_keluar"`
-	Keterangan     string     `json:"keterangan" db:"keterangan"`
-	Kegiatan       *string    `json:"kegiatan" db:"kegiatan"`
-	TTDPembimbing  bool       `json:"ttd_pembimbing" db:"ttd_pembimbing"`
-	ApprovedBy     *uuid.UUID `json:"approved_by" db:"approved_by"`
-	ApprovedAt     *time.Time `json:"approved_at" db:"approved_at"`
-	Catatan        *string    `json:"catatan" db:"catatan"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	PelaksanaanID uuid.UUID  `json:"pelaksanaan_id" db:"pelaksanaan_id"`
+	Tanggal       time.Time  `json:"tanggal" db:"tanggal"`
+	JamMasuk      *string    `json:"jam_masuk" db:"jam_masuk"`
+	JamKeluar     *string    `json:"jam_keluar" db:"jam_keluar"`
+	Keterangan    string     `json:"keterangan" db:"keterangan"`
+	Kegiatan      *string    `json:"kegiatan" db:"kegiatan"`
+	TTDPembimbing bool       `json:"ttd_pembimbing" db:"ttd_pembimbing"`
+	ApprovedBy    *uuid.UUID `json:"approved_by" db:"approved_by"`
+	ApprovedAt    *time.Time `json:"approved_at" db:"approved_at"`
+	Catatan       *string    `json:"catatan" db:"catatan"`
+	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
 // ============================================================
@@ -222,23 +223,23 @@ type Absensi struct {
 // ============================================================
 
 type ChatTiket struct {
-	ID          uuid.UUID   `json:"id" db:"id"`
-	UserID      uuid.UUID   `json:"user_id" db:"user_id"`
-	NomorTiket  string      `json:"nomor_tiket" db:"nomor_tiket"`
-	Subjek      *string     `json:"subjek" db:"subjek"`
-	Status      StatusTiket `json:"status" db:"status"`
-	AssignedTo  *uuid.UUID  `json:"assigned_to" db:"assigned_to"`
-	CreatedAt   time.Time   `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at" db:"updated_at"`
+	ID         uuid.UUID   `json:"id" db:"id"`
+	UserID     uuid.UUID   `json:"user_id" db:"user_id"`
+	NomorTiket string      `json:"nomor_tiket" db:"nomor_tiket"`
+	Subjek     *string     `json:"subjek" db:"subjek"`
+	Status     StatusTiket `json:"status" db:"status"`
+	AssignedTo *uuid.UUID  `json:"assigned_to" db:"assigned_to"`
+	CreatedAt  time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time   `json:"updated_at" db:"updated_at"`
 }
 
 type ChatTiketDetail struct {
 	ChatTiket
-	UserNama       string  `json:"user_nama"`
-	UserEmail      string  `json:"user_email"`
-	AssignedNama   *string `json:"assigned_nama"`
-	UnreadCount    int     `json:"unread_count"`
-	LastMessage    *string `json:"last_message"`
+	UserNama     string  `json:"user_nama"`
+	UserEmail    string  `json:"user_email"`
+	AssignedNama *string `json:"assigned_nama"`
+	UnreadCount  int     `json:"unread_count"`
+	LastMessage  *string `json:"last_message"`
 }
 
 type ChatPesan struct {
@@ -341,6 +342,12 @@ type PengajuanStep2Request struct {
 	KelasSemester  string         `json:"kelas_semester" binding:"required"`
 }
 
+// PengajuanPublikRequest — form publik tanpa login
+type PengajuanPublikRequest struct {
+	Step1 PengajuanStep1Request `json:"step1" binding:"required"`
+	Step2 PengajuanStep2Request `json:"step2" binding:"required"`
+}
+
 type UpdateStatusRequest struct {
 	Status  StatusPengajuan `json:"status" binding:"required"`
 	Catatan string          `json:"catatan"`
@@ -397,17 +404,17 @@ type PaginatedResponse struct {
 }
 
 type DashboardAdminStats struct {
-	TotalPeserta       int `json:"total_peserta"`
-	TotalPengajuan     int `json:"total_pengajuan"`
-	PengajuanMenunggu  int `json:"pengajuan_menunggu"`
-	PengajuanDiterima  int `json:"pengajuan_diterima"`
-	PengajuanDitolak   int `json:"pengajuan_ditolak"`
-	MagangAktif        int `json:"magang_aktif"`
-	MagangSelesai      int `json:"magang_selesai"`
-	TiketChatMenunggu  int `json:"tiket_chat_menunggu"`
+	TotalPeserta      int `json:"total_peserta"`
+	TotalPengajuan    int `json:"total_pengajuan"`
+	PengajuanMenunggu int `json:"pengajuan_menunggu"`
+	PengajuanDiterima int `json:"pengajuan_diterima"`
+	PengajuanDitolak  int `json:"pengajuan_ditolak"`
+	MagangAktif       int `json:"magang_aktif"`
+	MagangSelesai     int `json:"magang_selesai"`
+	TiketChatMenunggu int `json:"tiket_chat_menunggu"`
 }
 
 type NotifBadgeCount struct {
-	TotalUnread     int `json:"total_unread"`
-	ChatMenunggu    int `json:"chat_menunggu"`
+	TotalUnread  int `json:"total_unread"`
+	ChatMenunggu int `json:"chat_menunggu"`
 }

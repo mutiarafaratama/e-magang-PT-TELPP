@@ -17,6 +17,7 @@ func NewPengajuanRepository(db *pgxpool.Pool) *PengajuanRepository {
 	return &PengajuanRepository{db: db}
 }
 
+// Create — pengajuan dengan user_id (peserta sudah login)
 func (r *PengajuanRepository) Create(ctx context.Context, p *models.PengajuanMagang) error {
 	query := `
 		INSERT INTO pengajuan_magang (
@@ -32,30 +33,60 @@ func (r *PengajuanRepository) Create(ctx context.Context, p *models.PengajuanMag
 	).Scan(&p.ID, &p.Status, &p.CreatedAt, &p.UpdatedAt)
 }
 
+// CreatePublik — pengajuan publik tanpa user_id
+func (r *PengajuanRepository) CreatePublik(ctx context.Context, p *models.PengajuanMagang) error {
+	query := `
+		INSERT INTO pengajuan_magang (
+			nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
+			alamat, no_hp, email, kategori_magang, nomor_induk,
+			asal_institusi, jurusan, kelas_semester
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+		RETURNING id, status, created_at, updated_at`
+	return r.db.QueryRow(ctx, query,
+		p.NamaLengkap, p.TempatLahir, p.TanggalLahir, p.JenisKelamin,
+		p.Alamat, p.NoHP, p.Email, p.KategoriMagang, p.NomorInduk,
+		p.AsalInstitusi, p.Jurusan, p.KelasSemester,
+	).Scan(&p.ID, &p.Status, &p.CreatedAt, &p.UpdatedAt)
+}
+
+// SetAkunTerkirim — set user_id dan akun_terkirim_at setelah HRD kirim akun
+func (r *PengajuanRepository) SetAkunTerkirim(ctx context.Context, pengajuanID, userID uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE pengajuan_magang SET user_id = $1, akun_terkirim_at = NOW(), updated_at = NOW() WHERE id = $2`,
+		userID, pengajuanID)
+	return err
+}
+
 func (r *PengajuanRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.PengajuanMagang, error) {
 	p := &models.PengajuanMagang{}
-	query := `SELECT id, user_id, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
-			  alamat, no_hp, email, kategori_magang, nomor_induk, asal_institusi, jurusan,
-			  kelas_semester, status, catatan_hrd, verified_by, verified_at, created_at, updated_at
-			  FROM pengajuan_magang WHERE id = $1`
+	query := `SELECT id,
+		COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
+		alamat, no_hp, email, kategori_magang, nomor_induk, asal_institusi, jurusan,
+		kelas_semester, status, catatan_hrd, verified_by, verified_at, akun_terkirim_at, created_at, updated_at
+		FROM pengajuan_magang WHERE id = $1`
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&p.ID, &p.UserID, &p.NamaLengkap, &p.TempatLahir, &p.TanggalLahir, &p.JenisKelamin,
 		&p.Alamat, &p.NoHP, &p.Email, &p.KategoriMagang, &p.NomorInduk, &p.AsalInstitusi, &p.Jurusan,
-		&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.AkunTerkirimAt,
+		&p.CreatedAt, &p.UpdatedAt,
 	)
 	return p, err
 }
 
 func (r *PengajuanRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*models.PengajuanMagang, error) {
 	p := &models.PengajuanMagang{}
-	query := `SELECT id, user_id, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
-			  alamat, no_hp, email, kategori_magang, nomor_induk, asal_institusi, jurusan,
-			  kelas_semester, status, catatan_hrd, verified_by, verified_at, created_at, updated_at
-			  FROM pengajuan_magang WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`
+	query := `SELECT id,
+		COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
+		alamat, no_hp, email, kategori_magang, nomor_induk, asal_institusi, jurusan,
+		kelas_semester, status, catatan_hrd, verified_by, verified_at, akun_terkirim_at, created_at, updated_at
+		FROM pengajuan_magang WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`
 	err := r.db.QueryRow(ctx, query, userID).Scan(
 		&p.ID, &p.UserID, &p.NamaLengkap, &p.TempatLahir, &p.TanggalLahir, &p.JenisKelamin,
 		&p.Alamat, &p.NoHP, &p.Email, &p.KategoriMagang, &p.NomorInduk, &p.AsalInstitusi, &p.Jurusan,
-		&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.AkunTerkirimAt,
+		&p.CreatedAt, &p.UpdatedAt,
 	)
 	return p, err
 }
@@ -84,9 +115,11 @@ func (r *PengajuanRepository) FindAll(ctx context.Context, status, search string
 
 	args = append(args, limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, user_id, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
+		SELECT id,
+		COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
 		alamat, no_hp, email, kategori_magang, nomor_induk, asal_institusi, jurusan,
-		kelas_semester, status, catatan_hrd, verified_by, verified_at, created_at, updated_at
+		kelas_semester, status, catatan_hrd, verified_by, verified_at, akun_terkirim_at, created_at, updated_at
 		FROM pengajuan_magang %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
 		where, argIdx, argIdx+1)
 
@@ -102,7 +135,8 @@ func (r *PengajuanRepository) FindAll(ctx context.Context, status, search string
 		if err := rows.Scan(
 			&p.ID, &p.UserID, &p.NamaLengkap, &p.TempatLahir, &p.TanggalLahir, &p.JenisKelamin,
 			&p.Alamat, &p.NoHP, &p.Email, &p.KategoriMagang, &p.NomorInduk, &p.AsalInstitusi, &p.Jurusan,
-			&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.CreatedAt, &p.UpdatedAt,
+			&p.KelasSemester, &p.Status, &p.CatatanHRD, &p.VerifiedBy, &p.VerifiedAt, &p.AkunTerkirimAt,
+			&p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}

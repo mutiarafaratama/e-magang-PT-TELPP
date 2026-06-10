@@ -16,8 +16,17 @@
         </div>
 
         <div class="navbar__actions">
-          <router-link to="/login" class="btn-ghost">Masuk</router-link>
-          <router-link to="/register" class="btn-primary">Daftar Sekarang</router-link>
+          <template v-if="currentUser">
+            <router-link :to="`/dashboard/${currentUser.role}`" class="btn-ghost navbar__profile">
+              <div class="profile-avatar">{{ currentUser.nama_lengkap?.[0]?.toUpperCase() ?? 'U' }}</div>
+              <span>{{ firstName }}</span>
+            </router-link>
+            <router-link :to="`/dashboard/${currentUser.role}`" class="btn-primary">Dashboard →</router-link>
+          </template>
+          <template v-else>
+            <router-link to="/login" class="btn-ghost">Masuk</router-link>
+            <router-link to="/daftar" class="btn-primary">Daftar Sekarang</router-link>
+          </template>
         </div>
       </div>
     </nav>
@@ -45,8 +54,13 @@
             </div>
           </div>
           <div class="hero__cta">
-            <router-link to="/register" class="btn-primary btn-lg">Daftar Sekarang</router-link>
-            <button class="btn-outline-white btn-lg">Panduan Sistem</button>
+            <template v-if="!currentUser">
+              <router-link to="/daftar" class="btn-primary btn-lg">Daftar Sekarang</router-link>
+              <button class="btn-outline-white btn-lg">Panduan Sistem</button>
+            </template>
+            <template v-else>
+              <router-link :to="`/dashboard/${currentUser.role}`" class="btn-primary btn-lg">Buka Dashboard →</router-link>
+            </template>
           </div>
         </div>
 
@@ -214,7 +228,8 @@
         <h2>Siap Memulai Perjalananmu?</h2>
         <p>Bergabunglah bersama ratusan mahasiswa dan siswa SMK yang telah menjalani pengalaman magang berharga di PT TELPP.</p>
         <div class="cta-banner__btns">
-          <router-link to="/register" class="btn-white">Daftar Gratis Sekarang</router-link>
+          <router-link v-if="!currentUser" to="/daftar" class="btn-white">Daftar Gratis Sekarang</router-link>
+          <router-link v-else :to="`/dashboard/${currentUser.role}`" class="btn-white">Buka Dashboard →</router-link>
           <button class="btn-outline-white">Lihat Panduan</button>
         </div>
       </div>
@@ -247,9 +262,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineComponent, h } from "vue";
+import { ref, computed, defineComponent, h } from "vue";
 
 const openFaq = ref(-1);
+
+const currentUser = computed<{ nama_lengkap: string; role: string } | null>(() => {
+  try {
+    const s = localStorage.getItem("user");
+    return s ? JSON.parse(s) : null;
+  } catch {
+    return null;
+  }
+});
+
+const firstName = computed(() => currentUser.value?.nama_lengkap?.split(" ")[0] ?? "");
 
 const stats = [
   { num: "500+", label: "Alumni Magang" },
@@ -259,11 +285,11 @@ const stats = [
 ];
 
 const steps = [
-  { n: "01", title: "Buat Akun", desc: "Daftar dengan email institusi atau pribadi." },
-  { n: "02", title: "Isi Formulir", desc: "Lengkapi data diri dan akademik." },
-  { n: "03", title: "Upload Berkas", desc: "Unggah dokumen sesuai kategori." },
-  { n: "04", title: "Verifikasi HRD", desc: "Tim HRD memeriksa kelayakan berkas." },
-  { n: "05", title: "Mulai Magang", desc: "Terima surat konfirmasi dan mulai." },
+  { n: "01", title: "Isi Formulir", desc: "Lengkapi data diri dan akademik melalui formulir online." },
+  { n: "02", title: "Verifikasi HRD", desc: "Tim HRD memeriksa kelayakan berkas dalam 3–5 hari kerja." },
+  { n: "03", title: "Terima Akun", desc: "Akun login e-Magang dikirim ke email Anda setelah diterima." },
+  { n: "04", title: "Upload Berkas", desc: "Login dan unggah dokumen persyaratan yang diperlukan." },
+  { n: "05", title: "Mulai Magang", desc: "Mulai magang dan pantau progress via dashboard." },
 ];
 
 const periods = [
@@ -352,6 +378,8 @@ const footerCols = [
 }
 .navbar__links a:hover { color: #48AF4A; }
 .navbar__actions { display: flex; gap: 10px; align-items: center; }
+.navbar__profile { display: flex; align-items: center; gap: 6px; }
+.profile-avatar { width: 28px; height: 28px; border-radius: 50%; background: #48AF4A; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 /* ── BUTTONS ── */
 .btn-primary {

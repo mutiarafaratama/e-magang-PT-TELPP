@@ -14,9 +14,9 @@ const routes = [
     meta: { guest: true },
   },
   {
-    path: "/register",
-    name: "register",
-    component: () => import("@/views/RegisterPage.vue"),
+    path: "/daftar",
+    name: "daftar",
+    component: () => import("@/views/FormPengajuan.vue"),
     meta: { guest: true },
   },
   {

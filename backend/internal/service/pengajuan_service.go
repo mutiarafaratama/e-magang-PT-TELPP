@@ -2,10 +2,15 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"fmt"
+	"math/big"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/telpp/emagang/internal/models"
 	"github.com/telpp/emagang/internal/repository"
 )
@@ -14,14 +19,32 @@ type PengajuanService struct {
 	repo      *repository.PengajuanRepository
 	notifSvc  *NotifikasiService
 	userRepo  *repository.UserRepository
+	emailSvc  *EmailService
 }
 
-func NewPengajuanService(repo *repository.PengajuanRepository, notifSvc *NotifikasiService, userRepo *repository.UserRepository) *PengajuanService {
-	return &PengajuanService{repo: repo, notifSvc: notifSvc, userRepo: userRepo}
+func NewPengajuanService(
+	repo *repository.PengajuanRepository,
+	notifSvc *NotifikasiService,
+	userRepo *repository.UserRepository,
+	emailSvc *EmailService,
+) *PengajuanService {
+	return &PengajuanService{repo: repo, notifSvc: notifSvc, userRepo: userRepo, emailSvc: emailSvc}
 }
 
+// generatePassword — "Mg" + 6 huruf acak + "1!" = 10 karakter
+// Memenuhi regex: huruf (M,g,alpha), angka (1), special (!)
+func generatePassword() string {
+	const letters = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz"
+	pwd := "Mg"
+	for i := 0; i < 6; i++ {
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		pwd += string(letters[n.Int64()])
+	}
+	return pwd + "1!"
+}
+
+// Submit — peserta yang sudah login mengajukan magang
 func (s *PengajuanService) Submit(ctx context.Context, userID uuid.UUID, req1 models.PengajuanStep1Request, req2 models.PengajuanStep2Request) (*models.PengajuanMagang, error) {
-	// Cek apakah sudah pernah mengajukan dengan status aktif
 	existing, err := s.repo.FindByUserID(ctx, userID)
 	if err == nil && existing != nil {
 		activeStatuses := []models.StatusPengajuan{
@@ -59,7 +82,7 @@ func (s *PengajuanService) Submit(ctx context.Context, userID uuid.UUID, req1 mo
 		return nil, err
 	}
 
-	// Notif ke semua HRD — route langsung ke detail pengajuan
+	// Notif ke semua HRD
 	hrdList, _ := s.userRepo.FindHRDList(ctx)
 	for _, h := range hrdList {
 		s.notifSvc.KirimKeUser(ctx, h.ID, h.Role,
@@ -69,6 +92,99 @@ func (s *PengajuanService) Submit(ctx context.Context, userID uuid.UUID, req1 mo
 	}
 
 	return p, nil
+}
+
+// SubmitPublik — pengajuan dari form publik, tanpa login
+func (s *PengajuanService) SubmitPublik(ctx context.Context, req1 models.PengajuanStep1Request, req2 models.PengajuanStep2Request) (*models.PengajuanMagang, error) {
+	// Cek duplikat email dengan status aktif
+	tgl, err := parseDate(req1.TanggalLahir)
+	if err != nil {
+		return nil, errors.New("format tanggal lahir tidak valid (gunakan YYYY-MM-DD)")
+	}
+
+	p := &models.PengajuanMagang{
+		NamaLengkap:    req1.NamaLengkap,
+		TempatLahir:    req1.TempatLahir,
+		TanggalLahir:   tgl,
+		JenisKelamin:   req1.JenisKelamin,
+		Alamat:         req1.Alamat,
+		NoHP:           req1.NoHP,
+		Email:          req1.Email,
+		KategoriMagang: req2.KategoriMagang,
+		NomorInduk:     req2.NomorInduk,
+		AsalInstitusi:  req2.AsalInstitusi,
+		Jurusan:        req2.Jurusan,
+		KelasSemester:  req2.KelasSemester,
+	}
+
+	if err := s.repo.CreatePublik(ctx, p); err != nil {
+		return nil, err
+	}
+
+	// Notif ke semua HRD tentang pengajuan baru
+	hrdList, _ := s.userRepo.FindHRDList(ctx)
+	for _, h := range hrdList {
+		s.notifSvc.KirimKeUser(ctx, h.ID, h.Role,
+			"Pengajuan Magang Baru (Publik)",
+			p.NamaLengkap+" ("+string(p.KategoriMagang)+") dari "+p.AsalInstitusi+" — via form publik",
+			string(models.NotifPengajuan), &p.ID)
+	}
+
+	return p, nil
+}
+
+// KirimAkun — HRD buat akun peserta dan kirim kredensial via email
+func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID) error {
+	p, err := s.repo.FindByID(ctx, pengajuanID)
+	if err != nil {
+		return errors.New("pengajuan tidak ditemukan")
+	}
+	if p.Status != models.StatusDiterima {
+		return errors.New("pengajuan harus berstatus 'diterima' untuk dapat mengirim akun")
+	}
+	if p.AkunTerkirimAt != nil {
+		return errors.New("akun sudah pernah dikirim untuk pengajuan ini")
+	}
+
+	// Cek apakah email sudah terdaftar
+	existingUser, _ := s.userRepo.FindByEmail(ctx, p.Email)
+	if existingUser != nil {
+		// Tautkan saja ke akun yang sudah ada
+		if err := s.repo.SetAkunTerkirim(ctx, pengajuanID, existingUser.ID); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Buat user baru
+	password := generatePassword()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return fmt.Errorf("gagal hash password: %w", err)
+	}
+
+	newUser := &models.User{
+		NamaLengkap:  p.NamaLengkap,
+		Email:        p.Email,
+		PasswordHash: string(hash),
+		Role:         models.RolePeserta,
+		IsActive:     true,
+	}
+	if err := s.userRepo.Create(ctx, newUser); err != nil {
+		return fmt.Errorf("gagal membuat user: %w", err)
+	}
+
+	// Tautkan pengajuan ke user baru
+	if err := s.repo.SetAkunTerkirim(ctx, pengajuanID, newUser.ID); err != nil {
+		return fmt.Errorf("gagal update pengajuan: %w", err)
+	}
+
+	// Kirim email (non-fatal)
+	if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password); err != nil {
+		fmt.Printf("[WARN] Gagal kirim email ke %s: %v\n", p.Email, err)
+	}
+
+	return nil
 }
 
 func (s *PengajuanService) GetMyPengajuan(ctx context.Context, userID uuid.UUID) (*models.PengajuanMagang, error) {
@@ -105,33 +221,35 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 		return err
 	}
 
-	// Notif ke peserta — route berdasarkan status
-	type notifData struct{ judul, pesan, tipe string }
-	notifMap := map[models.StatusPengajuan]notifData{
-		models.StatusMenungguVerifikasi: {
-			"Status Pengajuan Diperbarui",
-			"Pengajuan Anda sedang menunggu verifikasi berkas oleh HRD",
-			string(models.NotifPengajuan),
-		},
-		models.StatusDiproses: {
-			"Berkas Sedang Diproses",
-			"Berkas pengajuan Anda sedang diproses oleh tim HRD",
-			string(models.NotifPengajuan),
-		},
-		models.StatusDiterima: {
-			"Pengajuan Magang Diterima! 🎉",
-			"Selamat! Permohonan magang Anda di PT TanjungEnim Lestari telah diterima",
-			string(models.NotifPelaksanaan),
-		},
-		models.StatusDitolak: {
-			"Pengajuan Tidak Dapat Diterima",
-			"Permohonan magang Anda belum dapat kami terima saat ini. Silakan periksa catatan HRD",
-			string(models.NotifPengajuan),
-		},
-	}
+	// Notif ke peserta — hanya jika sudah punya akun (UserID != nil / zero UUID)
+	if p.UserID != uuid.Nil {
+		type notifData struct{ judul, pesan, tipe string }
+		notifMap := map[models.StatusPengajuan]notifData{
+			models.StatusMenungguVerifikasi: {
+				"Status Pengajuan Diperbarui",
+				"Pengajuan Anda sedang menunggu verifikasi berkas oleh HRD",
+				string(models.NotifPengajuan),
+			},
+			models.StatusDiproses: {
+				"Berkas Sedang Diproses",
+				"Berkas pengajuan Anda sedang diproses oleh tim HRD",
+				string(models.NotifPengajuan),
+			},
+			models.StatusDiterima: {
+				"Pengajuan Magang Diterima! 🎉",
+				"Selamat! Permohonan magang Anda di PT TanjungEnim Lestari telah diterima",
+				string(models.NotifPelaksanaan),
+			},
+			models.StatusDitolak: {
+				"Pengajuan Tidak Dapat Diterima",
+				"Permohonan magang Anda belum dapat kami terima saat ini. Silakan periksa catatan HRD",
+				string(models.NotifPengajuan),
+			},
+		}
 
-	if nd, ok := notifMap[status]; ok {
-		s.notifSvc.KirimKeUser(ctx, p.UserID, models.RolePeserta, nd.judul, nd.pesan, nd.tipe, &id)
+		if nd, ok := notifMap[status]; ok {
+			s.notifSvc.KirimKeUser(ctx, p.UserID, models.RolePeserta, nd.judul, nd.pesan, nd.tipe, &id)
+		}
 	}
 
 	return nil
