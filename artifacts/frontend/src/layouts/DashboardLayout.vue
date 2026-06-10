@@ -8,11 +8,7 @@
       <div class="sidebar-header">
         <div class="sidebar-logo">
           <div class="sidebar-logo__mark">
-            <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-              <rect width="36" height="36" rx="8" fill="#48AF4A"/>
-              <path d="M18 6C13 6 9 10 9 15c0 6.5 9 15 9 15s9-8.5 9-15c0-5-4-9-9-9zm0 12a3 3 0 110-6 3 3 0 010 6z" fill="#fff"/>
-              <path d="M12 24h12M10 28h16" stroke="#d1fae5" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
+            <img src="/logo-telpp.png" alt="PT TELPP" class="sidebar-logo__img" />
           </div>
           <div v-if="!collapsed" class="sidebar-logo__text">
             <span class="sidebar-logo__name">e-Magang</span>
@@ -230,6 +226,14 @@ defineExpose({ activeTab });
 }
 
 .sidebar-logo__mark { flex-shrink: 0; display: flex; }
+.sidebar-logo__img {
+  height: 36px;
+  width: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  padding: 3px;
+}
 
 .sidebar-logo__text {
   display: flex;

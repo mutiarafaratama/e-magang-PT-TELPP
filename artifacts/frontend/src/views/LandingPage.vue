@@ -4,9 +4,7 @@
     <nav class="navbar">
       <div class="container navbar__inner">
         <a href="/" class="navbar__brand">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#48AF4A"/>
-          </svg>
+          <img src="/logo-telpp.png" alt="PT TELPP" class="navbar__logo" />
           <span>e-Magang <strong>PT TELPP</strong></span>
         </a>
 
@@ -226,6 +224,9 @@
     <footer class="footer">
       <div class="container footer__grid">
         <div>
+          <div class="footer__logo-wrap">
+            <img src="/logo-telpp.png" alt="PT TELPP" class="footer__logo" />
+          </div>
           <div class="footer__brand">e-Magang PT TELPP</div>
           <p class="footer__desc">Portal resmi manajemen magang terpadu untuk talenta muda Indonesia.</p>
           <div class="footer__address">PT TanjungEnim Lestari Pulp and Paper<br />Muara Enim, Sumatera Selatan</div>
@@ -585,10 +586,28 @@ const footerCols = [
 .cta-banner__btns { display: flex; gap: 14px; justify-content: center; }
 
 /* ── FOOTER ── */
+.navbar__logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 5px;
+  background: #fff;
+  padding: 2px 5px;
+}
+
 .footer { background: #061810; padding: 56px 0 0; }
 .footer__grid {
   display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 48px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.footer__logo-wrap { margin-bottom: 12px; }
+.footer__logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px 7px;
 }
 .footer__brand { font-size: 17px; font-weight: 800; color: #86efac; margin-bottom: 10px; }
 .footer__desc { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-bottom: 16px; }

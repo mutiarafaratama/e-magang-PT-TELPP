@@ -5,9 +5,7 @@
 
     <div class="auth-container">
       <div class="auth-brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#86efac"/>
-        </svg>
+        <img src="/logo-telpp.png" alt="PT TELPP" class="auth-brand__logo" />
         <span>e-Magang <strong>PT TELPP</strong></span>
       </div>
 
@@ -202,11 +200,19 @@ async function handleRegister() {
 .auth-brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   color: #fff;
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
+}
+.auth-brand__logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  padding: 3px 5px;
 }
 .auth-brand strong { color: #86efac; }
 

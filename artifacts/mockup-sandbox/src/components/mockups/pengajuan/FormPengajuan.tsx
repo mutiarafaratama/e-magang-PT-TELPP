@@ -1,27 +1,25 @@
 import { useState, useRef } from "react";
 
 const STEPS = [
-  { id: 1, label: "Data Diri",     icon: "👤" },
-  { id: 2, label: "Akademis",      icon: "🎓" },
-  { id: 3, label: "Dokumen",       icon: "📎" },
-  { id: 4, label: "Review & Kirim",icon: "✅" },
+  { id: 1, label: "Data Diri" },
+  { id: 2, label: "Akademis" },
+  { id: 3, label: "Dokumen" },
+  { id: 4, label: "Review & Kirim" },
 ];
 
 const KATEGORI = [
-  { value: "smk",         label: "SMK / Sekolah Menengah Kejuruan" },
-  { value: "d3_s1_s2",   label: "D3 / S1 / S2 (Perguruan Tinggi)" },
-  { value: "penelitian",  label: "Penelitian / Riset" },
+  { value: "smk",        label: "SMK / Sekolah Menengah Kejuruan" },
+  { value: "d3_s1_s2",  label: "D3 / S1 / S2 (Perguruan Tinggi)" },
+  { value: "penelitian", label: "Penelitian / Riset" },
 ];
 
 const DOKUMEN_LIST = [
-  { key: "proposal_magang", label: "Proposal Magang",     required: true,  accept: ".pdf,.doc,.docx", hint: "PDF atau Word, maks 10MB" },
-  { key: "ktp",             label: "KTP / Kartu Identitas", required: true, accept: "image/*,.pdf",    hint: "JPG, PNG, atau PDF" },
-  { key: "ktm",             label: "KTM / Kartu Pelajar",  required: false, accept: "image/*,.pdf",   hint: "JPG, PNG, atau PDF" },
-  { key: "pasfoto",         label: "Pasfoto 3×4",          required: true,  accept: "image/*",         hint: "JPG atau PNG, background merah/biru" },
-  { key: "bpjs_kis",        label: "BPJS / KIS",           required: true,  accept: "image/*,.pdf",    hint: "Foto kartu atau PDF" },
+  { key: "proposal_magang", label: "Proposal Magang",      required: true,  accept: ".pdf,.doc,.docx", hint: "PDF atau Word, maks 10 MB" },
+  { key: "ktp",             label: "KTP / Kartu Identitas", required: true,  accept: "image/*,.pdf",   hint: "JPG, PNG, atau PDF" },
+  { key: "ktm",             label: "KTM / Kartu Pelajar",   required: false, accept: "image/*,.pdf",   hint: "JPG, PNG, atau PDF" },
+  { key: "pasfoto",         label: "Pasfoto 3×4",           required: true,  accept: "image/*",        hint: "JPG atau PNG, latar merah/biru" },
+  { key: "bpjs_kis",        label: "BPJS / KIS",            required: true,  accept: "image/*,.pdf",   hint: "Foto kartu atau PDF" },
 ];
-
-/* ─── Shared UI ─────────────────────────────────────── */
 
 function Field({ label, required, children, hint }: {
   label: string; required?: boolean; children: React.ReactNode; hint?: string;
@@ -29,7 +27,7 @@ function Field({ label, required, children, hint }: {
   return (
     <div className="field">
       <label className="field-label">
-        {label}{required && <span style={{ color: "#e11d48" }}>*</span>}
+        {label}{required && <span style={{ color: "#e11d48" }}> *</span>}
       </label>
       {children}
       {hint && <div className="field-hint">{hint}</div>}
@@ -37,34 +35,28 @@ function Field({ label, required, children, hint }: {
   );
 }
 
-function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input className="inp" {...props} />;
 }
 
 function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }) {
-  return (
-    <select className="inp" {...props}>
-      {children}
-    </select>
-  );
+  return <select className="inp" {...props}>{children}</select>;
 }
 
-function Textarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className="inp" rows={3} {...props} />;
 }
 
-/* ─── Step 1: Data Diri ─────────────────────────────── */
+/* ─── Step 1: Data Diri ─────────────── */
 function StepDataDiri({ data, onChange }: { data: any; onChange: (k: string, v: string) => void }) {
   return (
     <div className="step-body">
       <div className="step-head">
-        <div className="step-icon">👤</div>
-        <div>
+        <div className="step-head__info">
           <div className="step-title">Data Diri</div>
-          <div className="step-sub">Lengkapi informasi pribadi Anda</div>
+          <div className="step-sub">Lengkapi informasi pribadi sesuai KTP</div>
         </div>
       </div>
-
       <div className="form-grid-2">
         <Field label="Nama Lengkap" required>
           <Input placeholder="Sesuai KTP" value={data.nama_lengkap} onChange={e => onChange("nama_lengkap", e.target.value)} />
@@ -90,24 +82,22 @@ function StepDataDiri({ data, onChange }: { data: any; onChange: (k: string, v: 
         </Field>
       </div>
       <Field label="Alamat Lengkap" required>
-        <Textarea placeholder="Jalan, nomor, kelurahan, kecamatan, kabupaten/kota, provinsi" value={data.alamat} onChange={e => onChange("alamat", e.target.value)} />
+        <Textarea placeholder="Jalan, nomor, kelurahan, kecamatan, kota, provinsi" value={data.alamat} onChange={e => onChange("alamat", e.target.value)} />
       </Field>
     </div>
   );
 }
 
-/* ─── Step 2: Akademis ──────────────────────────────── */
+/* ─── Step 2: Akademis ──────────────── */
 function StepAkademis({ data, onChange }: { data: any; onChange: (k: string, v: string) => void }) {
   return (
     <div className="step-body">
       <div className="step-head">
-        <div className="step-icon">🎓</div>
-        <div>
+        <div className="step-head__info">
           <div className="step-title">Informasi Akademis</div>
           <div className="step-sub">Data institusi dan program studi Anda</div>
         </div>
       </div>
-
       <Field label="Kategori Magang" required>
         <div className="kategori-grid">
           {KATEGORI.map(k => (
@@ -116,13 +106,12 @@ function StepAkademis({ data, onChange }: { data: any; onChange: (k: string, v: 
               className={`kategori-btn${data.kategori_magang === k.value ? " kategori-btn--active" : ""}`}
               onClick={() => onChange("kategori_magang", k.value)}
             >
-              <div className="kategori-dot" />
+              <span className="kategori-radio" />
               <span>{k.label}</span>
             </button>
           ))}
         </div>
       </Field>
-
       <div className="form-grid-2">
         <Field label="Asal Institusi / Sekolah" required>
           <Input placeholder="Nama sekolah / universitas" value={data.asal_institusi} onChange={e => onChange("asal_institusi", e.target.value)} />
@@ -137,54 +126,53 @@ function StepAkademis({ data, onChange }: { data: any; onChange: (k: string, v: 
           <Input placeholder="Nomor induk" value={data.nomor_induk} onChange={e => onChange("nomor_induk", e.target.value)} />
         </Field>
       </div>
-
       <div className="info-box">
-        <span>ℹ️</span>
-        <span>Kategori magang menentukan dokumen yang perlu Anda upload di langkah berikutnya.</span>
+        Kategori magang menentukan dokumen yang perlu diunggah pada langkah berikutnya.
       </div>
     </div>
   );
 }
 
-/* ─── Step 3: Upload Dokumen ────────────────────────── */
+/* ─── Step 3: Dokumen ───────────────── */
 function FileDropZone({ dok, file, onFile }: { dok: typeof DOKUMEN_LIST[0]; file: File | null; onFile: (f: File | null) => void }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setDrag(false);
-    const f = e.dataTransfer.files[0];
-    if (f) onFile(f);
-  };
-
-  const fmt = (bytes: number) => bytes > 1024*1024
-    ? `${(bytes/1024/1024).toFixed(1)} MB`
-    : `${(bytes/1024).toFixed(0)} KB`;
+  const fmt = (b: number) => b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${(b / 1024).toFixed(0)} KB`;
 
   return (
-    <div className={`dropzone${drag ? " dropzone--drag" : ""}${file ? " dropzone--done" : ""}`}
+    <div
+      className={`dropzone${drag ? " dropzone--drag" : ""}${file ? " dropzone--done" : ""}`}
       onDragOver={e => { e.preventDefault(); setDrag(true); }}
       onDragLeave={() => setDrag(false)}
-      onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
+      onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }}
+      onClick={() => ref.current?.click()}
     >
-      <input ref={inputRef} type="file" accept={dok.accept} style={{ display: "none" }}
-        onChange={e => onFile(e.target.files?.[0] ?? null)} />
-
+      <input ref={ref} type="file" accept={dok.accept} style={{ display: "none" }} onChange={e => onFile(e.target.files?.[0] ?? null)} />
       {file ? (
         <div className="dropzone-done">
-          <span className="dropzone-done__icon">✅</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" fill="#48AF4A" />
+            <path d="M8 12l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
           <div className="dropzone-done__info">
             <div className="dropzone-done__name">{file.name}</div>
             <div className="dropzone-done__size">{fmt(file.size)}</div>
           </div>
-          <button className="dropzone-done__remove" onClick={e => { e.stopPropagation(); onFile(null); }}>✕</button>
+          <button className="dropzone-done__remove" onClick={e => { e.stopPropagation(); onFile(null); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
         </div>
       ) : (
         <div className="dropzone-empty">
-          <div className="dropzone-empty__icon">📄</div>
-          <div className="dropzone-empty__text">Klik atau drag file ke sini</div>
-          <div className="dropzone-empty__hint">{dok.hint}</div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, color: "#9ca3af" }}>
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <polyline points="17 8 12 3 7 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <div>
+            <div className="dropzone-empty__text">Klik atau drag file ke sini</div>
+            <div className="dropzone-empty__hint">{dok.hint}</div>
+          </div>
         </div>
       )}
     </div>
@@ -195,13 +183,11 @@ function StepDokumen({ files, onFile }: { files: Record<string, File | null>; on
   return (
     <div className="step-body">
       <div className="step-head">
-        <div className="step-icon">📎</div>
-        <div>
+        <div className="step-head__info">
           <div className="step-title">Upload Dokumen</div>
-          <div className="step-sub">Upload semua berkas yang diperlukan</div>
+          <div className="step-sub">Unggah semua berkas yang diperlukan</div>
         </div>
       </div>
-
       <div className="dok-grid">
         {DOKUMEN_LIST.map(dok => (
           <div key={dok.key} className="dok-item">
@@ -219,7 +205,7 @@ function StepDokumen({ files, onFile }: { files: Record<string, File | null>; on
   );
 }
 
-/* ─── Step 4: Review ────────────────────────────────── */
+/* ─── Step 4: Review ────────────────── */
 function ReviewRow({ label, value }: { label: string; value?: string }) {
   return (
     <div className="review-row">
@@ -229,51 +215,57 @@ function ReviewRow({ label, value }: { label: string; value?: string }) {
   );
 }
 
-function StepReview({ diri, akademis, files }: { diri: any; akademis: any; files: Record<string, File|null> }) {
+function StepReview({ diri, akademis, files }: { diri: any; akademis: any; files: Record<string, File | null> }) {
   const kategoriLabel = KATEGORI.find(k => k.value === akademis.kategori_magang)?.label ?? akademis.kategori_magang;
-  const uploadedCount = DOKUMEN_LIST.filter(d => files[d.key]).length;
-  const requiredCount = DOKUMEN_LIST.filter(d => d.required).length;
+  const uploaded = DOKUMEN_LIST.filter(d => files[d.key]).length;
+  const requiredMissing = DOKUMEN_LIST.filter(d => d.required && !files[d.key]);
 
   return (
     <div className="step-body">
       <div className="step-head">
-        <div className="step-icon">✅</div>
-        <div>
+        <div className="step-head__info">
           <div className="step-title">Review & Kirim</div>
-          <div className="step-sub">Periksa kembali data Anda sebelum mengirim</div>
+          <div className="step-sub">Periksa kembali data sebelum mengirim pengajuan</div>
         </div>
       </div>
 
       <div className="review-section">
-        <div className="review-section__title">👤 Data Diri</div>
+        <div className="review-section__title">Data Diri</div>
         <div className="review-grid">
-          <ReviewRow label="Nama Lengkap" value={diri.nama_lengkap} />
+          <ReviewRow label="Nama Lengkap"  value={diri.nama_lengkap} />
           <ReviewRow label="Jenis Kelamin" value={diri.jenis_kelamin === "laki_laki" ? "Laki-laki" : diri.jenis_kelamin === "perempuan" ? "Perempuan" : ""} />
-          <ReviewRow label="Tempat Lahir" value={diri.tempat_lahir} />
+          <ReviewRow label="Tempat Lahir"  value={diri.tempat_lahir} />
           <ReviewRow label="Tanggal Lahir" value={diri.tanggal_lahir} />
-          <ReviewRow label="No. HP" value={diri.no_hp} />
-          <ReviewRow label="Email" value={diri.email} />
-          <ReviewRow label="Alamat" value={diri.alamat} />
+          <ReviewRow label="No. HP"        value={diri.no_hp} />
+          <ReviewRow label="Email"         value={diri.email} />
+          <ReviewRow label="Alamat"        value={diri.alamat} />
         </div>
       </div>
 
       <div className="review-section">
-        <div className="review-section__title">🎓 Data Akademis</div>
+        <div className="review-section__title">Data Akademis</div>
         <div className="review-grid">
-          <ReviewRow label="Kategori" value={kategoriLabel} />
-          <ReviewRow label="Institusi" value={akademis.asal_institusi} />
-          <ReviewRow label="Jurusan" value={akademis.jurusan} />
+          <ReviewRow label="Kategori"      value={kategoriLabel} />
+          <ReviewRow label="Institusi"     value={akademis.asal_institusi} />
+          <ReviewRow label="Jurusan"       value={akademis.jurusan} />
           <ReviewRow label="Kelas/Semester" value={akademis.kelas_semester} />
-          <ReviewRow label="Nomor Induk" value={akademis.nomor_induk} />
+          <ReviewRow label="Nomor Induk"   value={akademis.nomor_induk} />
         </div>
       </div>
 
       <div className="review-section">
-        <div className="review-section__title">📎 Dokumen</div>
+        <div className="review-section__title">Dokumen</div>
         <div className="dok-status-grid">
           {DOKUMEN_LIST.map(d => (
-            <div key={d.key} className={`dok-status${files[d.key] ? " dok-status--ok" : ""}`}>
-              <span>{files[d.key] ? "✅" : d.required ? "❌" : "⬜"}</span>
+            <div key={d.key} className={`dok-status${files[d.key] ? " dok-status--ok" : d.required ? " dok-status--miss" : ""}`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                {files[d.key]
+                  ? <><circle cx="12" cy="12" r="10" fill="#16a34a"/><path d="M8 12l3 3 5-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></>
+                  : d.required
+                    ? <><circle cx="12" cy="12" r="10" fill="#fecaca"/><path d="M15 9l-6 6M9 9l6 6" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/></>
+                    : <circle cx="12" cy="12" r="10" stroke="#d1d5db" strokeWidth="1.5" fill="none"/>
+                }
+              </svg>
               <span>{d.label}</span>
               {d.required && !files[d.key] && <span className="dok-missing">Belum upload</span>}
             </div>
@@ -281,19 +273,27 @@ function StepReview({ diri, akademis, files }: { diri: any; akademis: any; files
         </div>
       </div>
 
+      {requiredMissing.length > 0 && (
+        <div className="alert-warn">
+          Masih ada {requiredMissing.length} dokumen wajib yang belum diunggah. Kembali ke langkah Dokumen untuk melengkapinya.
+        </div>
+      )}
+
       <div className="review-note">
-        <strong>📌 Perhatian:</strong> Pastikan semua data sudah benar. Pengajuan yang sudah dikirim tidak dapat diedit. Tim HRD akan memverifikasi berkas Anda dalam <strong>3–5 hari kerja</strong>.
+        Pastikan semua data sudah benar. Pengajuan yang sudah dikirim tidak dapat diedit. Tim HRD akan memverifikasi berkas dalam <strong>3–5 hari kerja</strong>.
       </div>
 
-      <div className={`upload-progress${uploadedCount >= requiredCount ? " upload-progress--done" : ""}`}>
-        <div className="upload-progress__bar" style={{ width: `${Math.round(uploadedCount / DOKUMEN_LIST.length * 100)}%` }} />
-        <span className="upload-progress__label">{uploadedCount}/{DOKUMEN_LIST.length} dokumen terupload</span>
+      <div style={{ position: "relative", marginTop: 4 }}>
+        <div className="upload-bar">
+          <div className="upload-bar__fill" style={{ width: `${Math.round(uploaded / DOKUMEN_LIST.length * 100)}%` }} />
+        </div>
+        <div className="upload-bar__label">{uploaded}/{DOKUMEN_LIST.length} dokumen diunggah</div>
       </div>
     </div>
   );
 }
 
-/* ─── MAIN COMPONENT ────────────────────────────────── */
+/* ─── MAIN ──────────────────────────── */
 export default function FormPengajuan() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -304,13 +304,11 @@ export default function FormPengajuan() {
     no_hp: "081234567890", email: "budi@student.ac.id",
     alamat: "Jl. Mawar No.12, Kel. Ilir, Kec. Ilir Barat, Palembang, Sumatera Selatan",
   });
-
   const [akademis, setAkademis] = useState({
     kategori_magang: "d3_s1_s2", asal_institusi: "Universitas Sriwijaya",
     jurusan: "Teknik Informatika", kelas_semester: "Semester 5",
     nomor_induk: "09021282025082",
   });
-
   const [files, setFiles] = useState<Record<string, File | null>>({
     proposal_magang: null, ktp: null, ktm: null, pasfoto: null, bpjs_kis: null,
   });
@@ -318,18 +316,23 @@ export default function FormPengajuan() {
   if (submitted) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0fdf4", fontFamily: "Poppins, sans-serif" }}>
-        <div style={{ textAlign: "center", padding: "40px 32px", background: "#fff", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,40,24,0.10)", maxWidth: 480 }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#0d2818", marginBottom: 8 }}>Pengajuan Terkirim!</div>
-          <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 24, lineHeight: 1.7 }}>
-            Pengajuan magang Anda telah berhasil dikirim.<br />
+        <div style={{ textAlign: "center", padding: "48px 40px", background: "#fff", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,40,24,0.10)", maxWidth: 460 }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" fill="#48AF4A"/>
+              <path d="M8 12l3 3 5-6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#0d2818", marginBottom: 8 }}>Pengajuan Berhasil Dikirim</div>
+          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 24, lineHeight: 1.7 }}>
+            Pengajuan magang Anda telah diterima sistem.<br />
             Tim HRD akan memverifikasi berkas dalam <strong>3–5 hari kerja</strong>.
           </div>
-          <div style={{ background: "#f0fdf4", borderRadius: 12, padding: "14px 20px", fontSize: 13, color: "#16a34a", fontWeight: 600 }}>
+          <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "12px 20px", fontSize: 13, color: "#16a34a", fontWeight: 600, marginBottom: 20 }}>
             Status: Menunggu Verifikasi
           </div>
-          <button style={{ marginTop: 24, background: "#48AF4A", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "Poppins, sans-serif" }} onClick={() => setSubmitted(false)}>
-            Lihat Status Pengajuan →
+          <button style={{ background: "#48AF4A", color: "#fff", border: "none", borderRadius: 10, padding: "11px 28px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "Poppins, sans-serif" }} onClick={() => setSubmitted(false)}>
+            Lihat Status Pengajuan
           </button>
         </div>
       </div>
@@ -347,215 +350,202 @@ export default function FormPengajuan() {
           display: flex;
           align-items: flex-start;
           justify-content: center;
-          padding: 24px 16px 40px;
-          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          padding: 28px 16px 48px;
+          background: linear-gradient(160deg, #f0fdf4 0%, #e8f5e9 100%);
         }
-
         .card {
           width: 100%;
-          max-width: 780px;
+          max-width: 760px;
           background: #fff;
-          border-radius: 20px;
-          box-shadow: 0 8px 40px rgba(13,40,24,0.10);
+          border-radius: 18px;
+          box-shadow: 0 4px 32px rgba(13,40,24,0.09), 0 1px 4px rgba(13,40,24,0.05);
           overflow: hidden;
         }
 
-        /* ── Top Header ── */
+        /* Header */
         .card-header {
           background: linear-gradient(135deg, #0d2818 0%, #1a5c20 100%);
-          padding: 22px 28px 20px;
+          padding: 20px 28px 18px;
         }
-        .card-header__title { font-size: 17px; font-weight: 800; color: #fff; }
-        .card-header__sub   { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+        .card-header__title { font-size: 15px; font-weight: 800; color: #fff; }
+        .card-header__sub   { font-size: 11.5px; color: rgba(255,255,255,0.50); margin-top: 3px; }
 
-        /* ── Stepper ── */
+        /* Stepper */
         .stepper {
           display: flex;
-          padding: 20px 28px;
+          align-items: flex-start;
+          padding: 20px 28px 16px;
           border-bottom: 1px solid #f0faf0;
           gap: 0;
         }
-        .stepper-item {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          gap: 0;
-        }
+        .stepper-item { flex: 1; display: flex; align-items: flex-start; }
         .stepper-item:last-child .stepper-line { display: none; }
-        .stepper-dot-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .stepper-col { display: flex; flex-direction: column; align-items: center; gap: 7px; }
         .stepper-dot {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: #e5e7eb; color: #9ca3af;
-          font-size: 13px; font-weight: 700;
+          width: 30px; height: 30px; border-radius: 50%;
+          background: #f3f4f6; color: #9ca3af;
+          font-size: 12px; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
-          transition: all 0.2s;
-          flex-shrink: 0;
+          flex-shrink: 0; transition: all 0.2s;
+          border: 2px solid transparent;
         }
-        .stepper-dot--active { background: #48AF4A; color: #fff; box-shadow: 0 0 0 4px rgba(72,175,74,0.2); }
-        .stepper-dot--done   { background: #0d2818; color: #86efac; }
-        .stepper-label {
-          font-size: 10.5px; font-weight: 600;
-          color: #9ca3af; white-space: nowrap;
-          transition: color 0.2s;
-        }
+        .stepper-dot--active { background: #48AF4A; color: #fff; border-color: #48AF4A; box-shadow: 0 0 0 4px rgba(72,175,74,0.15); }
+        .stepper-dot--done   { background: #0d2818; color: #86efac; border-color: #0d2818; }
+        .stepper-label { font-size: 10px; font-weight: 600; color: #d1d5db; white-space: nowrap; }
         .stepper-label--active { color: #48AF4A; }
-        .stepper-label--done   { color: #0d2818; }
+        .stepper-label--done   { color: #374151; }
         .stepper-line {
-          flex: 1; height: 2px;
-          background: #e5e7eb;
-          margin: 0 6px;
-          margin-bottom: 18px;
-          transition: background 0.2s;
+          flex: 1; height: 2px; background: #e5e7eb;
+          margin: 14px 6px 0; transition: background 0.2s;
         }
         .stepper-line--done { background: #48AF4A; }
 
-        /* ── Step body ── */
-        .step-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
-        .step-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
-        .step-icon { font-size: 28px; width: 48px; height: 48px; background: #f0fdf4; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .step-title { font-size: 15px; font-weight: 800; color: #0d2818; }
-        .step-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+        /* Body */
+        .step-body { padding: 22px 28px; display: flex; flex-direction: column; gap: 16px; }
+        .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 2px; }
+        .step-head__info {}
+        .step-title { font-size: 14px; font-weight: 800; color: #0d2818; }
+        .step-sub   { font-size: 11.5px; color: #9ca3af; margin-top: 2px; }
 
-        /* ── Form fields ── */
-        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        /* Fields */
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field { display: flex; flex-direction: column; gap: 5px; }
         .field-label { font-size: 11.5px; font-weight: 600; color: #374151; }
         .field-hint  { font-size: 10.5px; color: #9ca3af; }
         .inp {
           border: 1.5px solid #e5e7eb; border-radius: 9px;
           padding: 9px 12px; font-size: 13px; font-family: 'Poppins', sans-serif;
-          color: #111827; outline: none;
-          transition: border-color 0.15s;
-          width: 100%; background: #fff;
-          appearance: none;
+          color: #111827; outline: none; width: 100%; background: #fff;
+          transition: border-color 0.15s; appearance: none;
         }
-        .inp:focus { border-color: #48AF4A; box-shadow: 0 0 0 3px rgba(72,175,74,0.12); }
+        .inp:focus { border-color: #48AF4A; box-shadow: 0 0 0 3px rgba(72,175,74,0.10); }
         textarea.inp { resize: vertical; }
 
-        /* ── Kategori picker ── */
-        .kategori-grid { display: flex; flex-direction: column; gap: 8px; }
+        /* Kategori picker */
+        .kategori-grid { display: flex; flex-direction: column; gap: 7px; }
         .kategori-btn {
-          display: flex; align-items: center; gap: 12px;
-          padding: 12px 14px; border-radius: 10px;
+          display: flex; align-items: center; gap: 11px;
+          padding: 11px 14px; border-radius: 9px;
           border: 1.5px solid #e5e7eb; background: #fff;
           font-size: 13px; font-family: 'Poppins', sans-serif;
           color: #374151; cursor: pointer; text-align: left;
           transition: all 0.15s;
         }
         .kategori-btn--active { border-color: #48AF4A; background: #f0fdf4; color: #0d2818; font-weight: 600; }
-        .kategori-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d1d5db; flex-shrink: 0; transition: all 0.15s; }
-        .kategori-btn--active .kategori-dot { background: #48AF4A; border-color: #48AF4A; }
-
-        /* ── Info box ── */
-        .info-box {
-          background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
-          padding: 12px 14px; font-size: 12.5px; color: #1d4ed8;
-          display: flex; gap: 8px; align-items: flex-start;
+        .kategori-radio {
+          width: 14px; height: 14px; border-radius: 50%;
+          border: 2px solid #d1d5db; flex-shrink: 0;
+          transition: all 0.15s;
+        }
+        .kategori-btn--active .kategori-radio {
+          border-color: #48AF4A; background: #48AF4A;
+          box-shadow: inset 0 0 0 3px #fff;
         }
 
-        /* ── Dokumen upload ── */
-        .dok-grid { display: flex; flex-direction: column; gap: 14px; }
-        .dok-item { display: flex; flex-direction: column; gap: 6px; }
-        .dok-item__header { display: flex; align-items: center; gap: 8px; }
+        /* Info box */
+        .info-box {
+          background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9px;
+          padding: 11px 14px; font-size: 12px; color: #1d4ed8; line-height: 1.6;
+        }
+
+        /* Dokumen */
+        .dok-grid { display: flex; flex-direction: column; gap: 12px; }
+        .dok-item { display: flex; flex-direction: column; gap: 5px; }
+        .dok-item__header { display: flex; align-items: center; gap: 7px; }
         .dok-item__label { font-size: 12px; font-weight: 600; color: #374151; }
         .badge-required { background: #fef2f2; color: #dc2626; border-radius: 100px; padding: 2px 8px; font-size: 10px; font-weight: 700; }
-        .badge-optional { background: #f3f4f6; color: #6b7280; border-radius: 100px; padding: 2px 8px; font-size: 10px; font-weight: 600; }
+        .badge-optional { background: #f3f4f6; color: #6b7280;  border-radius: 100px; padding: 2px 8px; font-size: 10px; font-weight: 600; }
 
         .dropzone {
-          border: 2px dashed #d1d5db; border-radius: 10px; padding: 14px;
-          cursor: pointer; transition: all 0.15s; background: #fafafa;
+          border: 2px dashed #d1d5db; border-radius: 9px;
+          padding: 12px 14px; cursor: pointer; transition: all 0.15s; background: #fafafa;
         }
         .dropzone:hover, .dropzone--drag { border-color: #48AF4A; background: #f0fdf4; }
-        .dropzone--done { border-color: #48AF4A; border-style: solid; background: #f0fdf4; }
+        .dropzone--done { border-style: solid; border-color: #48AF4A; background: #f0fdf4; }
         .dropzone-empty { display: flex; align-items: center; gap: 10px; }
-        .dropzone-empty__icon { font-size: 22px; }
         .dropzone-empty__text { font-size: 12.5px; color: #374151; font-weight: 500; }
-        .dropzone-empty__hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .dropzone-empty__hint { font-size: 11px; color: #9ca3af; margin-top: 1px; }
         .dropzone-done { display: flex; align-items: center; gap: 10px; }
-        .dropzone-done__icon { font-size: 20px; }
         .dropzone-done__info { flex: 1; }
         .dropzone-done__name { font-size: 12.5px; font-weight: 600; color: #0d2818; }
         .dropzone-done__size { font-size: 11px; color: #6b7280; }
-        .dropzone-done__remove { background: none; border: none; color: #9ca3af; font-size: 14px; cursor: pointer; padding: 4px 6px; border-radius: 4px; }
+        .dropzone-done__remove {
+          background: none; border: none; color: #9ca3af;
+          cursor: pointer; padding: 4px; border-radius: 4px;
+          display: flex; align-items: center;
+        }
         .dropzone-done__remove:hover { background: #fee2e2; color: #dc2626; }
 
-        /* ── Review ── */
-        .review-section { background: #fafafa; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .review-section__title { font-size: 12px; font-weight: 700; color: #0d2818; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
+        /* Review */
+        .review-section { background: #fafafa; border-radius: 11px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+        .review-section__title { font-size: 11.5px; font-weight: 700; color: #0d2818; text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
         .review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .review-row { display: flex; flex-direction: column; gap: 2px; }
         .review-row__label { font-size: 10.5px; color: #9ca3af; }
         .review-row__value { font-size: 12.5px; font-weight: 600; color: #111827; }
         .dok-status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .dok-status { font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 6px; }
-        .dok-status--ok { color: #16a34a; font-weight: 600; }
-        .dok-missing { font-size: 10px; color: #dc2626; font-weight: 600; }
+        .dok-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #6b7280; }
+        .dok-status--ok   { color: #16a34a; font-weight: 600; }
+        .dok-status--miss { color: #dc2626; }
+        .dok-missing { font-size: 10px; color: #dc2626; font-weight: 600; margin-left: auto; }
+
         .review-note {
           background: #fffbeb; border: 1px solid #fde68a;
-          border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #78350f; line-height: 1.6;
+          border-radius: 9px; padding: 11px 14px; font-size: 12px; color: #78350f; line-height: 1.6;
         }
-        .upload-progress {
-          background: #f3f4f6; border-radius: 100px;
-          height: 8px; position: relative; overflow: hidden;
+        .alert-warn {
+          background: #fef2f2; border: 1px solid #fecaca;
+          border-radius: 9px; padding: 11px 14px; font-size: 12px; color: #dc2626;
         }
-        .upload-progress__bar {
-          position: absolute; top: 0; left: 0; height: 100%;
-          background: #e5e7eb; border-radius: 100px; transition: width 0.3s;
-        }
-        .upload-progress--done .upload-progress__bar { background: #48AF4A; }
-        .upload-progress__label {
-          position: absolute; right: 0; top: -20px;
-          font-size: 11px; color: #6b7280;
-        }
+        .upload-bar { background: #e5e7eb; border-radius: 100px; height: 6px; overflow: hidden; }
+        .upload-bar__fill { height: 100%; background: #48AF4A; border-radius: 100px; transition: width 0.3s; }
+        .upload-bar__label { font-size: 10.5px; color: #6b7280; margin-top: 5px; text-align: right; }
 
-        /* ── Footer nav ── */
+        /* Footer */
         .card-footer {
-          padding: 16px 28px;
+          padding: 14px 28px;
           border-top: 1px solid #f0faf0;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          display: flex; align-items: center; justify-content: space-between;
           background: #fafafa;
         }
+        .step-counter { font-size: 11px; color: #9ca3af; }
         .btn-back {
-          background: #fff; border: 1.5px solid #e5e7eb;
-          color: #374151; border-radius: 10px;
-          padding: 10px 22px; font-size: 13px; font-weight: 600;
-          font-family: 'Poppins', sans-serif; cursor: pointer;
-          transition: all 0.15s;
+          background: #fff; border: 1.5px solid #e5e7eb; color: #374151;
+          border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600;
+          font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.15s;
         }
         .btn-back:hover { border-color: #48AF4A; color: #0d2818; }
         .btn-next {
           background: #48AF4A; color: #fff; border: none;
-          border-radius: 10px; padding: 10px 26px;
+          border-radius: 9px; padding: 9px 24px;
           font-size: 13px; font-weight: 700;
           font-family: 'Poppins', sans-serif; cursor: pointer;
-          transition: background 0.15s; display: flex; align-items: center; gap: 8px;
+          transition: background 0.15s;
         }
         .btn-next:hover { background: #3d9e3f; }
         .btn-submit { background: #0d2818; }
         .btn-submit:hover { background: #1a5c20; }
-        .step-counter { font-size: 11.5px; color: #9ca3af; }
       `}</style>
 
       <div className="shell">
         <div className="card">
-          {/* Header */}
           <div className="card-header">
-            <div className="card-header__title">📋 Formulir Pengajuan Magang</div>
+            <div className="card-header__title">Formulir Pengajuan Magang</div>
             <div className="card-header__sub">PT TanjungEnim Lestari Pulp and Paper (TELPP)</div>
           </div>
 
-          {/* Stepper */}
           <div className="stepper">
             {STEPS.map((s, i) => {
-              const done = step > s.id;
+              const done   = step > s.id;
               const active = step === s.id;
               return (
                 <div key={s.id} className="stepper-item">
-                  <div className="stepper-dot-wrap">
+                  <div className="stepper-col">
                     <div className={`stepper-dot${active ? " stepper-dot--active" : done ? " stepper-dot--done" : ""}`}>
-                      {done ? "✓" : s.id}
+                      {done
+                        ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        : s.id
+                      }
                     </div>
                     <div className={`stepper-label${active ? " stepper-label--active" : done ? " stepper-label--done" : ""}`}>
                       {s.label}
@@ -569,25 +559,21 @@ export default function FormPengajuan() {
             })}
           </div>
 
-          {/* Step Content */}
-          {step === 1 && <StepDataDiri data={diri} onChange={(k, v) => setDiri(p => ({ ...p, [k]: v }))} />}
-          {step === 2 && <StepAkademis data={akademis} onChange={(k, v) => setAkademis(p => ({ ...p, [k]: v }))} />}
-          {step === 3 && <StepDokumen files={files} onFile={(k, f) => setFiles(p => ({ ...p, [k]: f }))} />}
-          {step === 4 && <StepReview diri={diri} akademis={akademis} files={files} />}
+          {step === 1 && <StepDataDiri  data={diri}    onChange={(k,v) => setDiri(p => ({...p,[k]:v}))} />}
+          {step === 2 && <StepAkademis data={akademis} onChange={(k,v) => setAkademis(p => ({...p,[k]:v}))} />}
+          {step === 3 && <StepDokumen  files={files}   onFile={(k,f) => setFiles(p => ({...p,[k]:f}))} />}
+          {step === 4 && <StepReview   diri={diri}     akademis={akademis} files={files} />}
 
-          {/* Footer */}
           <div className="card-footer">
             <div>
-              {step > 1
-                ? <button className="btn-back" onClick={() => setStep(s => s - 1)}>← Kembali</button>
-                : <div />}
+              {step > 1 && <button className="btn-back" onClick={() => setStep(s => s - 1)}>Kembali</button>}
             </div>
             <div className="step-counter">Langkah {step} dari {STEPS.length}</div>
             <button
               className={`btn-next${step === 4 ? " btn-submit" : ""}`}
               onClick={() => step < 4 ? setStep(s => s + 1) : setSubmitted(true)}
             >
-              {step === 4 ? <>🚀 Kirim Pengajuan</> : <>Lanjut →</>}
+              {step === 4 ? "Kirim Pengajuan" : "Lanjut"}
             </button>
           </div>
         </div>
