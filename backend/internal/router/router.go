@@ -121,6 +121,9 @@ func Setup() *gin.Engine {
                         peserta.GET("/absensi/saya", absensiH.GetMy)
                         peserta.GET("/absensi/saya/pdf", absensiH.DownloadPDF)
 
+                        // Dokumen upload (peserta upload berkas pengajuan)
+                        peserta.POST("/dokumen/upload", dokumenH.Upload)
+
                         // Chat (peserta buat tiket)
                         peserta.POST("/chat/tiket", chatH.BuatTiket)
                         peserta.GET("/chat/tiket/saya", chatH.GetTiketSaya)

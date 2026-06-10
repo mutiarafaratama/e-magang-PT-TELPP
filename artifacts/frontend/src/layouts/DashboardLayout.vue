@@ -8,7 +8,7 @@
       <div class="sidebar-header">
         <div class="sidebar-logo">
           <div class="sidebar-logo__mark">
-            <img src="/logo-telpp.png" alt="PT TELPP" class="sidebar-logo__img" />
+            <img src="/logotel.png" alt="PT TELPP" class="sidebar-logo__img" />
           </div>
           <div v-if="!collapsed" class="sidebar-logo__text">
             <span class="sidebar-logo__name">e-Magang</span>

@@ -4,7 +4,7 @@
     <nav class="navbar">
       <div class="container navbar__inner">
         <a href="/" class="navbar__brand">
-          <img src="/logo-telpp.png" alt="PT TELPP" class="navbar__logo" />
+          <img src="/logotel.png" alt="PT TELPP" class="navbar__logo" />
           <span>e-Magang <strong>PT TELPP</strong></span>
         </a>
 
@@ -225,7 +225,7 @@
       <div class="container footer__grid">
         <div>
           <div class="footer__logo-wrap">
-            <img src="/logo-telpp.png" alt="PT TELPP" class="footer__logo" />
+            <img src="/logotel.png" alt="PT TELPP" class="footer__logo" />
           </div>
           <div class="footer__brand">e-Magang PT TELPP</div>
           <p class="footer__desc">Portal resmi manajemen magang terpadu untuk talenta muda Indonesia.</p>
