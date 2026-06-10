@@ -124,7 +124,17 @@
                   :class="{ 'radio-card--active': akademis.kategori_magang === k.value }"
                 >
                   <input type="radio" :value="k.value" v-model="akademis.kategori_magang" />
-                  <div class="radio-card__icon">{{ k.icon }}</div>
+                  <div class="radio-card__icon">
+                    <template v-if="k.value === 'smk'">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </template>
+                    <template v-else-if="k.value === 'd3_s1_s2'">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3.33 1.67 8.67 1.67 12 0v-5"/></svg>
+                    </template>
+                    <template v-else>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    </template>
+                  </div>
                   <div class="radio-card__label">{{ k.label }}</div>
                   <div class="radio-card__sub">{{ k.sub }}</div>
                 </label>
@@ -382,9 +392,9 @@ import api from "@/lib/api";
 const STEPS = ["Data Diri", "Akademis", "Dokumen", "Review & Kirim"];
 
 const KATEGORI = [
-  { value: "smk",        label: "Siswa SMK",         sub: "Prakerin / PKL",           icon: "🏫" },
-  { value: "d3_s1_s2",   label: "Mahasiswa D3/S1/S2", sub: "Program magang aktif",     icon: "🎓" },
-  { value: "penelitian", label: "Penelitian / Riset",  sub: "Skripsi, tesis, disertasi", icon: "🔬" },
+  { value: "smk",        label: "Siswa SMK",          sub: "Prakerin / PKL"            },
+  { value: "d3_s1_s2",   label: "Mahasiswa D3/S1/S2", sub: "Program magang aktif"      },
+  { value: "penelitian", label: "Penelitian / Riset",  sub: "Skripsi, tesis, disertasi" },
 ];
 
 const step = ref(0);
@@ -628,14 +638,22 @@ async function submitForm() {
 /* ── radio kategori ── */
 .radio-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .radio-card {
-  border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 14px 12px;
-  cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 4px;
+  border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 16px 14px;
+  cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; gap: 6px;
+  background: #fff;
 }
+.radio-card:hover { border-color: #bbf7d0; }
 .radio-card input { display: none; }
 .radio-card--active { border-color: #48AF4A; background: #f0fdf4; }
-.radio-card__icon { font-size: 20px; margin-bottom: 4px; }
-.radio-card__label { font-size: 12.5px; font-weight: 700; color: #111827; }
-.radio-card__sub { font-size: 11px; color: #6b7280; line-height: 1.5; }
+.radio-card__icon {
+  width: 38px; height: 38px; border-radius: 10px; background: #f1f5f9;
+  display: flex; align-items: center; justify-content: center;
+  color: #64748b; margin-bottom: 4px; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.radio-card--active .radio-card__icon { background: #dcfce7; color: #16a34a; }
+.radio-card__label { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.3; }
+.radio-card__sub { font-size: 11.5px; color: #6b7280; line-height: 1.5; }
 .radio-card--active .radio-card__label { color: #0d2818; }
 
 /* ── upload list ── */
