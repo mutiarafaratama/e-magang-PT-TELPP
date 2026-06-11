@@ -189,10 +189,15 @@
                         <button class="btn-approve" @click="openAction(p, 'diterima')">Terima</button>
                         <button class="btn-reject" @click="openAction(p, 'ditolak')">Tolak</button>
                       </template>
-                      <template v-if="p.status === 'diterima'">
-                        <button v-if="!p.akun_terkirim_at" class="btn-kirim-sm" @click="openDetail(p.id)" title="Buat akun & kirim email kredensial">Kirim Akun</button>
-                        <span v-else class="badge-sent" title="Akun sudah dikirim">Akun Terkirim</span>
-                      </template>
+                      <span v-if="p.akun_terkirim_at" class="badge-sent" title="Akun sudah dikirim">Akun Terkirim</span>
+                      <button
+                        v-else
+                        class="btn-kirim-sm"
+                        :class="{ 'btn-kirim-sm--off': p.status !== 'diterima' }"
+                        :disabled="p.status !== 'diterima'"
+                        :title="p.status !== 'diterima' ? 'Terima pengajuan terlebih dahulu sebelum mengirim akun' : 'Buat akun & kirim email kredensial'"
+                        @click="p.status === 'diterima' && openDetail(p.id)"
+                      >Kirim Akun</button>
                       <button class="btn-hapus" :title="`Hapus pengajuan ${p.nama_lengkap}`" @click="konfirmasiHapus(p)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/></svg>
                       </button>
@@ -1196,7 +1201,8 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 .btn-hapus:hover { background: #fee2e2; border-color: #f87171; }
 
 .btn-kirim-sm { background: #0d2818; color: #fff; border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
-.btn-kirim-sm:hover { background: #1a5c20; }
+.btn-kirim-sm:hover:not(:disabled) { background: #1a5c20; }
+.btn-kirim-sm--off { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
 .badge-sent { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; border-radius: 100px; padding: 3px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 
 /* ── doc actions (preview + download) ───────────────────────────── */
