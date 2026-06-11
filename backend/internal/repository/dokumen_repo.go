@@ -60,6 +60,26 @@ func (r *DokumenRepository) DeleteByID(ctx context.Context, id uuid.UUID) error 
         return err
 }
 
+// GetPathsByPengajuanID — ambil semua path_file untuk keperluan cleanup fisik sebelum hapus
+func (r *DokumenRepository) GetPathsByPengajuanID(ctx context.Context, pengajuanID uuid.UUID) ([]string, error) {
+        rows, err := r.db.Query(ctx,
+                `SELECT path_file FROM dokumen WHERE pengajuan_id = $1`, pengajuanID)
+        if err != nil {
+                return nil, err
+        }
+        defer rows.Close()
+
+        var paths []string
+        for rows.Next() {
+                var p string
+                if err := rows.Scan(&p); err != nil {
+                        return nil, err
+                }
+                paths = append(paths, p)
+        }
+        return paths, nil
+}
+
 // SavePublik — simpan dokumen dari form publik (user_id NULL, belum punya akun)
 func (r *DokumenRepository) SavePublik(ctx context.Context, d *models.Dokumen) error {
         query := `

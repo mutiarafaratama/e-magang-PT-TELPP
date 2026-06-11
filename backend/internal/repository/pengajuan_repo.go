@@ -194,13 +194,49 @@ func (r *PengajuanRepository) GetStatusHistory(ctx context.Context, pengajuanID 
         return list, nil
 }
 
-func (r *PengajuanRepository) Delete(ctx context.Context, id uuid.UUID) error {
-        tag, err := r.db.Exec(ctx, `DELETE FROM pengajuan_magang WHERE id = $1`, id)
+// HapusLengkap — hapus pengajuan beserta seluruh data terkait dalam satu transaksi.
+//
+// Urutan hapus (menghindari FK violation):
+//  1. chat_tiket milik peserta (cascade → chat_pesan) — jika hapusUser = true
+//  2. pelaksanaan_magang (cascade → absensi_harian)
+//  3. pengajuan_magang (cascade → dokumen, status_history)
+//  4. users (cascade → refresh_tokens, notifikasi) — jika hapusUser = true
+//
+// Penghapusan file fisik dilakukan oleh caller setelah fungsi ini sukses.
+func (r *PengajuanRepository) HapusLengkap(ctx context.Context, id, userID uuid.UUID, hapusUser bool) error {
+        tx, err := r.db.Begin(ctx)
         if err != nil {
-                return err
+                return fmt.Errorf("gagal mulai transaksi: %w", err)
+        }
+        defer tx.Rollback(ctx)
+
+        // 1. Hapus chat_tiket milik peserta (chat_pesan ter-cascade)
+        if hapusUser && userID != uuid.Nil {
+                if _, err := tx.Exec(ctx, `DELETE FROM chat_tiket WHERE user_id = $1`, userID); err != nil {
+                        return fmt.Errorf("gagal hapus chat tiket: %w", err)
+                }
+        }
+
+        // 2. Hapus pelaksanaan_magang (absensi_harian ter-cascade)
+        if _, err := tx.Exec(ctx, `DELETE FROM pelaksanaan_magang WHERE pengajuan_id = $1`, id); err != nil {
+                return fmt.Errorf("gagal hapus pelaksanaan: %w", err)
+        }
+
+        // 3. Hapus pengajuan_magang (dokumen & status_history ter-cascade)
+        tag, err := tx.Exec(ctx, `DELETE FROM pengajuan_magang WHERE id = $1`, id)
+        if err != nil {
+                return fmt.Errorf("gagal hapus pengajuan: %w", err)
         }
         if tag.RowsAffected() == 0 {
                 return fmt.Errorf("pengajuan tidak ditemukan")
         }
-        return nil
+
+        // 4. Hapus user peserta (refresh_tokens & notifikasi ter-cascade)
+        if hapusUser && userID != uuid.Nil {
+                if _, err := tx.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID); err != nil {
+                        return fmt.Errorf("gagal hapus akun peserta: %w", err)
+                }
+        }
+
+        return tx.Commit(ctx)
 }

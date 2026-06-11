@@ -6,6 +6,7 @@ import (
         "errors"
         "fmt"
         "math/big"
+        "os"
 
         "github.com/google/uuid"
         "github.com/jackc/pgx/v5"
@@ -16,10 +17,11 @@ import (
 )
 
 type PengajuanService struct {
-        repo      *repository.PengajuanRepository
-        notifSvc  *NotifikasiService
-        userRepo  *repository.UserRepository
-        emailSvc  *EmailService
+        repo        *repository.PengajuanRepository
+        notifSvc    *NotifikasiService
+        userRepo    *repository.UserRepository
+        emailSvc    *EmailService
+        dokumenRepo *repository.DokumenRepository
 }
 
 func NewPengajuanService(
@@ -27,8 +29,9 @@ func NewPengajuanService(
         notifSvc *NotifikasiService,
         userRepo *repository.UserRepository,
         emailSvc *EmailService,
+        dokumenRepo *repository.DokumenRepository,
 ) *PengajuanService {
-        return &PengajuanService{repo: repo, notifSvc: notifSvc, userRepo: userRepo, emailSvc: emailSvc}
+        return &PengajuanService{repo: repo, notifSvc: notifSvc, userRepo: userRepo, emailSvc: emailSvc, dokumenRepo: dokumenRepo}
 }
 
 // generatePassword — "Mg" + 6 huruf acak + "1!" = 10 karakter
@@ -259,6 +262,46 @@ func (s *PengajuanService) GetStatusHistory(ctx context.Context, pengajuanID uui
         return s.repo.GetStatusHistory(ctx, pengajuanID)
 }
 
+// HapusPengajuan — hapus pengajuan + akun peserta (jika sudah dibuat) + file fisik.
+//
+// Alur:
+//  1. Ambil data pengajuan (pastikan ada)
+//  2. Ambil semua path file dokumen sebelum hapus DB
+//  3. Hapus seluruh data DB dalam satu transaksi (HapusLengkap)
+//  4. Hapus file fisik — non-fatal: kegagalan hanya dicatat di log
 func (s *PengajuanService) HapusPengajuan(ctx context.Context, id uuid.UUID) error {
-        return s.repo.Delete(ctx, id)
+        // 1. Ambil pengajuan
+        p, err := s.repo.FindByID(ctx, id)
+        if err != nil {
+                return errors.New("pengajuan tidak ditemukan")
+        }
+
+        // 2. Ambil semua path file dokumen sebelum data terhapus
+        filePaths, err := s.dokumenRepo.GetPathsByPengajuanID(ctx, id)
+        if err != nil {
+                // Non-fatal: lanjutkan meskipun gagal query path
+                fmt.Printf("[WARN] Gagal ambil path dokumen untuk pengajuan %s: %v\n", id, err)
+                filePaths = nil
+        }
+
+        // Tentukan apakah akun peserta perlu dihapus:
+        // user_id ada (bukan zero UUID) dan akun_terkirim_at tidak nil
+        hapusUser := p.UserID != uuid.Nil && p.AkunTerkirimAt != nil
+
+        // 3. Hapus seluruh data DB dalam satu transaksi
+        if err := s.repo.HapusLengkap(ctx, id, p.UserID, hapusUser); err != nil {
+                return err
+        }
+
+        // 4. Hapus file fisik — kegagalan non-fatal (data DB sudah bersih)
+        for _, path := range filePaths {
+                if path == "" {
+                        continue
+                }
+                if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+                        fmt.Printf("[WARN] Gagal hapus file fisik %q: %v\n", path, err)
+                }
+        }
+
+        return nil
 }
