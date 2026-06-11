@@ -142,9 +142,6 @@ func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID)
         if err != nil {
                 return errors.New("pengajuan tidak ditemukan")
         }
-        if p.Status != models.StatusDiterima {
-                return errors.New("pengajuan harus berstatus 'diterima' untuk dapat mengirim akun")
-        }
         if p.AkunTerkirimAt != nil {
                 return errors.New("akun sudah pernah dikirim untuk pengajuan ini")
         }

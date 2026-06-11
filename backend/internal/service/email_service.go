@@ -1,38 +1,38 @@
 package service
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
+        "bytes"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "os"
 )
 
 type EmailService struct{}
 
 func NewEmailService() *EmailService {
-	return &EmailService{}
+        return &EmailService{}
 }
 
 type resendEmailRequest struct {
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	Html    string   `json:"html"`
+        From    string   `json:"from"`
+        To      []string `json:"to"`
+        Subject string   `json:"subject"`
+        Html    string   `json:"html"`
 }
 
 func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) error {
-	apiKey := os.Getenv("RESEND_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
-	}
+        apiKey := os.Getenv("RESEND_API_KEY")
+        if apiKey == "" {
+                return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
+        }
 
-	frontendURL := os.Getenv("FRONTEND_URL")
-	if frontendURL == "" {
-		frontendURL = "http://localhost:5000"
-	}
+        frontendURL := os.Getenv("FRONTEND_URL")
+        if frontendURL == "" {
+                frontendURL = "http://localhost:5000"
+        }
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+        html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
@@ -44,8 +44,9 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) er
     <div style="padding:36px 40px;">
       <p style="font-size:15px;color:#0d2818;font-weight:700;margin:0 0 8px;">Halo, %s!</p>
       <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0 0 24px;">
-        Pengajuan magang Anda telah <strong style="color:#16a34a;">diterima</strong> oleh tim HRD.
-        Berikut adalah kredensial akun e-Magang Anda untuk mulai mengakses sistem:
+        Akun e-Magang Anda telah dibuat oleh tim HRD. Gunakan akun ini untuk
+        <strong style="color:#16a34a;">memantau status pengajuan magang</strong> Anda secara langsung
+        melalui dashboard. Kredensial login Anda:
       </p>
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
         <div style="margin-bottom:14px;">
@@ -73,31 +74,31 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) er
 </body>
 </html>`, namaLengkap, toEmail, password, frontendURL)
 
-	payload := resendEmailRequest{
-		From:    "e-Magang TELPP <onboarding@resend.dev>",
-		To:      []string{toEmail},
-		Subject: "Akun e-Magang TELPP Anda Telah Dibuat",
-		Html:    html,
-	}
+        payload := resendEmailRequest{
+                From:    "e-Magang TELPP <onboarding@resend.dev>",
+                To:      []string{toEmail},
+                Subject: "Akun e-Magang TELPP Anda Telah Dibuat",
+                Html:    html,
+        }
 
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
-	if err != nil {
-		return fmt.Errorf("gagal membuat request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
+        body, _ := json.Marshal(payload)
+        req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
+        if err != nil {
+                return fmt.Errorf("gagal membuat request: %w", err)
+        }
+        req.Header.Set("Authorization", "Bearer "+apiKey)
+        req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("gagal mengirim email: %w", err)
-	}
-	defer resp.Body.Close()
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+                return fmt.Errorf("gagal mengirim email: %w", err)
+        }
+        defer resp.Body.Close()
 
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
-	}
+        if resp.StatusCode >= 300 {
+                return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
+        }
 
-	return nil
+        return nil
 }
