@@ -71,7 +71,7 @@
               <div class="step__num">3</div>
               <div class="step__body">
                 <div class="step__title">Terima Akun & Upload Berkas</div>
-                <div class="step__desc">{{ pengajuanSaya?.akun_terkirim_at ? 'Akun sudah dikirim ke email' : 'Akun login dikirim ke email setelah diterima' }}</div>
+                <div class="step__desc">{{ pengajuanSaya?.akun_terkirim_at ? 'Akun sudah dikirim ke email' : 'HRD akan mengirim akun ke email untuk pantau status' }}</div>
               </div>
             </div>
             <div :class="['step', pelaksanaanSaya ? 'step--active' : '']">
@@ -351,32 +351,32 @@ const pipeline = computed(() => {
       active: false,
     },
     {
+      label: "Akun Login Dikirim via Email",
+      sub: "HRD mengirim akun agar Anda dapat memantau status pengajuan",
+      date: akunTerkirim && p?.akun_terkirim_at ? formatTanggal(p.akun_terkirim_at) : null,
+      done: akunTerkirim,
+      active: !!p && !akunTerkirim,
+    },
+    {
       label: "Verifikasi Berkas HRD",
-      sub: "Sedang diproses tim HRD (3–5 hari kerja)",
+      sub: "Tim HRD mereview berkas dan upload surat balasan (3–5 hari kerja)",
       date: null,
       done: isVerified,
-      active: !isVerified && !!p,
+      active: akunTerkirim && !isVerified,
     },
     {
       label: "Pengajuan Diterima",
-      sub: "Menunggu keputusan HRD",
+      sub: "Menunggu keputusan akhir HRD",
       date: isDiterima && p?.verified_at ? formatTanggal(p.verified_at) : null,
       done: isDiterima,
       active: isVerified && !isDiterima,
-    },
-    {
-      label: "Akun Login Dikirim via Email",
-      sub: "HRD akan membuat dan mengirim akun login",
-      date: akunTerkirim && p?.akun_terkirim_at ? formatTanggal(p.akun_terkirim_at) : null,
-      done: akunTerkirim,
-      active: isDiterima && !akunTerkirim,
     },
     {
       label: "Pelaksanaan Magang Aktif",
       sub: "Jadwal magang belum ditetapkan",
       date: pelAktif && pel?.tanggal_mulai ? formatTanggal(pel.tanggal_mulai) : null,
       done: pelAktif,
-      active: akunTerkirim && !pelAktif,
+      active: isDiterima && !pelAktif,
     },
     {
       label: "Upload Laporan Akhir",

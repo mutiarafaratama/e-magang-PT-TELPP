@@ -60,9 +60,9 @@ async function sendKredensialEmail(toEmail: string, namaLengkap: string, passwor
           <td style="padding:36px 40px;">
             <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">Yth. ${namaLengkap},</p>
             <p style="margin:0 0 28px;font-size:13.5px;color:#475569;line-height:1.8;">
-              Dengan hormat, kami sampaikan bahwa pengajuan magang Anda di PT TanjungEnim Lestari Pulp and Paper
-              telah <strong style="color:#166534;">diterima</strong>. Akun e-Magang Anda telah dibuat dengan
-              kredensial berikut:
+              Dengan hormat, kami informasikan bahwa akun e-Magang Anda di PT TanjungEnim Lestari Pulp and Paper
+              telah dibuat. Gunakan akun ini untuk <strong style="color:#166534;">memantau status pengajuan magang</strong>
+              Anda secara langsung melalui dashboard. Kredensial login Anda:
             </p>
 
             <!-- Credential box -->
@@ -419,10 +419,6 @@ router.post(
       }
       const peng = pengResult.rows[0];
 
-      if (peng.status !== "diterima") {
-        res.status(400).json({ message: "Pengajuan harus berstatus 'diterima' untuk dapat mengirim akun" });
-        return;
-      }
       if (peng.akun_terkirim_at) {
         res.status(409).json({ message: "Akun sudah pernah dikirim untuk pengajuan ini" });
         return;

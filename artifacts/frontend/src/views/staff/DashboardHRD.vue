@@ -193,10 +193,8 @@
                       <button
                         v-else
                         class="btn-kirim-sm"
-                        :class="{ 'btn-kirim-sm--off': p.status !== 'diterima' }"
-                        :disabled="p.status !== 'diterima'"
-                        :title="p.status !== 'diterima' ? 'Terima pengajuan terlebih dahulu sebelum mengirim akun' : 'Buat akun & kirim email kredensial'"
-                        @click="p.status === 'diterima' && openDetail(p.id)"
+                        title="Buat akun & kirim email kredensial"
+                        @click="openDetail(p.id)"
                       >Kirim Akun</button>
                       <button class="btn-hapus" :title="`Hapus pengajuan ${p.nama_lengkap}`" @click="konfirmasiHapus(p)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/></svg>
@@ -407,17 +405,21 @@
 
         <!-- Approve / Reject footer -->
         <div v-if="detailData && ['diajukan','menunggu_verifikasi','diproses'].includes(detailData.status)" class="drawer-footer">
+          <div v-if="!hasSuratBalasan" class="surat-warning">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
+            Upload <strong>Surat Balasan Magang</strong> terlebih dahulu sebelum menerima atau menolak pengajuan.
+          </div>
           <div class="catatan-row">
             <label class="catatan-label">Catatan HRD (opsional)</label>
             <textarea v-model="actionCatatan" class="catatan-input" rows="2" placeholder="Tambahkan catatan untuk peserta…"></textarea>
           </div>
           <div class="footer-btns">
-            <button class="btn-reject-lg" :disabled="actionLoading" @click="submitAction('ditolak')">
+            <button class="btn-reject-lg" :disabled="actionLoading || !hasSuratBalasan" :title="!hasSuratBalasan ? 'Upload surat balasan terlebih dahulu' : ''" @click="submitAction('ditolak')">
               <div v-if="actionLoading && pendingAction === 'ditolak'" class="spinner spinner--sm spinner--white"></div>
               <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               Tolak Pengajuan
             </button>
-            <button class="btn-approve-lg" :disabled="actionLoading" @click="submitAction('diterima')">
+            <button class="btn-approve-lg" :disabled="actionLoading || !hasSuratBalasan" :title="!hasSuratBalasan ? 'Upload surat balasan terlebih dahulu' : ''" @click="submitAction('diterima')">
               <div v-if="actionLoading && pendingAction === 'diterima'" class="spinner spinner--sm spinner--white"></div>
               <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Terima Pengajuan
@@ -426,8 +428,8 @@
           <div v-if="actionError" class="action-error">{{ actionError }}</div>
         </div>
 
-        <!-- Kirim Akun footer (status diterima) -->
-        <div v-if="detailData && detailData.status === 'diterima'" class="drawer-footer drawer-footer--kirim">
+        <!-- Kirim Akun footer (semua status kecuali ditolak) -->
+        <div v-if="detailData && detailData.status !== 'ditolak'" class="drawer-footer drawer-footer--kirim">
           <template v-if="detailData.akun_terkirim_at">
             <div class="kirim-akun-sent">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#16a34a"/><path d="M8 12l3 3 5-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -601,6 +603,9 @@ const actionCatatan = ref("");
 const actionLoading = ref(false);
 const pendingAction = ref<string>("");
 const actionError = ref<string | null>(null);
+
+// ── surat balasan check ───────────────────────────────────────────
+const hasSuratBalasan = computed(() => dokumenList.value.some((d: Dokumen) => d.jenis === 'surat_balasan'));
 
 // ── kirim akun state ──────────────────────────────────────────────
 const kirimAkunLoading = ref(false);
@@ -1200,6 +1205,9 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 .btn-hapus { width: 28px; height: 28px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #dc2626; cursor: pointer; flex-shrink: 0; transition: all 0.15s; padding: 0; }
 .btn-hapus:hover { background: #fee2e2; border-color: #f87171; }
 
+.surat-warning { display: flex; align-items: flex-start; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #92400e; line-height: 1.5; margin-bottom: 2px; }
+.surat-warning svg { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+.btn-reject-lg:disabled, .btn-approve-lg:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-kirim-sm { background: #0d2818; color: #fff; border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
 .btn-kirim-sm:hover:not(:disabled) { background: #1a5c20; }
 .btn-kirim-sm--off { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
