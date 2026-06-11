@@ -740,7 +740,7 @@ async function downloadDoc(doc: Dokumen) {
       responseType: "blob",
     });
     const blob = new Blob([res.data], {
-      type: doc.mime_type ?? res.headers["content-type"] ?? "application/octet-stream",
+      type: doc.mime_type ?? "application/octet-stream",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
