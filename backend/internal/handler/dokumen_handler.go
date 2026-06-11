@@ -70,7 +70,7 @@ func (h *DokumenHandler) Upload(c *gin.Context) {
 
         // Simpan ke DB
         d := &models.Dokumen{
-                UserID:      userID,
+                UserID:      &userID,
                 Jenis:       models.JenisDokumen(jenis),
                 NamaFile:    header.Filename,
                 PathFile:    savePath,
@@ -208,7 +208,7 @@ func (h *DokumenHandler) Download(c *gin.Context) {
         // Cek akses: peserta hanya bisa download milik sendiri
         userID := middleware.GetUserID(c)
         role := middleware.GetUserRole(c)
-        if role == models.RolePeserta && doc.UserID != userID {
+        if role == models.RolePeserta && (doc.UserID == nil || *doc.UserID != userID) {
                 c.JSON(http.StatusForbidden, models.ErrorResponse{Error: "forbidden", Message: "Akses ditolak"})
                 return
         }
