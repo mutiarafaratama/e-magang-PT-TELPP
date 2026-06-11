@@ -24,6 +24,11 @@ async function sendKredensialEmail(toEmail: string, namaLengkap: string, passwor
     return;
   }
 
+  const actualTo = process.env.RESEND_TEST_TO || toEmail;
+  if (actualTo !== toEmail) {
+    console.info(`[TEST MODE] Email dialihkan dari ${toEmail} ke ${actualTo}`);
+  }
+
   const frontendUrl =
     process.env.FRONTEND_URL ||
     (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "http://localhost:5000");
@@ -141,7 +146,7 @@ async function sendKredensialEmail(toEmail: string, namaLengkap: string, passwor
     },
     body: JSON.stringify({
       from: "e-Magang TELPP <onboarding@resend.dev>",
-      to: [toEmail],
+      to: [actualTo],
       subject: "Akun e-Magang TELPP Anda Telah Dibuat",
       html,
     }),

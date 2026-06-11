@@ -85,3 +85,6 @@ REFRESH_EXPIRY = "168h"
 UPLOAD_DIR = "./uploads"
 MAX_UPLOAD_SIZE = "104857600"
 JWT_SECRET = "54ff827ea308d541f37c121c78b495cbb03148c4bb315fbd9e1df99399ec5d38fef9995bc660ae209fb8f95f35fafcf4"
+
+[userenv.development]
+RESEND_TEST_TO = "telpp123@gmail.com"
