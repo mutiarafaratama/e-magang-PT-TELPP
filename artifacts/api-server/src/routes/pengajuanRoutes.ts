@@ -29,43 +29,107 @@ async function sendKredensialEmail(toEmail: string, namaLengkap: string, passwor
     (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "http://localhost:5000");
 
   const html = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-    <div style="background:linear-gradient(135deg,#0d2818 0%,#1a5c20 100%);padding:32px 40px;text-align:center;">
-      <h1 style="color:#fff;font-size:22px;margin:0 0 6px;font-weight:800;">e-Magang PT TELPP</h1>
-      <p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0;">PT TanjungEnim Lestari Pulp and Paper</p>
-    </div>
-    <div style="padding:36px 40px;">
-      <p style="font-size:15px;color:#0d2818;font-weight:700;margin:0 0 8px;">Halo, ${namaLengkap}!</p>
-      <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0 0 24px;">
-        Pengajuan magang Anda telah <strong style="color:#16a34a;">diterima</strong>.
-        Berikut kredensial akun e-Magang Anda:
-      </p>
-      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
-        <div style="margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Email Login</div>
-          <div style="font-size:15px;font-weight:700;color:#0d2818;">${toEmail}</div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Password Sementara</div>
-          <div style="font-size:20px;font-weight:800;color:#48AF4A;letter-spacing:0.12em;font-family:monospace;">${password}</div>
-        </div>
-      </div>
-      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:28px;">
-        <p style="font-size:12px;color:#78350f;margin:0;line-height:1.6;">
-          &#x26A0;&#xFE0F; <strong>Penting:</strong> Segera ganti password Anda setelah login pertama.
-        </p>
-      </div>
-      <a href="${frontendUrl}/login" style="display:block;text-align:center;background:#48AF4A;color:#fff;text-decoration:none;border-radius:10px;padding:14px 24px;font-size:14px;font-weight:700;">
-        Login ke Dashboard e-Magang &rarr;
-      </a>
-    </div>
-    <div style="padding:16px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-      <p style="font-size:11px;color:#9ca3af;margin:0;">&copy; 2025 e-Magang PT TELPP &middot; Muara Enim, Sumatera Selatan</p>
-    </div>
-  </div>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Akun e-Magang PT TELPP</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#0d2818;padding:32px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.5);">PT TanjungEnim Lestari Pulp and Paper</p>
+            <h1 style="margin:0;font-size:20px;font-weight:800;color:#ffffff;letter-spacing:0.02em;">e-Magang PT TELPP</h1>
+          </td>
+        </tr>
+
+        <!-- Subject line -->
+        <tr>
+          <td style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:14px 40px;">
+            <p style="margin:0;font-size:12px;color:#64748b;font-weight:500;">Informasi Akun &mdash; Sistem Manajemen Magang</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px;">
+            <p style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a;">Yth. ${namaLengkap},</p>
+            <p style="margin:0 0 28px;font-size:13.5px;color:#475569;line-height:1.8;">
+              Dengan hormat, kami sampaikan bahwa pengajuan magang Anda di PT TanjungEnim Lestari Pulp and Paper
+              telah <strong style="color:#166534;">diterima</strong>. Akun e-Magang Anda telah dibuat dengan
+              kredensial berikut:
+            </p>
+
+            <!-- Credential box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;margin-bottom:20px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding-bottom:14px;">
+                        <p style="margin:0 0 4px;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Email Login</p>
+                        <p style="margin:0;font-size:14.5px;font-weight:700;color:#0f172a;">${toEmail}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="border-top:1px solid #bbf7d0;padding-top:14px;">
+                        <p style="margin:0 0 4px;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;">Password Sementara</p>
+                        <p style="margin:0;font-size:22px;font-weight:800;color:#15803d;letter-spacing:0.15em;font-family:'Courier New',Courier,monospace;">${password}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Warning box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;margin-bottom:28px;">
+              <tr>
+                <td style="padding:12px 18px;">
+                  <p style="margin:0;font-size:12.5px;color:#713f12;line-height:1.7;">
+                    <strong>Perhatian:</strong> Demi keamanan akun Anda, segera ubah password sementara di atas
+                    setelah berhasil masuk ke sistem melalui menu Pengaturan Akun.
+                    Jangan bagikan password ini kepada pihak lain.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- CTA Button -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <a href="${frontendUrl}/login"
+                     style="display:inline-block;background:#166534;color:#ffffff;text-decoration:none;border-radius:8px;padding:13px 32px;font-size:14px;font-weight:700;letter-spacing:0.02em;">
+                    Masuk ke Dashboard e-Magang
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:28px 0 0;font-size:12px;color:#94a3b8;line-height:1.8;text-align:center;">
+              Jika Anda merasa menerima email ini secara tidak sengaja atau memiliki pertanyaan,<br>
+              silakan hubungi tim HRD PT TELPP melalui saluran resmi perusahaan.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:18px 40px;text-align:center;">
+            <p style="margin:0 0 4px;font-size:11px;color:#94a3b8;">e-Magang PT TanjungEnim Lestari Pulp and Paper</p>
+            <p style="margin:0;font-size:11px;color:#cbd5e1;">Muara Enim, Sumatera Selatan &nbsp;&middot;&nbsp; &copy; ${new Date().getFullYear()}</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 
