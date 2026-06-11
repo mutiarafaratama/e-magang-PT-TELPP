@@ -418,4 +418,30 @@ router.post(
   }
 );
 
+// ── DELETE /api/pengajuan/:id — hapus pengajuan (HRD/admin only) ──────────────
+router.delete("/pengajuan/:id", requireAuth, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const role = req.user!.role;
+    if (!["hrd", "admin"].includes(role)) {
+      res.status(403).json({ message: "Akses tidak diizinkan" });
+      return;
+    }
+    const { id } = req.params;
+
+    const existing = await pool.query("SELECT id FROM pengajuan_magang WHERE id = $1", [id]);
+    if (existing.rows.length === 0) {
+      res.status(404).json({ message: "Pengajuan tidak ditemukan" });
+      return;
+    }
+
+    // Hapus dokumen, status_history, dan pengajuan (cascade sudah handle relasi)
+    await pool.query("DELETE FROM pengajuan_magang WHERE id = $1", [id]);
+
+    res.json({ message: "Pengajuan berhasil dihapus" });
+  } catch (err) {
+    console.error("DELETE /api/pengajuan/:id error:", err);
+    res.status(500).json({ message: "Terjadi kesalahan server" });
+  }
+});
+
 export default router;
