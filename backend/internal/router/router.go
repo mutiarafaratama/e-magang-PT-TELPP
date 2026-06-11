@@ -51,7 +51,7 @@ func Setup() *gin.Engine {
         // Handlers
         authH        := handler.NewAuthHandler(authSvc)
         pengajuanH   := handler.NewPengajuanHandler(pengajuanSvc)
-        dokumenH     := handler.NewDokumenHandler(dokumenRepo)
+        dokumenH     := handler.NewDokumenHandler(dokumenRepo, pengajuanRepo, notifSvc)
         pelaksanaanH := handler.NewPelaksanaanHandler(pelaksanaanRepo, pengajuanRepo, sertifikatSvc)
         absensiH     := handler.NewAbsensiHandler(absensiRepo, pelaksanaanRepo, pengajuanRepo)
         chatH        := handler.NewChatHandler(chatSvc)
