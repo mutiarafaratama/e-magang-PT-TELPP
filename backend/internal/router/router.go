@@ -155,6 +155,7 @@ func Setup() *gin.Engine {
                         hrd.GET("/pengajuan/:id", pengajuanH.GetDetail)
                         hrd.PATCH("/pengajuan/:id/status", pengajuanH.UpdateStatus)
                         hrd.POST("/pengajuan/:id/kirim-akun", pengajuanH.KirimAkun)
+                        hrd.DELETE("/pengajuan/:id", pengajuanH.Hapus)
 
                         // Dokumen
                         hrd.POST("/dokumen/upload", dokumenH.Upload)

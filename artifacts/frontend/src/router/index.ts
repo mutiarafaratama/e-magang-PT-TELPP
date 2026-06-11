@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import LandingPage from "@/views/LandingPage.vue";
+import LandingPage from "@/views/public/LandingPage.vue";
 
 const routes = [
   {
@@ -10,31 +10,31 @@ const routes = [
   {
     path: "/login",
     name: "login",
-    component: () => import("@/views/LoginPage.vue"),
+    component: () => import("@/views/public/LoginPage.vue"),
     meta: { guest: true },
   },
   {
     path: "/daftar",
     name: "daftar",
-    component: () => import("@/views/FormPengajuan.vue"),
+    component: () => import("@/views/public/FormPengajuan.vue"),
     meta: { guest: true },
   },
   {
     path: "/dashboard/peserta",
     name: "dashboard-peserta",
-    component: () => import("@/views/DashboardPeserta.vue"),
+    component: () => import("@/views/user/DashboardPeserta.vue"),
     meta: { requiresAuth: true, role: "peserta" },
   },
   {
     path: "/dashboard/hrd",
     name: "dashboard-hrd",
-    component: () => import("@/views/DashboardHRD.vue"),
+    component: () => import("@/views/staff/DashboardHRD.vue"),
     meta: { requiresAuth: true, role: "hrd" },
   },
   {
     path: "/dashboard/admin",
     name: "dashboard-admin",
-    component: () => import("@/views/DashboardAdmin.vue"),
+    component: () => import("@/views/admin/DashboardAdmin.vue"),
     meta: { requiresAuth: true, role: "admin" },
   },
   {

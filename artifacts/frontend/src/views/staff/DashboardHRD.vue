@@ -110,6 +110,27 @@
             </div>
           </div>
 
+          <!-- Date filters -->
+          <div class="date-filters">
+            <div class="date-filter-group">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <select v-model="filterBulan" class="date-select" @change="currentPage = 1">
+                <option value="">Semua Bulan</option>
+                <option v-for="b in bulanList" :key="b.value" :value="b.value">{{ b.label }}</option>
+              </select>
+            </div>
+            <div class="date-filter-group">
+              <select v-model="filterTahun" class="date-select" @change="currentPage = 1">
+                <option value="">Semua Tahun</option>
+                <option v-for="y in tahunList" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
+            <button v-if="filterBulan || filterTahun" class="btn-clear-date" @click="filterBulan = ''; filterTahun = ''; currentPage = 1">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              Reset
+            </button>
+          </div>
+
           <!-- Status filter pills -->
           <div class="filter-pills">
             <button
@@ -168,6 +189,9 @@
                         <button class="btn-approve" @click="openAction(p, 'diterima')">Terima</button>
                         <button class="btn-reject" @click="openAction(p, 'ditolak')">Tolak</button>
                       </template>
+                      <button class="btn-hapus" :title="`Hapus pengajuan ${p.nama_lengkap}`" @click="konfirmasiHapus(p)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/></svg>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -318,15 +342,24 @@
                     <span>{{ formatDate(doc.uploaded_at) }}</span>
                   </div>
                 </div>
-                <button
-                  class="btn-download"
-                  :class="{ 'btn-download--loading': downloadingId === doc.id }"
-                  :title="`Download ${doc.nama_file}`"
-                  @click="downloadDoc(doc)"
-                >
-                  <div v-if="downloadingId === doc.id" class="spinner spinner--sm"></div>
-                  <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
+                <div class="doc-actions">
+                  <button
+                    class="btn-preview"
+                    :title="`Lihat ${doc.nama_file}`"
+                    @click="previewDoc(doc)"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                  </button>
+                  <button
+                    class="btn-download"
+                    :class="{ 'btn-download--loading': downloadingId === doc.id }"
+                    :title="`Download ${doc.nama_file}`"
+                    @click="downloadDoc(doc)"
+                  >
+                    <div v-if="downloadingId === doc.id" class="spinner spinner--sm"></div>
+                    <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -410,6 +443,67 @@
     </div>
   </Teleport>
 
+  <!-- ══════════════════════════════════════════════════════
+       KONFIRMASI HAPUS DIALOG
+  ══════════════════════════════════════════════════════ -->
+  <Teleport to="body">
+    <div v-if="hapusTarget" class="modal-overlay" @click.self="hapusTarget = null">
+      <div class="confirm-modal">
+        <div class="confirm-modal__icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="#dc2626"/></svg>
+        </div>
+        <div class="confirm-modal__title">Hapus Pengajuan?</div>
+        <div class="confirm-modal__sub">
+          Pengajuan dari <strong>{{ hapusTarget.nama_lengkap }}</strong> akan dihapus permanen beserta seluruh dokumen terkait. Tindakan ini tidak dapat dibatalkan.
+        </div>
+        <div class="confirm-modal__actions">
+          <button class="btn-cancel-modal" :disabled="hapusLoading" @click="hapusTarget = null">Batal</button>
+          <button class="btn-confirm-hapus" :disabled="hapusLoading" @click="eksekusiHapus">
+            <div v-if="hapusLoading" class="spinner spinner--sm spinner--white"></div>
+            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            {{ hapusLoading ? 'Menghapus…' : 'Ya, Hapus' }}
+          </button>
+        </div>
+        <div v-if="hapusError" class="confirm-modal__error">{{ hapusError }}</div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ══════════════════════════════════════════════════════
+       PREVIEW LIGHTBOX
+  ══════════════════════════════════════════════════════ -->
+  <Teleport to="body">
+    <div v-if="previewState.show" class="preview-overlay" @click.self="closePreview">
+      <div class="preview-box">
+        <div class="preview-header">
+          <span class="preview-filename">{{ previewState.nama }}</span>
+          <div class="preview-header-actions">
+            <button class="preview-btn-dl" @click="downloadDoc(previewState.docRef!)" title="Download">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button class="preview-close" @click="closePreview">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="preview-body">
+          <div v-if="previewState.loading" class="preview-loading"><div class="spinner"></div></div>
+          <div v-else-if="previewState.error" class="preview-error">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="1.5"/><line x1="15" y1="9" x2="9" y2="15" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <p>Tidak dapat menampilkan file ini. Gunakan tombol download.</p>
+          </div>
+          <img v-else-if="previewState.type === 'image'" :src="previewState.url" class="preview-image" alt="preview" />
+          <iframe v-else-if="previewState.type === 'pdf'" :src="previewState.url" class="preview-iframe" />
+          <div v-else class="preview-error">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#9ca3af" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#9ca3af" stroke-width="1.5"/></svg>
+            <p>Preview tidak tersedia untuk tipe file ini.</p>
+            <button class="btn-green-sm" @click="downloadDoc(previewState.docRef!)">Download File</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
 </template>
 
 <script setup lang="ts">
@@ -460,9 +554,31 @@ const listLoading = ref(false);
 const listError = ref<string | null>(null);
 const statsLoading = ref(false);
 const filterStatus = ref("semua");
+const filterBulan = ref("");
+const filterTahun = ref("");
 const searchQuery = ref("");
 const currentPage = ref(1);
 const PAGE_SIZE = 10;
+
+// ── hapus state ────────────────────────────────────────────────────
+const hapusTarget = ref<Pengajuan | null>(null);
+const hapusLoading = ref(false);
+const hapusError = ref<string | null>(null);
+
+// ── preview state ──────────────────────────────────────────────────
+interface PreviewState {
+  show: boolean;
+  loading: boolean;
+  error: boolean;
+  url: string;
+  type: "image" | "pdf" | "other";
+  nama: string;
+  docRef: Dokumen | null;
+}
+const previewState = ref<PreviewState>({
+  show: false, loading: false, error: false,
+  url: "", type: "other", nama: "", docRef: null,
+});
 
 // ── detail state ──────────────────────────────────────────────────
 const showDetail = ref(false);
@@ -508,9 +624,27 @@ const statusFilters = computed(() => [
   { value: "ditolak",             label: "Ditolak",        count: totalDitolak.value },
 ]);
 
+const bulanList = [
+  { value: "1", label: "Januari" }, { value: "2", label: "Februari" },
+  { value: "3", label: "Maret" },   { value: "4", label: "April" },
+  { value: "5", label: "Mei" },     { value: "6", label: "Juni" },
+  { value: "7", label: "Juli" },    { value: "8", label: "Agustus" },
+  { value: "9", label: "September" },{ value: "10", label: "Oktober" },
+  { value: "11", label: "November" },{ value: "12", label: "Desember" },
+];
+
+const tahunList = computed(() => {
+  const years = new Set(allPengajuan.value.map(p => new Date(p.created_at).getFullYear()));
+  const cur = new Date().getFullYear();
+  years.add(cur); years.add(cur - 1);
+  return Array.from(years).sort((a, b) => b - a);
+});
+
 const filteredList = computed(() => {
   let list = allPengajuan.value;
   if (filterStatus.value !== "semua") list = list.filter(p => p.status === filterStatus.value);
+  if (filterBulan.value) list = list.filter(p => (new Date(p.created_at).getMonth() + 1) === Number(filterBulan.value));
+  if (filterTahun.value) list = list.filter(p => new Date(p.created_at).getFullYear() === Number(filterTahun.value));
   const q = searchQuery.value.trim().toLowerCase();
   if (q) list = list.filter(p => p.nama_lengkap.toLowerCase().includes(q) || p.asal_institusi.toLowerCase().includes(q));
   return list;
@@ -523,7 +657,7 @@ const paginatedList = computed(() => {
 });
 
 // reset page when filter/search changes
-watch([filterStatus, searchQuery], () => { currentPage.value = 1; });
+watch([filterStatus, filterBulan, filterTahun, searchQuery], () => { currentPage.value = 1; });
 
 // ── data fetching ──────────────────────────────────────────────────
 async function fetchPengajuan() {
@@ -629,6 +763,55 @@ async function kirimAkun() {
 
 function openAction(p: Pengajuan, type: string) {
   openDetail(p.id);
+}
+
+// ── hapus pengajuan ─────────────────────────────────────────────────
+function konfirmasiHapus(p: Pengajuan) {
+  hapusTarget.value = p;
+  hapusError.value = null;
+}
+
+async function eksekusiHapus() {
+  if (!hapusTarget.value) return;
+  hapusLoading.value = true;
+  hapusError.value = null;
+  try {
+    await api.delete(`/api/pengajuan/${hapusTarget.value.id}`);
+    hapusTarget.value = null;
+    await fetchPengajuan();
+  } catch (e: any) {
+    hapusError.value = e.response?.data?.message ?? "Gagal menghapus pengajuan.";
+  } finally {
+    hapusLoading.value = false;
+  }
+}
+
+// ── preview dokumen ─────────────────────────────────────────────────
+async function previewDoc(doc: Dokumen) {
+  previewState.value = {
+    show: true, loading: true, error: false,
+    url: "", type: "other", nama: doc.nama_file, docRef: doc,
+  };
+  try {
+    const res = await api.get(`/api/dokumen/${doc.id}/download`, { responseType: "blob" });
+    const mime = doc.mime_type ?? "application/octet-stream";
+    const blob = new Blob([res.data], { type: mime });
+    const url = URL.createObjectURL(blob);
+    let type: "image" | "pdf" | "other" = "other";
+    if (mime.startsWith("image/")) type = "image";
+    else if (mime === "application/pdf") type = "pdf";
+    previewState.value = { ...previewState.value, loading: false, url, type };
+  } catch {
+    previewState.value = { ...previewState.value, loading: false, error: true };
+  }
+}
+
+function closePreview() {
+  if (previewState.value.url) URL.revokeObjectURL(previewState.value.url);
+  previewState.value = {
+    show: false, loading: false, error: false,
+    url: "", type: "other", nama: "", docRef: null,
+  };
 }
 
 function goToVerifikasi() {
@@ -996,6 +1179,53 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 
 .btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: "Poppins", sans-serif; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
 .btn-green-sm:hover { background: #3d9e3f; }
+
+/* ── date filters ────────────────────────────────────────────────── */
+.date-filters { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid #f3f4f6; flex-wrap: wrap; }
+.date-filter-group { display: flex; align-items: center; gap: 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 5px 10px; color: #6b7280; }
+.date-select { background: none; border: none; font-size: 12.5px; font-family: inherit; color: #374151; cursor: pointer; outline: none; }
+.btn-clear-date { background: none; border: 1px solid #e5e7eb; border-radius: 7px; padding: 5px 10px; font-size: 11.5px; color: #9ca3af; cursor: pointer; display: flex; align-items: center; gap: 4px; font-family: inherit; }
+.btn-clear-date:hover { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+
+/* ── hapus button in table ───────────────────────────────────────── */
+.btn-hapus { width: 28px; height: 28px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #dc2626; cursor: pointer; flex-shrink: 0; transition: all 0.15s; padding: 0; }
+.btn-hapus:hover { background: #fee2e2; border-color: #f87171; }
+
+/* ── doc actions (preview + download) ───────────────────────────── */
+.doc-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.btn-preview { width: 32px; height: 32px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563eb; cursor: pointer; flex-shrink: 0; transition: all 0.15s; padding: 0; }
+.btn-preview:hover { background: #dbeafe; border-color: #93c5fd; }
+
+/* ── confirm modal ───────────────────────────────────────────────── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.confirm-modal { background: #fff; border-radius: 16px; padding: 28px 28px 24px; max-width: 400px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.18); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.confirm-modal__icon { width: 56px; height: 56px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center; }
+.confirm-modal__title { font-size: 16px; font-weight: 700; color: #111827; }
+.confirm-modal__sub { font-size: 13px; color: #6b7280; line-height: 1.6; }
+.confirm-modal__sub strong { color: #111827; }
+.confirm-modal__actions { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.btn-cancel-modal { flex: 1; background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 10px 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.btn-cancel-modal:hover:not(:disabled) { background: #e5e7eb; }
+.btn-confirm-hapus { flex: 1; background: #dc2626; color: #fff; border: none; border-radius: 9px; padding: 10px 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.btn-confirm-hapus:hover:not(:disabled) { background: #b91c1c; }
+.btn-confirm-hapus:disabled, .btn-cancel-modal:disabled { opacity: 0.5; cursor: default; }
+.confirm-modal__error { font-size: 12px; color: #dc2626; background: #fef2f2; padding: 7px 12px; border-radius: 7px; width: 100%; text-align: left; }
+
+/* ── preview lightbox ────────────────────────────────────────────── */
+.preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.preview-box { background: #fff; border-radius: 14px; width: min(860px, 100%); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.3); }
+.preview-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #f3f4f6; gap: 12px; flex-shrink: 0; }
+.preview-filename { font-size: 13px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.preview-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.preview-btn-dl { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
+.preview-btn-dl:hover { background: #dcfce7; }
+.preview-close { background: #f3f4f6; border: none; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+.preview-close:hover { background: #e5e7eb; color: #111827; }
+.preview-body { flex: 1; overflow: auto; min-height: 300px; display: flex; align-items: center; justify-content: center; background: #f9fafb; }
+.preview-image { max-width: 100%; max-height: calc(90vh - 70px); object-fit: contain; display: block; }
+.preview-iframe { width: 100%; height: calc(90vh - 70px); border: none; }
+.preview-loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+.preview-error { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 24px; text-align: center; color: #9ca3af; font-size: 13px; }
 
 @media (max-width: 700px) { .stats-row { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 420px) { .stats-row { grid-template-columns: 1fr; } }
