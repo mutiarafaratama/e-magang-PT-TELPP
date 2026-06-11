@@ -296,21 +296,37 @@
 
           <!-- Dokumen peserta -->
           <div class="detail-section">
-            <div class="detail-section__title">Dokumen Peserta</div>
+            <div class="detail-section__title-row">
+              <span class="detail-section__title">Dokumen Peserta</span>
+              <span v-if="dokumenList.length > 0" class="doc-count-badge">{{ dokumenList.length }} file</span>
+            </div>
             <div v-if="dokumenLoading" class="doc-loading"><div class="spinner spinner--sm"></div></div>
-            <div v-else-if="dokumenList.length === 0" class="doc-empty">Belum ada dokumen diunggah.</div>
+            <div v-else-if="dokumenList.length === 0" class="doc-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#d1d5db" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#d1d5db" stroke-width="1.5"/></svg>
+              Belum ada dokumen diunggah oleh peserta.
+            </div>
             <div v-else class="doc-list">
               <div v-for="doc in dokumenList" :key="doc.id" class="doc-item">
-                <div class="doc-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg>
+                <div class="doc-icon" :class="`doc-icon--${docTypeColor(doc.jenis)}`">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </div>
                 <div class="doc-info">
                   <div class="doc-name">{{ doc.nama_file }}</div>
-                  <div class="doc-meta">{{ formatJenisDok(doc.jenis) }} · {{ formatSize(doc.ukuran_bytes) }}</div>
+                  <div class="doc-meta">
+                    <span class="doc-jenis-tag" :class="`doc-jenis-tag--${docTypeColor(doc.jenis)}`">{{ formatJenisDok(doc.jenis) }}</span>
+                    <span v-if="doc.ukuran_bytes">{{ formatSize(doc.ukuran_bytes) }}</span>
+                    <span>{{ formatDate(doc.uploaded_at) }}</span>
+                  </div>
                 </div>
-                <a class="btn-download" :href="`/api/dokumen/${doc.id}/download`" target="_blank">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </a>
+                <button
+                  class="btn-download"
+                  :class="{ 'btn-download--loading': downloadingId === doc.id }"
+                  :title="`Download ${doc.nama_file}`"
+                  @click="downloadDoc(doc)"
+                >
+                  <div v-if="downloadingId === doc.id" class="spinner spinner--sm"></div>
+                  <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -434,6 +450,7 @@ interface Dokumen {
   jenis: string;
   nama_file: string;
   ukuran_bytes: number | null;
+  mime_type: string | null;
   uploaded_at: string;
 }
 
@@ -464,6 +481,9 @@ const actionError = ref<string | null>(null);
 const kirimAkunLoading = ref(false);
 const kirimAkunDone    = ref(false);
 const kirimAkunError   = ref<string | null>(null);
+
+// ── download state ────────────────────────────────────────────────
+const downloadingId = ref<string | null>(null);
 
 // ── upload state ──────────────────────────────────────────────────
 const uploadFile = ref<File | null>(null);
@@ -698,6 +718,45 @@ function formatJenisDok(j: string) {
   return m[j] ?? j;
 }
 
+function docTypeColor(jenis: string): string {
+  const m: Record<string, string> = {
+    proposal_magang: "red",
+    ktp: "blue",
+    ktm: "blue",
+    pasfoto: "purple",
+    bpjs_kis: "green",
+    surat_balasan: "orange",
+    laporan_magang: "indigo",
+    sertifikat: "gold",
+  };
+  return m[jenis] ?? "gray";
+}
+
+async function downloadDoc(doc: Dokumen) {
+  if (downloadingId.value) return;
+  downloadingId.value = doc.id;
+  try {
+    const res = await api.get(`/api/dokumen/${doc.id}/download`, {
+      responseType: "blob",
+    });
+    const blob = new Blob([res.data], {
+      type: doc.mime_type ?? res.headers["content-type"] ?? "application/octet-stream",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = doc.nama_file;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    // gagal download — bisa tambahkan toast di sini
+  } finally {
+    downloadingId.value = null;
+  }
+}
+
 function formatSize(b: number | null) {
   if (!b) return "";
   if (b < 1024) return b + " B";
@@ -859,16 +918,43 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 .info-val { font-size: 13px; color: #111827; font-weight: 500; }
 
 /* ── dokumen list ────────────────────────────────────────────────── */
+.detail-section__title-row { display: flex; align-items: center; gap: 8px; }
+.doc-count-badge { background: #1a5c20; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 100px; }
+
 .doc-loading { display: flex; justify-content: center; padding: 16px; }
-.doc-empty { font-size: 12.5px; color: #9ca3af; text-align: center; padding: 12px; background: #f9fafb; border-radius: 8px; }
-.doc-list { display: flex; flex-direction: column; gap: 6px; }
-.doc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f9fafb; border-radius: 9px; border: 1px solid #f3f4f6; }
-.doc-icon { width: 32px; height: 32px; background: #eff6ff; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #2563eb; flex-shrink: 0; }
+.doc-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12.5px; color: #9ca3af; text-align: center; padding: 20px 12px; background: #f9fafb; border-radius: 10px; border: 1.5px dashed #e5e7eb; }
+
+.doc-list { display: flex; flex-direction: column; gap: 7px; }
+.doc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border-radius: 10px; border: 1px solid #e9f5e9; transition: border-color 0.15s, box-shadow 0.15s; }
+.doc-item:hover { border-color: #86efac; box-shadow: 0 2px 8px rgba(26,92,32,0.07); }
+
+.doc-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.doc-icon--red    { background: #fef2f2; color: #dc2626; }
+.doc-icon--blue   { background: #eff6ff; color: #2563eb; }
+.doc-icon--purple { background: #f5f3ff; color: #7c3aed; }
+.doc-icon--green  { background: #f0fdf4; color: #16a34a; }
+.doc-icon--orange { background: #fff7ed; color: #ea580c; }
+.doc-icon--indigo { background: #eef2ff; color: #4338ca; }
+.doc-icon--gold   { background: #fefce8; color: #ca8a04; }
+.doc-icon--gray   { background: #f3f4f6; color: #6b7280; }
+
 .doc-info { flex: 1; min-width: 0; }
 .doc-name { font-size: 12.5px; font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.doc-meta { font-size: 11px; color: #9ca3af; margin-top: 1px; }
-.btn-download { width: 28px; height: 28px; background: #f3f4f6; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #374151; text-decoration: none; flex-shrink: 0; }
-.btn-download:hover { background: #e5e7eb; }
+.doc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 3px; font-size: 11px; color: #9ca3af; }
+
+.doc-jenis-tag { padding: 1px 7px; border-radius: 100px; font-size: 10.5px; font-weight: 600; }
+.doc-jenis-tag--red    { background: #fef2f2; color: #dc2626; }
+.doc-jenis-tag--blue   { background: #eff6ff; color: #2563eb; }
+.doc-jenis-tag--purple { background: #f5f3ff; color: #7c3aed; }
+.doc-jenis-tag--green  { background: #f0fdf4; color: #16a34a; }
+.doc-jenis-tag--orange { background: #fff7ed; color: #ea580c; }
+.doc-jenis-tag--indigo { background: #eef2ff; color: #4338ca; }
+.doc-jenis-tag--gold   { background: #fefce8; color: #ca8a04; }
+.doc-jenis-tag--gray   { background: #f3f4f6; color: #6b7280; }
+
+.btn-download { width: 32px; height: 32px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #16a34a; cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+.btn-download:hover { background: #dcfce7; border-color: #86efac; }
+.btn-download--loading { opacity: 0.6; cursor: wait; }
 
 /* ── upload area ─────────────────────────────────────────────────── */
 .upload-area { border: 2px dashed #d1d5db; border-radius: 10px; cursor: pointer; transition: border-color 0.15s; }
