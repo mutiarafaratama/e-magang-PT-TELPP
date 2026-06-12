@@ -1,74 +1,82 @@
 package service
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
+        "bytes"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "os"
 )
 
 type EmailService struct{}
 
 func NewEmailService() *EmailService {
-	return &EmailService{}
+        return &EmailService{}
 }
 
 type resendEmailRequest struct {
-	From    string   `json:"from"`
-	To      []string `json:"to"`
-	Subject string   `json:"subject"`
-	Html    string   `json:"html"`
+        From    string   `json:"from"`
+        To      []string `json:"to"`
+        Subject string   `json:"subject"`
+        Html    string   `json:"html"`
 }
 
 func (s *EmailService) kirimViaResend(to, subject, html string) error {
-	apiKey := os.Getenv("RESEND_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
-	}
+        apiKey := os.Getenv("RESEND_API_KEY")
+        if apiKey == "" {
+                return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
+        }
 
-	payload := resendEmailRequest{
-		From:    "e-Magang TELPP <onboarding@resend.dev>",
-		To:      []string{to},
-		Subject: subject,
-		Html:    html,
-	}
+        // Jika RESEND_TEST_TO diset (mode development/testing), redirect semua
+        // email ke alamat tersebut agar bisa diterima di inbox.
+        // onboarding@resend.dev hanya bisa kirim ke pemilik akun Resend.
+        actualTo := to
+        if testTo := os.Getenv("RESEND_TEST_TO"); testTo != "" {
+                actualTo = testTo
+        }
 
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
-	if err != nil {
-		return fmt.Errorf("gagal membuat request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
+        payload := resendEmailRequest{
+                From:    "e-Magang TELPP <onboarding@resend.dev>",
+                To:      []string{actualTo},
+                Subject: subject,
+                Html:    html,
+        }
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("gagal mengirim email: %w", err)
-	}
-	defer resp.Body.Close()
+        body, _ := json.Marshal(payload)
+        req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
+        if err != nil {
+                return fmt.Errorf("gagal membuat request: %w", err)
+        }
+        req.Header.Set("Authorization", "Bearer "+apiKey)
+        req.Header.Set("Content-Type", "application/json")
 
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
-	}
-	return nil
+        resp, err := http.DefaultClient.Do(req)
+        if err != nil {
+                return fmt.Errorf("gagal mengirim email: %w", err)
+        }
+        defer resp.Body.Close()
+
+        if resp.StatusCode >= 300 {
+                return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
+        }
+        return nil
 }
 
 func frontendURL() string {
-	u := os.Getenv("FRONTEND_URL")
-	if u == "" {
-		u = "http://localhost:5000"
-	}
-	return u
+        u := os.Getenv("FRONTEND_URL")
+        if u == "" {
+                u = "http://localhost:5000"
+        }
+        return u
 }
 
 // KirimKredensial — email diterima + kredensial login (password bisa kosong jika akun sudah ada)
 func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) error {
-	loginURL := frontendURL() + "/login"
+        loginURL := frontendURL() + "/login"
 
-	var passwordSection string
-	if password != "" {
-		passwordSection = fmt.Sprintf(`
+        var passwordSection string
+        if password != "" {
+                passwordSection = fmt.Sprintf(`
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
         <div style="margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Email Login</div>
@@ -84,8 +92,8 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) er
           ⚠️ <strong>Penting:</strong> Segera ganti password Anda setelah login pertama melalui menu Pengaturan Akun.
         </p>
       </div>`, toEmail, password)
-	} else {
-		passwordSection = fmt.Sprintf(`
+        } else {
+                passwordSection = fmt.Sprintf(`
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px 24px;margin-bottom:24px;">
         <div style="margin-bottom:8px;">
           <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Email Login</div>
@@ -93,9 +101,9 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) er
         </div>
         <div style="font-size:12.5px;color:#6b7280;">Gunakan password akun Anda yang sudah ada.</div>
       </div>`, toEmail)
-	}
+        }
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+        html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
@@ -130,21 +138,21 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password string) er
 </body>
 </html>`, namaLengkap, passwordSection, loginURL)
 
-	return s.kirimViaResend(toEmail, "Akun e-Magang PT TELPP Anda Sudah Siap", html)
+        return s.kirimViaResend(toEmail, "Akun e-Magang PT TELPP Anda Sudah Siap", html)
 }
 
 // KirimDitolak — email pemberitahuan penolakan
 func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan string) error {
-	var catatanSection string
-	if catatan != "" {
-		catatanSection = fmt.Sprintf(`
+        var catatanSection string
+        if catatan != "" {
+                catatanSection = fmt.Sprintf(`
       <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
         <div style="font-size:11px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Catatan dari Tim HRD</div>
         <p style="font-size:13px;color:#7c2d12;margin:0;line-height:1.6;">%s</p>
       </div>`, catatan)
-	}
+        }
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+        html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
@@ -176,5 +184,5 @@ func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan string) error 
 </body>
 </html>`, namaLengkap, catatanSection)
 
-	return s.kirimViaResend(toEmail, "Informasi Hasil Seleksi Magang PT TELPP", html)
+        return s.kirimViaResend(toEmail, "Informasi Hasil Seleksi Magang PT TELPP", html)
 }

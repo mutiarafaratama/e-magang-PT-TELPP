@@ -185,17 +185,6 @@
                   <td>
                     <div class="action-btns">
                       <button class="btn-detail" @click="openDetail(p.id)">Detail</button>
-                      <template v-if="['diajukan','menunggu_verifikasi','diproses'].includes(p.status)">
-                        <button class="btn-approve" @click="openAction(p, 'diterima')">Terima</button>
-                        <button class="btn-reject" @click="openAction(p, 'ditolak')">Tolak</button>
-                      </template>
-                      <span v-if="p.akun_terkirim_at" class="badge-sent" title="Akun sudah dikirim">Akun Terkirim</span>
-                      <button
-                        v-else
-                        class="btn-kirim-sm"
-                        title="Buat akun & kirim email kredensial"
-                        @click="openDetail(p.id)"
-                      >Kirim Akun</button>
                       <button class="btn-hapus" :title="`Hapus pengajuan ${p.nama_lengkap}`" @click="konfirmasiHapus(p)">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" stroke-width="2"/></svg>
                       </button>
