@@ -75,7 +75,6 @@ func frontendURL() string {
 	return u
 }
 
-// buatLampiranSuratBalasan — baca file PDF dari disk dan encode ke base64 untuk dilampirkan
 func buatLampiranSuratBalasan(pathFile string) []resendAttachment {
 	if pathFile == "" {
 		return nil
@@ -92,154 +91,268 @@ func buatLampiranSuratBalasan(pathFile string) []resendAttachment {
 	}
 }
 
-// KirimKredensial — email pemberitahuan diterima beserta kredensial login dan surat balasan
+// KirimKredensial — email pemberitahuan diterima beserta kredensial login
 func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBalasanPath string) error {
 	loginURL := frontendURL() + "/login"
 
-	var passwordSection string
+	var credentialRows string
 	if password != "" {
-		passwordSection = fmt.Sprintf(`
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;margin-bottom:24px;">
-        <tr><td style="padding:20px 24px;">
-          <div style="margin-bottom:14px;">
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Email Login</div>
-            <div style="font-size:15px;font-weight:700;color:#0d2818;">%s</div>
-          </div>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Password Sementara</div>
-            <div style="font-size:20px;font-weight:800;color:#48AF4A;letter-spacing:0.12em;font-family:monospace;">%s</div>
-          </div>
-        </td></tr>
-      </table>
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;margin-bottom:28px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="font-size:12px;color:#78350f;margin:0;line-height:1.6;">
-            <strong>Penting:</strong> Segera ganti password Anda setelah login pertama melalui menu Pengaturan Akun.
-          </p>
-        </td></tr>
-      </table>`, toEmail, password)
+		// Akun baru — tampilkan email + password sementara
+		credentialRows = fmt.Sprintf(`
+              <tr>
+                <td style="padding-bottom:12px;border-bottom:1px solid #e5e7eb;">
+                  <p style="margin:0 0 2px;font-size:11px;color:#9ca3af;">Email</p>
+                  <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">%s</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding-top:12px;">
+                  <p style="margin:0 0 2px;font-size:11px;color:#9ca3af;">Password Sementara</p>
+                  <p style="margin:0;font-size:24px;font-weight:800;color:#166534;letter-spacing:0.14em;font-family:'Courier New',monospace;">%s</p>
+                </td>
+              </tr>`, toEmail, password)
 	} else {
-		passwordSection = fmt.Sprintf(`
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;margin-bottom:24px;">
-        <tr><td style="padding:20px 24px;">
-          <div style="margin-bottom:8px;">
-            <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Email Login</div>
-            <div style="font-size:15px;font-weight:700;color:#0d2818;">%s</div>
-          </div>
-          <div style="font-size:12.5px;color:#6b7280;">Gunakan password akun Anda yang sudah ada.</div>
-        </td></tr>
-      </table>`, toEmail)
+		// Akun lama — hanya tampilkan email, password tidak berubah
+		credentialRows = fmt.Sprintf(`
+              <tr>
+                <td>
+                  <p style="margin:0 0 2px;font-size:11px;color:#9ca3af;">Email</p>
+                  <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">%s</p>
+                  <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Gunakan password akun Anda yang sudah ada.</p>
+                </td>
+              </tr>`, toEmail)
 	}
 
-	suratBalasanKet := ""
+	var warningSection string
+	if password != "" {
+		warningSection = `
+  <!-- WARNING -->
+  <tr>
+    <td style="padding:20px 40px 0;">
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;">
+        <tr>
+          <td style="padding:12px 16px;font-size:13px;color:#92400e;line-height:1.6;">
+            <strong>Segera ubah password ini</strong> setelah pertama kali masuk melalui menu <em>Pengaturan Akun</em>.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>`
+	}
+
+	var suratNote string
 	if suratBalasanPath != "" {
-		suratBalasanKet = `
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:28px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="font-size:12px;color:#1e40af;margin:0;line-height:1.6;">
-            Surat balasan resmi magang terlampir pada email ini.
-          </p>
-        </td></tr>
-      </table>`
-	} else {
-		suratBalasanKet = `
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:28px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="font-size:12px;color:#1e40af;margin:0;line-height:1.6;">
-            Surat balasan resmi magang dapat diunduh melalui menu <strong>Pengajuan Saya</strong> setelah login ke dashboard.
-          </p>
-        </td></tr>
-      </table>`
+		suratNote = `
+  <tr>
+    <td style="padding:16px 40px 0;">
+      <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
+        Surat balasan resmi magang terlampir pada email ini.
+      </p>
+    </td>
+  </tr>`
 	}
 
 	html := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-    <div style="background:linear-gradient(135deg,#0d2818 0%%,#1a5c20 100%%);padding:32px 40px;text-align:center;">
-      <h1 style="color:#fff;font-size:22px;margin:0 0 6px;font-weight:800;">e-Magang PT TELPP</h1>
-      <p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0;">PT TanjungEnim Lestari Pulp and Paper</p>
-    </div>
-    <div style="padding:36px 40px;">
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:20px;">
-        <tr><td style="padding:12px 18px;text-align:center;">
-          <span style="font-size:13px;font-weight:700;color:#16a34a;">Pengajuan Magang Diterima</span>
-        </td></tr>
-      </table>
-      <p style="font-size:15px;color:#0d2818;font-weight:700;margin:0 0 8px;">Yth. %s,</p>
-      <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0 0 24px;">
-        Permohonan magang Anda di <strong>PT TanjungEnim Lestari Pulp and Paper</strong> telah <strong style="color:#16a34a;">diterima</strong>.
-        Gunakan akun berikut untuk masuk ke dashboard e-Magang:
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Akun e-Magang PT TELPP</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 16px;">
+<tr><td align="center">
+<table width="520" cellpadding="0" cellspacing="0"
+       style="max-width:520px;width:100%%;background:#ffffff;border-radius:12px;
+              box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;">
+
+  <!-- TOP ACCENT BAR -->
+  <tr><td style="background:#166534;height:4px;font-size:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td style="padding:32px 40px 0;text-align:center;">
+      <p style="margin:0;font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.12em;">
+        PT TanjungEnim Lestari Pulp and Paper
       </p>
-      %s
-      %s
-      <a href="%s" style="display:block;text-align:center;background:#48AF4A;color:#fff;text-decoration:none;border-radius:10px;padding:14px 24px;font-size:14px;font-weight:700;">
-        Login ke Dashboard e-Magang
+      <h1 style="margin:8px 0 0;font-size:22px;font-weight:700;color:#111827;letter-spacing:-0.01em;">
+        Akun Anda Sudah Siap
+      </h1>
+      <p style="margin:10px 0 0;font-size:14px;color:#6b7280;line-height:1.6;">
+        Halo <strong style="color:#111827;">%s</strong>, akun e-Magang Anda telah dibuat oleh Tim HRD.
+      </p>
+    </td>
+  </tr>
+
+  <!-- DIVIDER -->
+  <tr>
+    <td style="padding:24px 40px 0;">
+      <table width="100%%" cellpadding="0" cellspacing="0">
+        <tr><td style="border-top:1px solid #f3f4f6;font-size:0;">&nbsp;</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CREDENTIAL BOX -->
+  <tr>
+    <td style="padding:0 40px;">
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+        <tr>
+          <td style="padding:20px 24px;">
+            <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#9ca3af;
+                       text-transform:uppercase;letter-spacing:0.1em;">Detail Login</p>
+            <table width="100%%" cellpadding="0" cellspacing="0">
+              %s
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA -->
+  <tr>
+    <td style="padding:24px 40px 0;text-align:center;">
+      <a href="%s"
+         style="display:inline-block;background:#166534;color:#ffffff;text-decoration:none;
+                border-radius:8px;padding:13px 36px;font-size:14px;font-weight:600;
+                letter-spacing:0.02em;">
+        Masuk ke e-Magang &rarr;
       </a>
-    </div>
-    <div style="padding:16px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-      <p style="font-size:11px;color:#9ca3af;margin:0;">Hormat kami, Tim HRD PT TanjungEnim Lestari Pulp and Paper</p>
-    </div>
-  </div>
+    </td>
+  </tr>
+
+  %s
+  %s
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="padding:28px 40px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.7;">
+        PT TanjungEnim Lestari Pulp and Paper &bull; Muara Enim, Sumatera Selatan<br>
+        Email otomatis &mdash; mohon tidak membalas.
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </body>
-</html>`, namaLengkap, passwordSection, suratBalasanKet, loginURL)
+</html>`, namaLengkap, credentialRows, loginURL, warningSection, suratNote)
 
 	return s.kirimViaResend(toEmail, "Akun e-Magang PT TELPP Anda Sudah Siap", html, buatLampiranSuratBalasan(suratBalasanPath))
 }
 
-// KirimDitolak — email pemberitahuan penolakan beserta surat balasan
+// KirimDitolak — email pemberitahuan hasil seleksi tidak diterima
 func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan, suratBalasanPath string) error {
 	var catatanSection string
 	if catatan != "" {
 		catatanSection = fmt.Sprintf(`
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;margin-bottom:24px;">
-        <tr><td style="padding:14px 18px;">
-          <div style="font-size:11px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Catatan dari Tim HRD</div>
-          <p style="font-size:13px;color:#7c2d12;margin:0;line-height:1.6;">%s</p>
-        </td></tr>
-      </table>`, catatan)
+  <!-- CATATAN HRD -->
+  <tr>
+    <td style="padding:20px 40px 0;">
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">Keterangan</p>
+            <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">%s</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>`, catatan)
 	}
 
-	suratBalasanKet := ""
+	var suratNote string
 	if suratBalasanPath != "" {
-		suratBalasanKet = `
-      <table width="100%%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;margin-bottom:24px;">
-        <tr><td style="padding:14px 18px;">
-          <p style="font-size:12px;color:#1e40af;margin:0;line-height:1.6;">
-            Surat balasan resmi terlampir pada email ini.
-          </p>
-        </td></tr>
-      </table>`
+		suratNote = `
+  <tr>
+    <td style="padding:16px 40px 0;">
+      <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
+        Surat balasan resmi terlampir pada email ini.
+      </p>
+    </td>
+  </tr>`
 	}
 
 	html := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;">
-  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-    <div style="background:linear-gradient(135deg,#0d2818 0%%,#1a5c20 100%%);padding:32px 40px;text-align:center;">
-      <h1 style="color:#fff;font-size:22px;margin:0 0 6px;font-weight:800;">e-Magang PT TELPP</h1>
-      <p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0;">PT TanjungEnim Lestari Pulp and Paper</p>
-    </div>
-    <div style="padding:36px 40px;">
-      <p style="font-size:15px;color:#0d2818;font-weight:700;margin:0 0 8px;">Yth. %s,</p>
-      <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0 0 20px;">
-        Terima kasih atas minat Anda bergabung dalam program magang di PT TanjungEnim Lestari Pulp and Paper.
-        Setelah melalui proses seleksi, kami menyampaikan bahwa pengajuan magang Anda <strong style="color:#dc2626;">belum dapat kami terima</strong> pada periode ini.
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Informasi Hasil Seleksi Magang PT TELPP</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 16px;">
+<tr><td align="center">
+<table width="520" cellpadding="0" cellspacing="0"
+       style="max-width:520px;width:100%%;background:#ffffff;border-radius:12px;
+              box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;">
+
+  <!-- TOP ACCENT BAR -->
+  <tr><td style="background:#166534;height:4px;font-size:0;">&nbsp;</td></tr>
+
+  <!-- HEADER -->
+  <tr>
+    <td style="padding:32px 40px 0;text-align:center;">
+      <p style="margin:0;font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.12em;">
+        PT TanjungEnim Lestari Pulp and Paper
       </p>
-      %s
-      %s
-      <p style="font-size:13px;color:#64748b;line-height:1.7;margin:0;">
-        Kami mengundang Anda untuk kembali mendaftar pada periode pendaftaran berikutnya. Terima kasih atas perhatian Anda.
+      <h1 style="margin:8px 0 0;font-size:22px;font-weight:700;color:#111827;letter-spacing:-0.01em;">
+        Informasi Hasil Seleksi Magang
+      </h1>
+    </td>
+  </tr>
+
+  <!-- DIVIDER -->
+  <tr>
+    <td style="padding:24px 40px 0;">
+      <table width="100%%" cellpadding="0" cellspacing="0">
+        <tr><td style="border-top:1px solid #f3f4f6;font-size:0;">&nbsp;</td></tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- BODY -->
+  <tr>
+    <td style="padding:0 40px;">
+      <p style="margin:0 0 14px;font-size:14px;color:#374151;line-height:1.8;">
+        Yth. <strong>%s</strong>,
       </p>
-    </div>
-    <div style="padding:16px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-      <p style="font-size:11px;color:#9ca3af;margin:0;">Hormat kami, Tim HRD PT TanjungEnim Lestari Pulp and Paper</p>
-    </div>
-  </div>
+      <p style="margin:0 0 14px;font-size:14px;color:#374151;line-height:1.8;">
+        Terima kasih atas minat Anda untuk bergabung dalam program magang di
+        <strong>PT TanjungEnim Lestari Pulp and Paper</strong>.
+      </p>
+      <p style="margin:0;font-size:14px;color:#374151;line-height:1.8;">
+        Setelah melalui proses seleksi berkas, dengan hormat kami sampaikan bahwa pada periode ini
+        pengajuan magang Anda belum dapat kami terima. Kami mengundang Anda untuk kembali mendaftar
+        pada periode pendaftaran berikutnya.
+      </p>
+    </td>
+  </tr>
+
+  %s
+  %s
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="padding:32px 40px 28px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.7;">
+        PT TanjungEnim Lestari Pulp and Paper &bull; Muara Enim, Sumatera Selatan<br>
+        Email otomatis &mdash; mohon tidak membalas.
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </body>
-</html>`, namaLengkap, catatanSection, suratBalasanKet)
+</html>`, namaLengkap, catatanSection, suratNote)
 
 	return s.kirimViaResend(toEmail, "Informasi Hasil Seleksi Magang PT TELPP", html, buatLampiranSuratBalasan(suratBalasanPath))
 }
