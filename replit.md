@@ -50,12 +50,13 @@ Frontend (Vue 3):
 
 ## User preferences
 
-- **DB lokal**: User pakai PostgreSQL lokal di mesin sendiri. Replit hanya untuk testing. Setiap ada perubahan schema (tabel baru, kolom baru, dll), beritahu SQL-nya agar bisa dijalankan di lokal juga.
+- **DB lokal**: User pakai PostgreSQL lokal di mesin sendiri. Replit hanya untuk testing. Setiap ada perubahan schema (tabel baru, kolom baru, dll), beritahu SQL-nya agar bisa dijalankan di lokal juga. Migrasi SQL dari `backend/migrations/` dijalankan langsung ke database Replit untuk testing.
 - **Inform dulu sebelum eksekusi**: Setiap ada perubahan penting atau file baru, beritahu user lebih dulu sebelum mengeksekusi/membuat.
 - **Struktur lokal berbeda dengan Replit**:
-  - Lokal: `E-MAGANG PT TELPP/backend/` (Go) dan `E-MAGANG PT TELPP/frontend/` (Vue 3, langsung di root)
-  - Replit: Go backend di `backend/`, Vue 3 frontend di `artifacts/frontend/`
+  - Lokal: `E-MAGANG PT TELPP/backend/` (Go) dan `E-MAGANG PT TELPP/frontend/` (Vue 3, langsung di root, bukan di artifacts/)
+  - Replit: Go backend di `backend/`, Vue 3 frontend di `artifacts/frontend/`, Node.js proxy di `artifacts/api-server/` (hanya ada di Replit, tidak di lokal)
   - Semua perubahan relevan harus bisa diterapkan ke struktur lokal user.
+- **Sinkronisasi routes**: Jika ada perubahan di `artifacts/api-server/src/routes/`, wajib juga ubah `backend/internal/routes/` menggunakan Go — backend asli tetap Go, Node.js api-server hanya proxy Replit.
 
 ## Gotchas
 
