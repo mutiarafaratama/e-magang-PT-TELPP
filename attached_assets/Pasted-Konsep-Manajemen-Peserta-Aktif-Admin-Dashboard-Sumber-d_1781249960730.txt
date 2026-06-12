@@ -1,0 +1,51 @@
+Konsep: Manajemen Peserta Aktif (Admin Dashboard)
+Sumber data
+Fitur ini berbasis tabel pelaksanaan_magang yang otomatis dibuat saat HRD menandai pengajuan sebagai diterima. Satu record = satu peserta aktif. Di-JOIN dengan pengajuan_magang (data diri), users (pembimbing), periode_magang, dan absensi (progress).
+
+Tampilan: Tab "Peserta" di Dashboard Admin
+🔢 Stats Cards (atas)
+Kartu	Isi
+Total Peserta	semua pelaksanaan_magang
+Sedang Aktif	status = aktif
+Menunggu Mulai	status = menunggu_mulai
+Sudah Selesai	status = selesai
+📋 List / Tabel
+Kolom yang ditampilkan:
+
+Nama Peserta | Institusi | Kategori | Periode | Divisi | Pembimbing | Status | Progress | Aksi
+
+Status → badge warna: abu (menunggu mulai) → hijau (aktif) → biru (upload laporan) → kuning (penilaian) → abu-tua (selesai)
+Progress → 18/60 hari berdasarkan count absensi vs durasi
+Filter: by status, by periode, by kategori
+Search: nama / institusi
+🔍 Detail Panel (klik nama peserta)
+┌─ Data Diri ────────────────┐  ┌─ Info Magang ──────────────┐
+│ Nama, Institusi, Jurusan   │  │ Periode, Divisi, Pembimbing│
+│ Kategori, No HP, Email     │  │ Tanggal Mulai – Selesai    │
+└────────────────────────────┘  └────────────────────────────┘
+┌─ Progress Absensi ─────────────────────────────────────────┐
+│ ████████░░░░░░  18/60 hari  |  Hadir:15 Izin:2 Alpha:1    │
+└────────────────────────────────────────────────────────────┘
+┌─ Nilai & Sertifikat ───────────────────────────────────────┐
+│ Nilai: 87.5  |  Catatan: ...  |  [Generate Sertifikat]     │
+└────────────────────────────────────────────────────────────┘
+
+✏️ Edit Peserta (modal)
+Assign divisi (text input)
+Assign pembimbing (dropdown user HRD)
+Koreksi tanggal mulai/selesai
+Advance status manual (misal dari menunggu_mulai → aktif)
+Backend yang dibutuhkan
+Cek dulu endpoint mana yang sudah ada, mana yang perlu dibuat:
+
+Endpoint	Fungsi
+GET /api/pelaksanaan	list semua + filter + search
+GET /api/pelaksanaan/:id	detail + ringkasan absensi
+PATCH /api/pelaksanaan/:id	update divisi/pembimbing/tanggal
+PATCH /api/pelaksanaan/:id/status	advance status
+POST /api/pelaksanaan/:id/sertifikat	generate PDF sertifikat
+Yang TIDAK dibangun sekarang
+Absensi harian (itu domain peserta & HRD, bukan admin)
+TTD digital pembimbing (scope tersendiri)
+Input nilai (itu domain HRD)
+Setuju dengan konsep ini? Atau ada yang ingin diubah — misalnya kolom tambahannya, cara advance status, atau fitur lain yang mau dimasukkan ke sini?
