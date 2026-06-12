@@ -27,17 +27,14 @@ func (s *EmailService) kirimViaResend(to, subject, html string) error {
                 return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
         }
 
-        // Jika RESEND_TEST_TO diset (mode development/testing), redirect semua
-        // email ke alamat tersebut agar bisa diterima di inbox.
-        // onboarding@resend.dev hanya bisa kirim ke pemilik akun Resend.
-        actualTo := to
-        if testTo := os.Getenv("RESEND_TEST_TO"); testTo != "" {
-                actualTo = testTo
+        from := os.Getenv("RESEND_FROM_EMAIL")
+        if from == "" {
+                from = "e-Magang TELPP <onboarding@resend.dev>"
         }
 
         payload := resendEmailRequest{
-                From:    "e-Magang TELPP <onboarding@resend.dev>",
-                To:      []string{actualTo},
+                From:    from,
+                To:      []string{to},
                 Subject: subject,
                 Html:    html,
         }
