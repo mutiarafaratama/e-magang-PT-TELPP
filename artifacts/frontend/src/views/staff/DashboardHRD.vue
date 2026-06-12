@@ -325,19 +325,19 @@
             </div>
           </div>
 
-          <!-- Dokumen peserta -->
+          <!-- Dokumen peserta (bukan surat balasan) -->
           <div class="detail-section">
             <div class="detail-section__title-row">
               <span class="detail-section__title">Dokumen Peserta</span>
-              <span v-if="dokumenList.length > 0" class="doc-count-badge">{{ dokumenList.length }} file</span>
+              <span v-if="dokumenPeserta.length > 0" class="doc-count-badge">{{ dokumenPeserta.length }} file</span>
             </div>
             <div v-if="dokumenLoading" class="doc-loading"><div class="spinner spinner--sm"></div></div>
-            <div v-else-if="dokumenList.length === 0" class="doc-empty">
+            <div v-else-if="dokumenPeserta.length === 0" class="doc-empty">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#d1d5db" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#d1d5db" stroke-width="1.5"/></svg>
               Belum ada dokumen diunggah oleh peserta.
             </div>
             <div v-else class="doc-list">
-              <div v-for="doc in dokumenList" :key="doc.id" class="doc-item">
+              <div v-for="doc in dokumenPeserta" :key="doc.id" class="doc-item">
                 <div class="doc-icon" :class="`doc-icon--${docTypeColor(doc.jenis)}`">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 </div>
@@ -350,19 +350,10 @@
                   </div>
                 </div>
                 <div class="doc-actions">
-                  <button
-                    class="btn-preview"
-                    :title="`Lihat ${doc.nama_file}`"
-                    @click="previewDoc(doc)"
-                  >
+                  <button class="btn-preview" :title="`Lihat ${doc.nama_file}`" @click="previewDoc(doc)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
                   </button>
-                  <button
-                    class="btn-download"
-                    :class="{ 'btn-download--loading': downloadingId === doc.id }"
-                    :title="`Download ${doc.nama_file}`"
-                    @click="downloadDoc(doc)"
-                  >
+                  <button class="btn-download" :class="{ 'btn-download--loading': downloadingId === doc.id }" :title="`Download ${doc.nama_file}`" @click="downloadDoc(doc)">
                     <div v-if="downloadingId === doc.id" class="spinner spinner--sm"></div>
                     <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                   </button>
@@ -371,13 +362,46 @@
             </div>
           </div>
 
-          <!-- Upload dokumen balasan -->
-          <div class="detail-section">
-            <div class="detail-section__title">Upload Dokumen Balasan</div>
+          <!-- Surat Balasan HRD -->
+          <div class="detail-section surat-balasan-section">
+            <div class="detail-section__title-row">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="color:#1a5c20"><path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22 6 12 13 2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span class="detail-section__title" style="color:#0d2818;">Surat Balasan HRD</span>
+              <span v-if="suratBalasanList.length > 0" class="doc-count-badge">{{ suratBalasanList.length }} file</span>
+            </div>
+
+            <!-- List surat balasan yang sudah diupload -->
+            <div v-if="!dokumenLoading && suratBalasanList.length > 0" class="doc-list">
+              <div v-for="doc in suratBalasanList" :key="doc.id" class="doc-item doc-item--surat">
+                <div class="doc-icon doc-icon--green">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22 6 12 13 2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <div class="doc-info">
+                  <div class="doc-name">{{ doc.nama_file }}</div>
+                  <div class="doc-meta">
+                    <span class="doc-jenis-tag doc-jenis-tag--green">Surat Balasan</span>
+                    <span v-if="doc.ukuran_bytes">{{ formatSize(doc.ukuran_bytes) }}</span>
+                    <span>{{ formatDate(doc.uploaded_at) }}</span>
+                  </div>
+                </div>
+                <div class="doc-actions">
+                  <button class="btn-preview" :title="`Lihat ${doc.nama_file}`" @click="previewDoc(doc)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                  </button>
+                  <button class="btn-download" :class="{ 'btn-download--loading': downloadingId === doc.id }" :title="`Download ${doc.nama_file}`" @click="downloadDoc(doc)">
+                    <div v-if="downloadingId === doc.id" class="spinner spinner--sm"></div>
+                    <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="dokumenLoading" class="doc-loading"><div class="spinner spinner--sm"></div></div>
+
+            <!-- Form upload surat balasan -->
             <div class="upload-area" @dragover.prevent @drop.prevent="onDrop">
               <div v-if="!uploadFile" class="upload-placeholder" @click="triggerFileInput">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/><polyline points="17 8 12 3 7 8" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/></svg>
-                <p>Klik atau seret file ke sini</p>
+                <p>{{ suratBalasanList.length > 0 ? 'Upload ulang / revisi surat' : 'Upload Surat Balasan Magang' }}</p>
                 <span>PDF, DOC, DOCX — maks. 10MB</span>
               </div>
               <div v-else class="upload-selected">
@@ -389,16 +413,12 @@
               </div>
             </div>
             <input ref="fileInputRef" type="file" accept=".pdf,.doc,.docx" style="display:none" @change="onFileChange" />
-            <button
-              class="btn-upload"
-              :disabled="!uploadFile || uploadLoading"
-              @click="submitUpload"
-            >
+            <button class="btn-upload" :disabled="!uploadFile || uploadLoading" @click="submitUpload">
               <svg v-if="!uploadLoading" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               <div v-else class="spinner spinner--sm spinner--white"></div>
               {{ uploadLoading ? 'Mengupload…' : 'Upload Surat Balasan' }}
             </button>
-            <div v-if="uploadSuccess" class="upload-msg upload-msg--ok">✓ Dokumen berhasil diupload.</div>
+            <div v-if="uploadSuccess" class="upload-msg upload-msg--ok">✓ Surat balasan berhasil diupload.</div>
             <div v-if="uploadError" class="upload-msg upload-msg--err">{{ uploadError }}</div>
           </div>
         </div>
@@ -407,7 +427,11 @@
         <div v-if="detailData && ['diajukan','menunggu_verifikasi','diproses'].includes(detailData.status)" class="drawer-footer">
           <div v-if="!hasSuratBalasan" class="surat-warning">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg>
-            Upload <strong>Surat Balasan Magang</strong> terlebih dahulu sebelum menerima atau menolak pengajuan.
+            Upload <strong>Surat Balasan Magang</strong> (di atas) terlebih dahulu sebelum menerima atau menolak.
+          </div>
+          <div v-else class="auto-email-info">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z" stroke="currentColor" stroke-width="2"/><polyline points="22 6 12 13 2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Email otomatis dikirim ke <strong>{{ detailData.email }}</strong> setelah keputusan ini.
           </div>
           <div class="catatan-row">
             <label class="catatan-label">Catatan HRD (opsional)</label>
@@ -428,26 +452,26 @@
           <div v-if="actionError" class="action-error">{{ actionError }}</div>
         </div>
 
-        <!-- Kirim Akun footer (semua status kecuali ditolak) -->
-        <div v-if="detailData && detailData.status !== 'ditolak'" class="drawer-footer drawer-footer--kirim">
+        <!-- Info akun sudah dikirim (hanya tampil jika status diterima dan akun sudah terkirim) -->
+        <div v-if="detailData && detailData.status === 'diterima'" class="drawer-footer drawer-footer--kirim">
           <template v-if="detailData.akun_terkirim_at">
             <div class="kirim-akun-sent">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#16a34a"/><path d="M8 12l3 3 5-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              Akun sudah dikirim pada {{ new Date(detailData.akun_terkirim_at).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) }}
+              Email &amp; akun dikirim otomatis pada {{ new Date(detailData.akun_terkirim_at).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) }}
             </div>
           </template>
           <template v-else>
             <div class="kirim-akun-info">
-              <div class="kirim-akun-info__title">Kirim Akun Login ke Peserta</div>
-              <div class="kirim-akun-info__sub">Akun baru akan dibuat dan kredensial dikirim ke <strong>{{ detailData.email }}</strong></div>
+              <div class="kirim-akun-info__title">Kirim Ulang Akun Login</div>
+              <div class="kirim-akun-info__sub">Kirim ulang email kredensial ke <strong>{{ detailData.email }}</strong></div>
             </div>
             <button class="btn-kirim-akun" :disabled="kirimAkunLoading" @click="kirimAkun">
               <div v-if="kirimAkunLoading" class="spinner spinner--sm spinner--white"></div>
               <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22 11 13 2 9l20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              {{ kirimAkunLoading ? 'Mengirim…' : 'Kirim Akun & Kredensial' }}
+              {{ kirimAkunLoading ? 'Mengirim…' : 'Kirim Ulang Email Akun' }}
             </button>
             <div v-if="kirimAkunError" class="action-error">{{ kirimAkunError }}</div>
-            <div v-if="kirimAkunDone" class="action-success">✓ Akun berhasil dibuat dan email dikirim!</div>
+            <div v-if="kirimAkunDone" class="action-success">✓ Email berhasil dikirim ulang!</div>
           </template>
         </div>
       </div>
@@ -604,8 +628,10 @@ const actionLoading = ref(false);
 const pendingAction = ref<string>("");
 const actionError = ref<string | null>(null);
 
-// ── surat balasan check ───────────────────────────────────────────
-const hasSuratBalasan = computed(() => dokumenList.value.some((d: Dokumen) => d.jenis === 'surat_balasan'));
+// ── surat balasan split ───────────────────────────────────────────
+const dokumenPeserta   = computed(() => dokumenList.value.filter((d: Dokumen) => d.jenis !== 'surat_balasan'));
+const suratBalasanList = computed(() => dokumenList.value.filter((d: Dokumen) => d.jenis === 'surat_balasan'));
+const hasSuratBalasan  = computed(() => suratBalasanList.value.length > 0);
 
 // ── kirim akun state ──────────────────────────────────────────────
 const kirimAkunLoading = ref(false);
@@ -1207,6 +1233,18 @@ watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 
 .surat-warning { display: flex; align-items: flex-start; gap: 8px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #92400e; line-height: 1.5; margin-bottom: 2px; }
 .surat-warning svg { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+
+/* ── auto email info ──────────────────────────────────────────── */
+.auto-email-info { display: flex; align-items: center; gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 9px 14px; font-size: 12px; color: #166534; line-height: 1.5; margin-bottom: 2px; }
+.auto-email-info svg { flex-shrink: 0; color: #16a34a; }
+
+/* ── surat balasan section ────────────────────────────────────── */
+.surat-balasan-section { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; }
+.surat-balasan-section .detail-section__title { color: #0d2818; }
+.surat-balasan-section .detail-section__title-row { margin-bottom: 10px; }
+.surat-balasan-section .upload-area { border-color: #86efac; }
+.surat-balasan-section .upload-area:hover { border-color: #48AF4A; }
+.doc-item--surat { border-color: #bbf7d0; background: #f8fffe; }
 .btn-reject-lg:disabled, .btn-approve-lg:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-kirim-sm { background: #0d2818; color: #fff; border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
 .btn-kirim-sm:hover:not(:disabled) { background: #1a5c20; }

@@ -221,7 +221,55 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
                 return err
         }
 
-        // Notif ke peserta — hanya jika sudah punya akun (UserID != nil / zero UUID)
+        // ── Otomatisasi saat DITERIMA ─────────────────────────────────────────
+        if status == models.StatusDiterima {
+                password := ""
+
+                if p.AkunTerkirimAt == nil {
+                        // Cek apakah email sudah terdaftar sebagai user
+                        existingUser, _ := s.userRepo.FindByEmail(ctx, p.Email)
+                        if existingUser != nil {
+                                // Tautkan ke akun yang sudah ada (tanpa kirim password)
+                                _ = s.repo.SetAkunTerkirim(ctx, id, existingUser.ID)
+                        } else {
+                                // Buat akun baru
+                                password = generatePassword()
+                                hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+                                if err == nil {
+                                        newUser := &models.User{
+                                                NamaLengkap:  p.NamaLengkap,
+                                                Email:        p.Email,
+                                                PasswordHash: string(hash),
+                                                Role:         models.RolePeserta,
+                                                IsActive:     true,
+                                        }
+                                        if err := s.userRepo.Create(ctx, newUser); err == nil {
+                                                _ = s.repo.SetAkunTerkirim(ctx, id, newUser.ID)
+                                                // Update p.UserID agar notif terkirim
+                                                p.UserID = newUser.ID
+                                        }
+                                }
+                        }
+                }
+
+                // Kirim email diterima + kredensial (non-fatal)
+                go func() {
+                        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password); err != nil {
+                                fmt.Printf("[WARN] Gagal kirim email diterima ke %s: %v\n", p.Email, err)
+                        }
+                }()
+        }
+
+        // ── Otomatisasi saat DITOLAK ─────────────────────────────────────────
+        if status == models.StatusDitolak {
+                go func() {
+                        if err := s.emailSvc.KirimDitolak(p.Email, p.NamaLengkap, catatan); err != nil {
+                                fmt.Printf("[WARN] Gagal kirim email ditolak ke %s: %v\n", p.Email, err)
+                        }
+                }()
+        }
+
+        // ── Notifikasi in-app ke peserta (jika sudah punya akun) ─────────────
         if p.UserID != uuid.Nil {
                 type notifData struct{ judul, pesan, tipe string }
                 notifMap := map[models.StatusPengajuan]notifData{
