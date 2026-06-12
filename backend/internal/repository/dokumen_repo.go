@@ -80,6 +80,16 @@ func (r *DokumenRepository) GetPathsByPengajuanID(ctx context.Context, pengajuan
         return paths, nil
 }
 
+// FindSuratBalasanPath — ambil path_file surat_balasan milik pengajuan tertentu
+func (r *DokumenRepository) FindSuratBalasanPath(ctx context.Context, pengajuanID uuid.UUID) string {
+        var path string
+        r.db.QueryRow(ctx,
+                `SELECT path_file FROM dokumen WHERE pengajuan_id = $1 AND jenis = 'surat_balasan' ORDER BY uploaded_at DESC LIMIT 1`,
+                pengajuanID,
+        ).Scan(&path)
+        return path
+}
+
 // SavePublik — simpan dokumen dari form publik (user_id NULL, belum punya akun)
 func (r *DokumenRepository) SavePublik(ctx context.Context, d *models.Dokumen) error {
         query := `

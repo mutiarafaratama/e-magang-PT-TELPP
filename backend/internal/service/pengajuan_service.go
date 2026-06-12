@@ -146,12 +146,18 @@ func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID)
                 return errors.New("akun sudah pernah dikirim untuk pengajuan ini")
         }
 
+        // Ambil path surat_balasan jika sudah diupload HRD
+        suratBalasanPath := s.dokumenRepo.FindSuratBalasanPath(ctx, pengajuanID)
+
         // Cek apakah email sudah terdaftar
         existingUser, _ := s.userRepo.FindByEmail(ctx, p.Email)
         if existingUser != nil {
-                // Tautkan saja ke akun yang sudah ada
+                // Tautkan saja ke akun yang sudah ada, lalu kirim email tanpa password baru
                 if err := s.repo.SetAkunTerkirim(ctx, pengajuanID, existingUser.ID); err != nil {
                         return err
+                }
+                if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, "", suratBalasanPath); err != nil {
+                        fmt.Printf("[WARN] Gagal kirim email ke %s: %v\n", p.Email, err)
                 }
                 return nil
         }
@@ -179,8 +185,8 @@ func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID)
                 return fmt.Errorf("gagal update pengajuan: %w", err)
         }
 
-        // Kirim email (non-fatal)
-        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password); err != nil {
+        // Kirim email dengan password + surat balasan (non-fatal)
+        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, suratBalasanPath); err != nil {
                 fmt.Printf("[WARN] Gagal kirim email ke %s: %v\n", p.Email, err)
         }
 
@@ -252,9 +258,10 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
                         }
                 }
 
-                // Kirim email diterima + kredensial (non-fatal)
+                // Kirim email diterima + kredensial + surat balasan (non-fatal)
+                suratBalasanPath := s.dokumenRepo.FindSuratBalasanPath(ctx, id)
                 go func() {
-                        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password); err != nil {
+                        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, suratBalasanPath); err != nil {
                                 fmt.Printf("[WARN] Gagal kirim email diterima ke %s: %v\n", p.Email, err)
                         }
                 }()
@@ -262,8 +269,9 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 
         // ── Otomatisasi saat DITOLAK ─────────────────────────────────────────
         if status == models.StatusDitolak {
+                suratBalasanPath := s.dokumenRepo.FindSuratBalasanPath(ctx, id)
                 go func() {
-                        if err := s.emailSvc.KirimDitolak(p.Email, p.NamaLengkap, catatan); err != nil {
+                        if err := s.emailSvc.KirimDitolak(p.Email, p.NamaLengkap, catatan, suratBalasanPath); err != nil {
                                 fmt.Printf("[WARN] Gagal kirim email ditolak ke %s: %v\n", p.Email, err)
                         }
                 }()
