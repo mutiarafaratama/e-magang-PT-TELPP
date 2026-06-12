@@ -1,5 +1,5 @@
 <template>
-  <DashboardLayout :nav-groups="navGroups" role-name="Staff HRD" default-tab="beranda" ref="layout">
+  <DashboardLayout :nav-groups="navGroups" role-name="Staff HRD" default-tab="beranda" ref="layout" @tab-change="onTabChange">
     <template #default>
 
       <!-- ══════════════════════════════════════════════════════
@@ -539,7 +539,7 @@ import api from "@/lib/api";
 // ── auth ──────────────────────────────────────────────────────────
 const { user } = useAuth();
 const layout = ref<InstanceType<typeof DashboardLayout> | null>(null);
-const activeTab = computed(() => layout.value?.activeTab ?? "beranda");
+const activeTab = ref("beranda");
 const firstName = computed(() => user.value?.nama_lengkap?.split(" ")[0] ?? "");
 
 // ── types ─────────────────────────────────────────────────────────
@@ -843,8 +843,14 @@ function closePreview() {
   };
 }
 
+function onTabChange(tab: string) {
+  activeTab.value = tab;
+  if (tab === "verifikasi") fetchPengajuan();
+}
+
 function goToVerifikasi() {
-  if (layout.value) (layout.value as any).activeTab = "verifikasi";
+  activeTab.value = "verifikasi";
+  if (layout.value) (layout.value as any).activeTab.value = "verifikasi";
 }
 
 // ── upload ─────────────────────────────────────────────────────────
@@ -1009,7 +1015,6 @@ const navGroups = computed(() => [
 
 // ── lifecycle ──────────────────────────────────────────────────────
 onMounted(() => { fetchPengajuan(); });
-watch(activeTab, (tab) => { if (tab === "verifikasi") fetchPengajuan(); });
 </script>
 
 <style scoped>
