@@ -696,7 +696,7 @@ async function fetchPengajuan() {
   try {
     const res = await api.get("/api/pengajuan?page=1&limit=200");
     const body = res.data;
-    allPengajuan.value = body.data ?? body ?? [];
+    allPengajuan.value = Array.isArray(body.data) ? body.data : [];
   } catch (e: any) {
     listError.value = e.response?.data?.message ?? "Gagal memuat data pengajuan.";
   } finally {

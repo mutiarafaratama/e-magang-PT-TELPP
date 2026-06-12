@@ -129,7 +129,7 @@ func (r *PengajuanRepository) FindAll(ctx context.Context, status, search string
         }
         defer rows.Close()
 
-        var list []models.PengajuanMagang
+        list := make([]models.PengajuanMagang, 0)
         for rows.Next() {
                 var p models.PengajuanMagang
                 if err := rows.Scan(
