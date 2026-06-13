@@ -213,14 +213,74 @@
           <div class="card-header">
             <div>
               <h3 class="card-title">Menunggu Penempatan</h3>
-              <p class="card-subtitle">Pengajuan diterima yang belum dijadwalkan</p>
+              <p class="card-subtitle">Pengajuan diterima yang belum memiliki jadwal magang</p>
+            </div>
+            <div class="card-header-actions">
+              <span v-if="!penempatanLoading" class="penempatan-count-badge">
+                {{ penerimaanTanpaJadwal.length }} peserta
+              </span>
+              <button class="btn-green-sm" @click="fetchPenempatan">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Refresh
+              </button>
             </div>
           </div>
-          <div class="empty-state">
+
+          <!-- Loading -->
+          <div v-if="penempatanLoading" class="empty-state"><div class="spinner"></div></div>
+
+          <!-- Error -->
+          <div v-else-if="penempatanError" class="empty-state">
+            <p class="text-red">{{ penempatanError }}</p>
+            <button class="btn-green-sm" @click="fetchPenempatan">Coba lagi</button>
+          </div>
+
+          <!-- Empty -->
+          <div v-else-if="penerimaanTanpaJadwal.length === 0" class="empty-state">
             <div class="empty-state__icon">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" stroke-width="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#d1d5db" stroke-width="1.5"/><line x1="8" y1="2" x2="8" y2="6" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <p>Semua pengajuan yang diterima sudah dijadwalkan.</p>
+            <p>Semua pengajuan yang diterima sudah dijadwalkan. 🎉</p>
+          </div>
+
+          <!-- Tabel -->
+          <div v-else class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Peserta</th>
+                  <th>Institusi / Jurusan</th>
+                  <th>Kategori</th>
+                  <th>Tanggal Diterima</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in penerimaanTanpaJadwal" :key="p.id">
+                  <td class="td-name">
+                    <div class="name-cell">
+                      <div class="name-avatar">{{ p.nama_lengkap[0] }}</div>
+                      <div>
+                        <div class="name-text">{{ p.nama_lengkap }}</div>
+                        <div class="name-sub">{{ p.no_hp }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="name-text" style="font-size:12.5px">{{ p.asal_institusi }}</div>
+                    <div class="name-sub">{{ p.jurusan }}</div>
+                  </td>
+                  <td><span class="tag">{{ formatKategori(p.kategori_magang) }}</span></td>
+                  <td>{{ formatDate(p.created_at) }}</td>
+                  <td>
+                    <button class="btn-set-jadwal" @click="openJadwalModal(p)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                      Set Jadwal
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </template>
@@ -290,6 +350,89 @@
 
     </template>
   </DashboardLayout>
+
+  <!-- ══════════════════════════════════════════════════════
+       MODAL SET JADWAL
+  ══════════════════════════════════════════════════════ -->
+  <Teleport to="body">
+    <div v-if="showJadwalModal" class="modal-overlay" @click.self="closeJadwalModal">
+      <div class="jadwal-modal">
+        <!-- Header -->
+        <div class="jadwal-modal__header">
+          <div>
+            <h3 class="jadwal-modal__title">Set Jadwal Magang</h3>
+            <p class="jadwal-modal__sub" v-if="jadwalTarget">{{ jadwalTarget.nama_lengkap }} · {{ jadwalTarget.asal_institusi }}</p>
+          </div>
+          <button class="drawer-close" @click="closeJadwalModal">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="jadwal-modal__body">
+          <!-- Tanggal Mulai & Selesai -->
+          <div class="jform-row">
+            <div class="jform-group">
+              <label class="jform-label">Tanggal Mulai <span class="jform-req">*</span></label>
+              <input v-model="jadwalForm.tanggal_mulai" type="date" class="jform-input" :disabled="jadwalLoading" />
+            </div>
+            <div class="jform-group">
+              <label class="jform-label">Tanggal Selesai <span class="jform-req">*</span></label>
+              <input v-model="jadwalForm.tanggal_selesai" type="date" class="jform-input" :disabled="jadwalLoading"
+                :min="jadwalForm.tanggal_mulai" />
+            </div>
+          </div>
+
+          <!-- Durasi info -->
+          <div v-if="jadwalForm.tanggal_mulai && jadwalForm.tanggal_selesai" class="jform-duration">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Durasi:
+            <strong>
+              {{ Math.max(0, Math.round((new Date(jadwalForm.tanggal_selesai).getTime() - new Date(jadwalForm.tanggal_mulai).getTime()) / 86400000)) }} hari
+            </strong>
+          </div>
+
+          <!-- Divisi -->
+          <div class="jform-group">
+            <label class="jform-label">Divisi / Unit Kerja <span class="jform-req">*</span></label>
+            <input v-model="jadwalForm.divisi" type="text" class="jform-input" placeholder="contoh: IT, Produksi, Keuangan…" :disabled="jadwalLoading" />
+          </div>
+
+          <!-- Pembimbing -->
+          <div class="jform-group">
+            <label class="jform-label">Pembimbing <span class="jform-opt">(opsional)</span></label>
+            <select v-model="jadwalForm.pembimbing_id" class="jform-input jform-select" :disabled="jadwalLoading">
+              <option value="">— Pilih pembimbing —</option>
+              <option v-for="h in hrdList" :key="h.id" :value="h.id">{{ h.nama_lengkap }}</option>
+            </select>
+          </div>
+
+          <!-- Error -->
+          <div v-if="jadwalError" class="jform-error">{{ jadwalError }}</div>
+
+          <!-- Success -->
+          <div v-if="jadwalSuccess" class="jform-success">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Jadwal berhasil disimpan!
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="jadwal-modal__footer">
+          <button class="btn-cancel-modal" @click="closeJadwalModal" :disabled="jadwalLoading">Batal</button>
+          <button
+            class="btn-jadwal-simpan"
+            :disabled="jadwalLoading || !jadwalForm.tanggal_mulai || !jadwalForm.tanggal_selesai || !jadwalForm.divisi"
+            @click="submitJadwal"
+          >
+            <div v-if="jadwalLoading" class="spinner spinner--sm spinner--white"></div>
+            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            {{ jadwalLoading ? 'Menyimpan…' : 'Simpan Jadwal' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 
   <!-- ══════════════════════════════════════════════════════
        DETAIL DRAWER
@@ -660,6 +803,29 @@ const kirimAkunError   = ref<string | null>(null);
 // ── download state ────────────────────────────────────────────────
 const downloadingId = ref<string | null>(null);
 
+// ── penempatan (Menunggu Penempatan) state ────────────────────────
+interface Pelaksanaan { id: string; pengajuan_id: string; }
+interface HRDUser    { id: string; nama_lengkap: string; email: string; }
+
+const allPelaksanaan      = ref<Pelaksanaan[]>([]);
+const hrdList             = ref<HRDUser[]>([]);
+const penempatanLoading   = ref(false);
+const penempatanError     = ref<string | null>(null);
+
+// modal set jadwal
+const showJadwalModal     = ref(false);
+const jadwalTarget        = ref<Pengajuan | null>(null);
+const jadwalForm          = ref({ tanggal_mulai: "", tanggal_selesai: "", divisi: "", pembimbing_id: "" });
+const jadwalLoading       = ref(false);
+const jadwalError         = ref<string | null>(null);
+const jadwalSuccess       = ref(false);
+
+// pengajuan diterima yang belum punya jadwal
+const penerimaanTanpaJadwal = computed(() => {
+  const scheduled = new Set(allPelaksanaan.value.map(p => p.pengajuan_id));
+  return allPengajuan.value.filter(p => p.status === "diterima" && !scheduled.has(p.id));
+});
+
 // ── upload state ──────────────────────────────────────────────────
 const uploadFile = ref<File | null>(null);
 const uploadLoading = ref(false);
@@ -873,9 +1039,72 @@ function closePreview() {
   };
 }
 
+// ── penempatan functions ────────────────────────────────────────────
+async function fetchPenempatan() {
+  penempatanLoading.value = true;
+  penempatanError.value = null;
+  try {
+    const [resPengajuan, resPelaksanaan, resHRD] = await Promise.all([
+      allPengajuan.value.length ? Promise.resolve(null) : api.get("/api/pengajuan?page=1&limit=200"),
+      api.get("/api/pelaksanaan"),
+      hrdList.value.length ? Promise.resolve(null) : api.get("/api/admin/hrd-list"),
+    ]);
+    if (resPengajuan) allPengajuan.value = Array.isArray(resPengajuan.data.data) ? resPengajuan.data.data : [];
+    allPelaksanaan.value = Array.isArray(resPelaksanaan.data.data) ? resPelaksanaan.data.data : [];
+    if (resHRD) hrdList.value = Array.isArray(resHRD.data.data) ? resHRD.data.data : [];
+  } catch (e: any) {
+    penempatanError.value = e.response?.data?.message ?? "Gagal memuat data.";
+  } finally {
+    penempatanLoading.value = false;
+  }
+}
+
+function openJadwalModal(p: Pengajuan) {
+  jadwalTarget.value = p;
+  jadwalForm.value = { tanggal_mulai: "", tanggal_selesai: "", divisi: "", pembimbing_id: "" };
+  jadwalError.value = null;
+  jadwalSuccess.value = false;
+  showJadwalModal.value = true;
+}
+
+function closeJadwalModal() {
+  showJadwalModal.value = false;
+  jadwalTarget.value = null;
+  jadwalError.value = null;
+}
+
+async function submitJadwal() {
+  if (!jadwalTarget.value) return;
+  jadwalLoading.value = true;
+  jadwalError.value = null;
+  jadwalSuccess.value = false;
+  try {
+    await api.post(`/api/pelaksanaan/pengajuan/${jadwalTarget.value.id}`, {
+      tanggal_mulai:   jadwalForm.value.tanggal_mulai,
+      tanggal_selesai: jadwalForm.value.tanggal_selesai,
+      divisi:          jadwalForm.value.divisi,
+      pembimbing_id:   jadwalForm.value.pembimbing_id || undefined,
+    });
+    jadwalSuccess.value = true;
+    // refresh data
+    const [resPelaksanaan, resPengajuan] = await Promise.all([
+      api.get("/api/pelaksanaan"),
+      api.get("/api/pengajuan?page=1&limit=200"),
+    ]);
+    allPelaksanaan.value = Array.isArray(resPelaksanaan.data.data) ? resPelaksanaan.data.data : [];
+    allPengajuan.value   = Array.isArray(resPengajuan.data.data)   ? resPengajuan.data.data   : [];
+    setTimeout(() => closeJadwalModal(), 1200);
+  } catch (e: any) {
+    jadwalError.value = e.response?.data?.message ?? "Gagal menyimpan jadwal.";
+  } finally {
+    jadwalLoading.value = false;
+  }
+}
+
 function onTabChange(tab: string) {
   activeTab.value = tab;
   if (tab === "verifikasi") fetchPengajuan();
+  if (tab === "peserta-penempatan") fetchPenempatan();
 }
 
 function goToVerifikasi() {
@@ -1286,6 +1515,35 @@ onMounted(() => { fetchPengajuan(); });
 .doc-actions { display: flex; gap: 5px; flex-shrink: 0; }
 .btn-preview { width: 32px; height: 32px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #2563eb; cursor: pointer; flex-shrink: 0; transition: all 0.15s; padding: 0; }
 .btn-preview:hover { background: #dbeafe; border-color: #93c5fd; }
+
+/* ── penempatan tab ──────────────────────────────────────────────── */
+.penempatan-count-badge { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
+.btn-set-jadwal { display: inline-flex; align-items: center; gap: 5px; background: #0d2818; color: #fff; border: none; border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.btn-set-jadwal:hover { background: #1a5c20; }
+
+/* ── modal set jadwal ────────────────────────────────────────────── */
+.jadwal-modal { background: #fff; border-radius: 18px; width: min(520px, 100%); box-shadow: 0 24px 80px rgba(0,0,0,0.22); display: flex; flex-direction: column; overflow: hidden; }
+.jadwal-modal__header { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 24px 16px; border-bottom: 1px solid #f0faf0; gap: 12px; }
+.jadwal-modal__title { font-size: 16px; font-weight: 700; color: #111827; margin: 0 0 3px; }
+.jadwal-modal__sub { font-size: 12.5px; color: #6b7280; margin: 0; }
+.jadwal-modal__body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.jadwal-modal__footer { display: flex; gap: 10px; padding: 16px 24px; border-top: 1px solid #f0faf0; }
+
+.jform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.jform-group { display: flex; flex-direction: column; gap: 5px; }
+.jform-label { font-size: 12px; font-weight: 600; color: #374151; }
+.jform-req { color: #dc2626; }
+.jform-opt { color: #9ca3af; font-weight: 400; }
+.jform-input { border: 1px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; color: #111827; outline: none; transition: border-color 0.15s; background: #fff; }
+.jform-input:focus { border-color: #48AF4A; box-shadow: 0 0 0 3px rgba(72,175,74,0.12); }
+.jform-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+.jform-select { cursor: pointer; }
+.jform-duration { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #374151; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 12px; }
+.jform-error { font-size: 12.5px; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 9px 13px; }
+.jform-success { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 9px 13px; font-weight: 600; }
+.btn-jadwal-simpan { flex: 1; background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 11px 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; transition: background 0.15s; }
+.btn-jadwal-simpan:hover:not(:disabled) { background: #3d9e3f; }
+.btn-jadwal-simpan:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── confirm modal ───────────────────────────────────────────────── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
