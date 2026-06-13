@@ -334,7 +334,7 @@ const todayAbsensi = computed(() =>
 
 const absensiState = computed(() => {
   if (absensiLoading.value) return 'loading';
-  if (!pelaksanaanSaya.value) return 'no_magang';
+  if (!pelaksanaanSaya.value || pelaksanaanSaya.value.status !== 'aktif') return 'no_magang';
   if (!cfg.value) return 'loading';
   const now = nowWIB.value;
   const masukBuka   = parseWinTime(cfg.value.jam_masuk_buka,   now);
@@ -376,6 +376,7 @@ const countdownPulangText = computed(() => {
 
 async function fetchAbsensi() {
   absensiLoading.value = true;
+  absensiError.value = '';
   try {
     const [r1, r2] = await Promise.allSettled([
       api.get('/api/absensi/config'),
