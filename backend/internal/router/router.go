@@ -1,7 +1,9 @@
 package router
 
 import (
+        "context"
         "net/http"
+        "time"
 
         "github.com/gin-gonic/gin"
         "github.com/telpp/emagang/internal/database"
@@ -108,6 +110,19 @@ func Setup() *gin.Engine {
         routes.RegisterNotifikasiRoutes(api, notifH)
         routes.RegisterLandingRoutes(public, hrd, admin, landingH)
         routes.RegisterAdminRoutes(hrd, admin, adminH)
+
+        // ============================================================
+        // AUTO-UPDATE STATUS PELAKSANAAN BERDASARKAN TANGGAL
+        // Berjalan sekali saat server start, lalu setiap jam.
+        // ============================================================
+        go func() {
+                pelaksanaanRepo.AutoUpdateStatuses(context.Background())
+                ticker := time.NewTicker(1 * time.Hour)
+                defer ticker.Stop()
+                for range ticker.C {
+                        pelaksanaanRepo.AutoUpdateStatuses(context.Background())
+                }
+        }()
 
         return r
 }

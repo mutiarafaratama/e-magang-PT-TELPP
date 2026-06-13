@@ -113,6 +113,42 @@ func (h *PelaksanaanHandler) GetAll(c *gin.Context) {
         })
 }
 
+// PATCH /api/pelaksanaan/:id/status — HRD update status pelaksanaan
+func (h *PelaksanaanHandler) UpdateStatus(c *gin.Context) {
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+                return
+        }
+
+        var req struct {
+                Status models.StatusPelaksanaan `json:"status" binding:"required"`
+        }
+        if err := c.ShouldBindJSON(&req); err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: err.Error()})
+                return
+        }
+
+        allowed := map[models.StatusPelaksanaan]bool{
+                models.StatusMenungguMulai: true,
+                models.StatusAktif:         true,
+                models.StatusUploadLaporan: true,
+                models.StatusPenilaian:     true,
+                models.StatusSelesai:       true,
+        }
+        if !allowed[req.Status] {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_status", Message: "Status tidak valid"})
+                return
+        }
+
+        if err := h.repo.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+                return
+        }
+
+        c.JSON(http.StatusOK, models.SuccessResponse{Message: "Status pelaksanaan berhasil diperbarui"})
+}
+
 // PATCH /api/pelaksanaan/:id/nilai — HRD set nilai
 func (h *PelaksanaanHandler) SetNilai(c *gin.Context) {
         id, err := uuid.Parse(c.Param("id"))

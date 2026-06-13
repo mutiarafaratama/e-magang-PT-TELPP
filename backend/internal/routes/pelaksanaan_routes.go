@@ -1,22 +1,23 @@
 package routes
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/telpp/emagang/internal/handler"
+        "github.com/gin-gonic/gin"
+        "github.com/telpp/emagang/internal/handler"
 )
 
 // RegisterPelaksanaanRoutes mendaftarkan route pelaksanaan magang.
 //
-//	peserta : /api  (role peserta)
-//	hrd     : /api  (role hrd/admin)
+//      peserta : /api  (role peserta)
+//      hrd     : /api  (role hrd/admin)
 func RegisterPelaksanaanRoutes(peserta, hrd *gin.RouterGroup, h *handler.PelaksanaanHandler) {
-	// Peserta
-	peserta.GET("/pelaksanaan/saya", h.GetMy)
-	peserta.GET("/pelaksanaan/:id/sertifikat/download", h.DownloadSertifikat)
+        // Peserta
+        peserta.GET("/pelaksanaan/saya", h.GetMy)
+        peserta.GET("/pelaksanaan/:id/sertifikat/download", h.DownloadSertifikat)
 
-	// HRD / Admin
-	hrd.POST("/pelaksanaan/pengajuan/:pengajuan_id", h.SetJadwal)
-	hrd.GET("/pelaksanaan", h.GetAll)
-	hrd.PATCH("/pelaksanaan/:id/nilai", h.SetNilai)
-	hrd.POST("/pelaksanaan/:id/sertifikat", h.GenerateSertifikat)
+        // HRD / Admin
+        hrd.POST("/pelaksanaan/pengajuan/:pengajuan_id", h.SetJadwal)
+        hrd.GET("/pelaksanaan", h.GetAll)
+        hrd.PATCH("/pelaksanaan/:id/status", h.UpdateStatus)
+        hrd.PATCH("/pelaksanaan/:id/nilai", h.SetNilai)
+        hrd.POST("/pelaksanaan/:id/sertifikat", h.GenerateSertifikat)
 }

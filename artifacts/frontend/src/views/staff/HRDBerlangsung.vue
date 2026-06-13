@@ -35,7 +35,7 @@
         <thead>
           <tr>
             <th>Peserta</th><th>Divisi</th><th>Periode</th>
-            <th>Progress</th><th>Status</th><th>Sisa Hari</th>
+            <th>Progress</th><th>Status</th><th>Sisa Hari</th><th>Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -72,10 +72,43 @@
               <span v-else-if="sisaHari(pl.tanggal_selesai) <= 7" class="sisa-hari sisa-hari--warn">{{ sisaHari(pl.tanggal_selesai) }} hari</span>
               <span v-else class="sisa-hari">{{ sisaHari(pl.tanggal_selesai) }} hari</span>
             </td>
+            <td>
+              <!-- Tombol aksi berdasarkan status -->
+              <div class="aksi-cell">
+                <button
+                  v-if="pl.status === 'menunggu_mulai'"
+                  class="btn-aksi btn-aksi--green"
+                  :disabled="updatingId === pl.id"
+                  @click="updateStatus(pl.id, 'aktif')"
+                >
+                  {{ updatingId === pl.id ? '...' : 'Aktifkan' }}
+                </button>
+                <button
+                  v-else-if="pl.status === 'aktif'"
+                  class="btn-aksi btn-aksi--blue"
+                  :disabled="updatingId === pl.id"
+                  @click="updateStatus(pl.id, 'upload_laporan')"
+                >
+                  {{ updatingId === pl.id ? '...' : 'Upload Laporan' }}
+                </button>
+                <button
+                  v-else-if="pl.status === 'upload_laporan'"
+                  class="btn-aksi btn-aksi--orange"
+                  :disabled="updatingId === pl.id"
+                  @click="updateStatus(pl.id, 'penilaian')"
+                >
+                  {{ updatingId === pl.id ? '...' : 'Ke Penilaian' }}
+                </button>
+                <span v-else class="name-sub">–</span>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Error toast -->
+    <div v-if="updateError" class="update-error">{{ updateError }}</div>
   </div>
 </template>
 
@@ -91,6 +124,8 @@ const allPelaksanaan = ref<Pelaksanaan[]>([]);
 const allPengajuan   = ref<Pengajuan[]>([]);
 const loading        = ref(false);
 const error          = ref<string | null>(null);
+const updatingId     = ref<string | null>(null);
+const updateError    = ref('');
 
 const rows = computed<Row[]>(() => {
   const pMap = new Map(allPengajuan.value.map(p => [p.id, p]));
@@ -114,6 +149,22 @@ async function fetchData() {
   } catch (e: any) {
     error.value = e.response?.data?.message ?? "Gagal memuat data.";
   } finally { loading.value = false; }
+}
+
+async function updateStatus(id: string, status: string) {
+  updatingId.value = id;
+  updateError.value = '';
+  try {
+    await api.patch(`/api/pelaksanaan/${id}/status`, { status });
+    // Update lokal langsung tanpa refetch
+    const idx = allPelaksanaan.value.findIndex(p => p.id === id);
+    if (idx !== -1) allPelaksanaan.value[idx].status = status;
+  } catch (e: any) {
+    updateError.value = e.response?.data?.message ?? 'Gagal memperbarui status';
+    setTimeout(() => { updateError.value = ''; }, 4000);
+  } finally {
+    updatingId.value = null;
+  }
 }
 
 function sisaHari(selesai: string): number {
@@ -182,4 +233,17 @@ onMounted(fetchData);
 .sisa-hari       { font-size:12px; font-weight:700; color:#374151; }
 .sisa-hari--warn { color:#ea580c; }
 .sisa-hari--over { color:#dc2626; }
+
+/* Aksi */
+.aksi-cell { display:flex; align-items:center; }
+.btn-aksi { border:none; border-radius:7px; padding:5px 12px; font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+.btn-aksi:disabled { opacity:0.5; cursor:default; }
+.btn-aksi--green  { background:#dcfce7; color:#15803d; }
+.btn-aksi--green:hover:not(:disabled)  { background:#bbf7d0; }
+.btn-aksi--blue   { background:#dbeafe; color:#1d4ed8; }
+.btn-aksi--blue:hover:not(:disabled)   { background:#bfdbfe; }
+.btn-aksi--orange { background:#ffedd5; color:#c2410c; }
+.btn-aksi--orange:hover:not(:disabled) { background:#fed7aa; }
+
+.update-error { margin:12px 16px; background:#fff1f2; border:1px solid #fecdd3; color:#be123c; font-size:12.5px; padding:8px 14px; border-radius:8px; }
 </style>
