@@ -218,6 +218,16 @@ type Absensi struct {
         CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
+type AbsensiConfig struct {
+        ID             int        `json:"id" db:"id"`
+        JamMasukBuka   string     `json:"jam_masuk_buka" db:"jam_masuk_buka"`
+        JamMasukTutup  string     `json:"jam_masuk_tutup" db:"jam_masuk_tutup"`
+        JamPulangBuka  string     `json:"jam_pulang_buka" db:"jam_pulang_buka"`
+        JamPulangTutup string     `json:"jam_pulang_tutup" db:"jam_pulang_tutup"`
+        UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
+        UpdatedBy      *uuid.UUID `json:"updated_by" db:"updated_by"`
+}
+
 // ============================================================
 // CHAT
 // ============================================================
@@ -360,15 +370,10 @@ type SetJadwalRequest struct {
         PembimbingID   string `json:"pembimbing_id"`
 }
 
-type AbsensiCheckInRequest struct {
-        Tanggal    string `json:"tanggal" binding:"required"`
-        JamMasuk   string `json:"jam_masuk" binding:"required"`
-        Kegiatan   string `json:"kegiatan" binding:"required"`
-        Keterangan string `json:"keterangan"`
-}
+type AbsensiCheckInRequest struct{}
 
 type AbsensiCheckOutRequest struct {
-        JamKeluar string `json:"jam_keluar" binding:"required"`
+        Kegiatan string `json:"kegiatan" binding:"required"`
 }
 
 type NilaiRequest struct {

@@ -18,43 +18,73 @@ type AbsensiHandler struct {
 	repo            *repository.AbsensiRepository
 	pelaksanaanRepo *repository.PelaksanaanRepository
 	pengajuanRepo   *repository.PengajuanRepository
+	configRepo      *repository.AbsensiConfigRepository
 }
 
-func NewAbsensiHandler(repo *repository.AbsensiRepository, pelaksanaanRepo *repository.PelaksanaanRepository, pengajuanRepo *repository.PengajuanRepository) *AbsensiHandler {
-	return &AbsensiHandler{repo: repo, pelaksanaanRepo: pelaksanaanRepo, pengajuanRepo: pengajuanRepo}
+func NewAbsensiHandler(
+	repo *repository.AbsensiRepository,
+	pelaksanaanRepo *repository.PelaksanaanRepository,
+	pengajuanRepo *repository.PengajuanRepository,
+	configRepo *repository.AbsensiConfigRepository,
+) *AbsensiHandler {
+	return &AbsensiHandler{repo: repo, pelaksanaanRepo: pelaksanaanRepo, pengajuanRepo: pengajuanRepo, configRepo: configRepo}
+}
+
+// wibNow returns current time in WIB (Asia/Jakarta, UTC+7)
+func wibNow() time.Time {
+	wib, _ := time.LoadLocation("Asia/Jakarta")
+	return time.Now().In(wib)
+}
+
+// parseWindowTime parses "HH:MM" string into time.Time on the same day as base
+func parseWindowTime(hhMM string, base time.Time) time.Time {
+	t, err := time.ParseInLocation("2006-01-02 15:04", base.Format("2006-01-02")+" "+hhMM, base.Location())
+	if err != nil {
+		return base
+	}
+	return t
 }
 
 // POST /api/absensi/checkin
 func (h *AbsensiHandler) CheckIn(c *gin.Context) {
-	var req models.AbsensiCheckInRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: err.Error()})
+	userID := middleware.GetUserID(c)
+	now := wibNow()
+
+	cfg, err := h.configRepo.Get(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal memuat konfigurasi jam absensi"})
 		return
 	}
 
-	userID := middleware.GetUserID(c)
+	buka := parseWindowTime(cfg.JamMasukBuka, now)
+	tutup := parseWindowTime(cfg.JamMasukTutup, now)
+	if now.Before(buka) || now.After(tutup) {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "outside_window",
+			Message: fmt.Sprintf("Absen masuk hanya bisa dilakukan antara %s - %s WIB", cfg.JamMasukBuka, cfg.JamMasukTutup),
+		})
+		return
+	}
+
 	pelaksanaan, err := h.pelaksanaanRepo.FindByUserID(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "not_found", Message: "Data pelaksanaan magang tidak ditemukan"})
 		return
 	}
-
 	if pelaksanaan.Status != models.StatusAktif {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_status", Message: "Magang belum aktif"})
 		return
 	}
 
-	keterangan := req.Keterangan
-	if keterangan == "" {
-		keterangan = "hadir"
-	}
+	tanggal := now.Format("2006-01-02")
+	jamMasuk := now.Format("15:04")
+	keterangan := "hadir"
 
 	a := &models.Absensi{
 		PelaksanaanID: pelaksanaan.ID,
-		Tanggal:       parseTimeOnly(req.Tanggal),
-		JamMasuk:      &req.JamMasuk,
+		Tanggal:       parseTimeOnly(tanggal),
+		JamMasuk:      &jamMasuk,
 		Keterangan:    keterangan,
-		Kegiatan:      &req.Kegiatan,
 	}
 
 	if err := h.repo.CheckIn(c.Request.Context(), a); err != nil {
@@ -63,7 +93,7 @@ func (h *AbsensiHandler) CheckIn(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, models.SuccessResponse{
-		Message: "Check-in berhasil",
+		Message: "Absen masuk berhasil",
 		Data:    a,
 	})
 }
@@ -77,19 +107,39 @@ func (h *AbsensiHandler) CheckOut(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+	now := wibNow()
+
+	cfg, err := h.configRepo.Get(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal memuat konfigurasi jam absensi"})
+		return
+	}
+
+	buka := parseWindowTime(cfg.JamPulangBuka, now)
+	tutup := parseWindowTime(cfg.JamPulangTutup, now)
+	if now.Before(buka) || now.After(tutup) {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "outside_window",
+			Message: fmt.Sprintf("Absen pulang hanya bisa dilakukan antara %s - %s WIB", cfg.JamPulangBuka, cfg.JamPulangTutup),
+		})
+		return
+	}
+
 	pelaksanaan, err := h.pelaksanaanRepo.FindByUserID(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "not_found", Message: "Data pelaksanaan tidak ditemukan"})
 		return
 	}
 
-	today := time.Now().Format("2006-01-02")
-	if err := h.repo.CheckOut(c.Request.Context(), pelaksanaan.ID, today, req.JamKeluar); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "checkout_failed", Message: "Belum check-in hari ini"})
+	today := now.Format("2006-01-02")
+	jamKeluar := now.Format("15:04")
+
+	if err := h.repo.CheckOut(c.Request.Context(), pelaksanaan.ID, today, jamKeluar, req.Kegiatan); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "checkout_failed", Message: "Belum check-in hari ini atau sudah check-out"})
 		return
 	}
 
-	c.JSON(http.StatusOK, models.SuccessResponse{Message: "Check-out berhasil"})
+	c.JSON(http.StatusOK, models.SuccessResponse{Message: "Absen pulang berhasil"})
 }
 
 // GET /api/absensi/saya — rekap absensi peserta
@@ -97,7 +147,7 @@ func (h *AbsensiHandler) GetMy(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	pelaksanaan, err := h.pelaksanaanRepo.FindByUserID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusOK, models.SuccessResponse{Data: []interface{}{}})
+		c.JSON(http.StatusOK, models.SuccessResponse{Data: map[string]interface{}{"list": []interface{}{}, "rekap": map[string]int{}}})
 		return
 	}
 
@@ -140,7 +190,7 @@ func (h *AbsensiHandler) GetByPelaksanaan(c *gin.Context) {
 	})
 }
 
-// PATCH /api/absensi/:id/approve — pembimbing HRD setujui absensi
+// PATCH /api/absensi/:id/approve — HRD setujui absensi
 func (h *AbsensiHandler) Approve(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -189,7 +239,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
 
-	// Header
 	pdf.SetFillColor(0, 128, 0)
 	pdf.Rect(0, 0, 210, 25, "F")
 	pdf.SetTextColor(255, 255, 255)
@@ -200,7 +249,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 	pdf.SetXY(10, 14)
 	pdf.CellFormat(190, 8, "REKAP ABSENSI MAGANG", "", 0, "C", false, 0, "")
 
-	// Info peserta
 	pdf.SetTextColor(0, 0, 0)
 	pdf.SetFont("Helvetica", "B", 11)
 	pdf.SetXY(10, 32)
@@ -228,7 +276,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 		yPos += 7
 	}
 
-	// Rekap singkat
 	yPos += 5
 	pdf.SetFillColor(240, 255, 240)
 	pdf.SetDrawColor(0, 128, 0)
@@ -241,7 +288,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 	pdf.CellFormat(47, 6, fmt.Sprintf("Alpha: %d", alpha), "", 0, "C", false, 0, "")
 	yPos += 15
 
-	// Header tabel
 	pdf.SetFillColor(0, 100, 0)
 	pdf.SetTextColor(255, 255, 255)
 	pdf.SetFont("Helvetica", "B", 9)
@@ -253,7 +299,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 	}
 	yPos += 7
 
-	// Baris data
 	pdf.SetTextColor(0, 0, 0)
 	pdf.SetFont("Helvetica", "", 8)
 	for i, a := range list {
@@ -276,7 +321,7 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 		}
 		ttd := "Belum"
 		if a.TTDPembimbing {
-			ttd = "✓"
+			ttd = "V"
 		}
 		row := []string{
 			fmt.Sprintf("%d", i+1),
@@ -293,7 +338,6 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
 		}
 	}
 
-	// Tanda tangan pembimbing
 	yPos += 15
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.SetXY(120, yPos)
