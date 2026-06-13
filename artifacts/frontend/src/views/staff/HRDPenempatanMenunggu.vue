@@ -93,6 +93,10 @@
             <label class="jform-label">Divisi / Unit Kerja <span class="jform-req">*</span></label>
             <input v-model="form.divisi" type="text" class="jform-input" placeholder="contoh: IT, Produksi, Keuangan…" :disabled="modalLoading"/>
           </div>
+          <div class="jform-group">
+            <label class="jform-label">Nama Pembimbing <span class="jform-opt">(opsional)</span></label>
+            <input v-model="form.pembimbing" type="text" class="jform-input" placeholder="contoh: Budi Santoso" :disabled="modalLoading"/>
+          </div>
           <div v-if="modalError" class="jform-error">{{ modalError }}</div>
           <div v-if="modalSuccess" class="jform-success">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -138,7 +142,7 @@ const penerimaanTanpaJadwal = computed(() => {
 // modal
 const showModal    = ref(false);
 const modalTarget  = ref<Pengajuan | null>(null);
-const form         = ref({ tanggal_mulai: "", tanggal_selesai: "", divisi: "" });
+const form         = ref({ tanggal_mulai: "", tanggal_selesai: "", divisi: "", pembimbing: "" });
 const modalLoading = ref(false);
 const modalError   = ref<string | null>(null);
 const modalSuccess = ref(false);
@@ -159,7 +163,7 @@ async function fetchData() {
 
 function openJadwalModal(p: Pengajuan) {
   modalTarget.value = p;
-  form.value = { tanggal_mulai: "", tanggal_selesai: "", divisi: "" };
+  form.value = { tanggal_mulai: "", tanggal_selesai: "", divisi: "", pembimbing: "" };
   modalError.value = null; modalSuccess.value = false; showModal.value = true;
 }
 function closeModal() { showModal.value = false; modalTarget.value = null; modalError.value = null; }
@@ -172,6 +176,7 @@ async function submitJadwal() {
       tanggal_mulai:   form.value.tanggal_mulai,
       tanggal_selesai: form.value.tanggal_selesai,
       divisi:          form.value.divisi,
+      pembimbing:      form.value.pembimbing || undefined,
     });
     modalSuccess.value = true;
     const [rPelaksanaan, rPengajuan] = await Promise.all([
@@ -239,6 +244,7 @@ onMounted(fetchData);
 .jform-group { display:flex; flex-direction:column; gap:5px; }
 .jform-label { font-size:12px; font-weight:600; color:#374151; }
 .jform-req { color:#dc2626; }
+.jform-opt { color:#9ca3af; font-weight:400; }
 .jform-input { border:1px solid #e5e7eb; border-radius:9px; padding:9px 12px; font-size:13px; font-family:inherit; color:#111827; outline:none; transition:border-color 0.15s; background:#fff; }
 .jform-input:focus { border-color:#48AF4A; box-shadow:0 0 0 3px rgba(72,175,74,0.12); }
 .jform-input:disabled { background:#f9fafb; color:#9ca3af; cursor:not-allowed; }
