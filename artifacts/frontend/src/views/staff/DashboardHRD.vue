@@ -398,15 +398,6 @@
             <input v-model="jadwalForm.divisi" type="text" class="jform-input" placeholder="contoh: IT, Produksi, Keuangan…" :disabled="jadwalLoading" />
           </div>
 
-          <!-- Pembimbing -->
-          <div class="jform-group">
-            <label class="jform-label">Pembimbing <span class="jform-opt">(opsional)</span></label>
-            <select v-model="jadwalForm.pembimbing_id" class="jform-input jform-select" :disabled="jadwalLoading">
-              <option value="">— Pilih pembimbing —</option>
-              <option v-for="h in hrdList" :key="h.id" :value="h.id">{{ h.nama_lengkap }}</option>
-            </select>
-          </div>
-
           <!-- Error -->
           <div v-if="jadwalError" class="jform-error">{{ jadwalError }}</div>
 
