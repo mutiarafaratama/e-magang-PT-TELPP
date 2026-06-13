@@ -85,9 +85,6 @@
         </div>
       </template>
 
-      <!-- ── STATUS ── -->
-      <PesertaStatus v-else-if="activeTab === 'status'" />
-
       <!-- ── DOKUMEN ── -->
       <template v-else-if="activeTab === 'dokumen'">
         <div class="card">
@@ -142,7 +139,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
-import PesertaStatus from "./PesertaStatus.vue";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 
@@ -189,7 +185,6 @@ function formatTanggal(iso: string) {
 // ── Nav ────────────────────────────────────────────────────────
 const ICON = {
   home:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="2"/><polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" stroke-width="2"/></svg>`,
-  status:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   upload:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2"/><polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2"/></svg>`,
   calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>`,
   bell:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2"/></svg>`,
@@ -201,7 +196,6 @@ const navGroups = [
   {
     label: "Magang Saya",
     items: [
-      { key: "status",   label: "Status Magang",  icon: ICON.status },
       { key: "dokumen",  label: "Dokumen Saya",   icon: ICON.upload },
       { key: "absensi",  label: "Absensi Harian", icon: ICON.calendar },
     ],
