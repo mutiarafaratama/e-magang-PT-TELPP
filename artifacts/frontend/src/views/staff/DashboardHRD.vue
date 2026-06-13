@@ -205,12 +205,42 @@
       </template>
 
       <!-- ── Other tabs (peserta, absensi, penilaian, sertifikat, chat) stay as before ── -->
-      <template v-else-if="activeTab === 'peserta'">
+      <!-- ══════════════════════════════════════════════════════
+           PESERTA AKTIF — MENUNGGU PENEMPATAN
+      ══════════════════════════════════════════════════════ -->
+      <template v-else-if="activeTab === 'peserta-penempatan'">
         <div class="card">
-          <div class="card-header"><h3 class="card-title">Peserta Magang Aktif</h3></div>
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Menunggu Penempatan</h3>
+              <p class="card-subtitle">Pengajuan diterima yang belum dijadwalkan</p>
+            </div>
+          </div>
           <div class="empty-state">
-            <div class="empty-state__icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#d1d5db" stroke-width="1.5"/><circle cx="9" cy="7" r="4" stroke="#d1d5db" stroke-width="1.5"/></svg></div>
-            <p>Belum ada peserta magang aktif.</p>
+            <div class="empty-state__icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" stroke-width="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#d1d5db" stroke-width="1.5"/><line x1="8" y1="2" x2="8" y2="6" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <p>Semua pengajuan yang diterima sudah dijadwalkan.</p>
+          </div>
+        </div>
+      </template>
+
+      <!-- ══════════════════════════════════════════════════════
+           PESERTA AKTIF — SEDANG BERLANGSUNG
+      ══════════════════════════════════════════════════════ -->
+      <template v-else-if="activeTab === 'peserta-berlangsung'">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Sedang Berlangsung</h3>
+              <p class="card-subtitle">Semua peserta yang sudah memiliki jadwal magang</p>
+            </div>
+          </div>
+          <div class="empty-state">
+            <div class="empty-state__icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#d1d5db" stroke-width="1.5"/><circle cx="9" cy="7" r="4" stroke="#d1d5db" stroke-width="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/><path d="M16 3.13a4 4 0 010 7.75" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </div>
+            <p>Belum ada peserta dengan jadwal magang aktif.</p>
           </div>
         </div>
       </template>
@@ -999,7 +1029,13 @@ const navGroups = computed(() => [
     label: "Seleksi & Verifikasi",
     items: [
       { key: "verifikasi", label: "Verifikasi Berkas", icon: ICON.verify, badge: totalPending.value || undefined },
-      { key: "peserta",    label: "Peserta Aktif",     icon: ICON.users },
+      {
+        key: "peserta", label: "Peserta Aktif", icon: ICON.users,
+        children: [
+          { key: "peserta-penempatan", label: "Menunggu Penempatan", icon: "" },
+          { key: "peserta-berlangsung", label: "Sedang Berlangsung",  icon: "" },
+        ],
+      },
     ],
   },
   {
@@ -1035,6 +1071,7 @@ onMounted(() => { fetchPengajuan(); });
 .card { background: #fff; border-radius: 14px; border: 1px solid #e9f5e9; box-shadow: 0 1px 3px rgba(13,40,24,0.05); overflow: hidden; }
 .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f0faf0; gap: 12px; flex-wrap: wrap; }
 .card-title { font-size: 13.5px; font-weight: 700; color: #111827; margin: 0; }
+.card-subtitle { font-size: 12px; color: #9ca3af; margin: 2px 0 0; }
 .card-header-actions { display: flex; align-items: center; gap: 8px; }
 .card-footer { padding: 12px 20px; border-top: 1px solid #f3f4f6; text-align: center; }
 .btn-link { background: none; border: none; color: #48AF4A; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; }

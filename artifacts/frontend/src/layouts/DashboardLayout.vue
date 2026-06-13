@@ -44,18 +44,50 @@
         <template v-for="(group, gi) in navGroups" :key="gi">
           <div v-if="!collapsed && group.label" class="sidebar-nav__label">{{ group.label }}</div>
           <div v-else-if="collapsed && gi > 0" class="sidebar-nav__divider"></div>
-          <button
-            v-for="item in group.items"
-            :key="item.key"
-            class="nav-btn"
-            :class="{ 'nav-btn--active': activeTab === item.key }"
-            @click="handleNavClick(item)"
-            :title="collapsed ? item.label : ''"
-          >
-            <span class="nav-btn__icon" v-html="item.icon"></span>
-            <span v-if="!collapsed" class="nav-btn__label">{{ item.label }}</span>
-            <span v-if="!collapsed && item.badge" class="nav-btn__badge">{{ item.badge }}</span>
-          </button>
+          <template v-for="item in group.items" :key="item.key">
+            <!-- Parent item with children (expandable) -->
+            <template v-if="item.children?.length">
+              <button
+                class="nav-btn nav-btn--parent"
+                :class="{ 'nav-btn--active': isChildActive(item), 'nav-btn--expanded': expandedKeys.has(item.key) }"
+                @click="handleNavClick(item)"
+                :title="collapsed ? item.label : ''"
+              >
+                <span class="nav-btn__icon" v-html="item.icon"></span>
+                <span v-if="!collapsed" class="nav-btn__label">{{ item.label }}</span>
+                <span v-if="!collapsed && item.badge" class="nav-btn__badge">{{ item.badge }}</span>
+                <svg v-if="!collapsed" class="nav-btn__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <!-- Children -->
+              <div v-if="!collapsed && expandedKeys.has(item.key)" class="nav-children">
+                <button
+                  v-for="child in item.children"
+                  :key="child.key"
+                  class="nav-btn nav-btn--child"
+                  :class="{ 'nav-btn--active': activeTab === child.key }"
+                  @click="handleNavClick(child)"
+                >
+                  <span class="nav-btn__child-dot"></span>
+                  <span class="nav-btn__label">{{ child.label }}</span>
+                  <span v-if="child.badge" class="nav-btn__badge">{{ child.badge }}</span>
+                </button>
+              </div>
+            </template>
+            <!-- Regular item -->
+            <button
+              v-else
+              class="nav-btn"
+              :class="{ 'nav-btn--active': activeTab === item.key }"
+              @click="handleNavClick(item)"
+              :title="collapsed ? item.label : ''"
+            >
+              <span class="nav-btn__icon" v-html="item.icon"></span>
+              <span v-if="!collapsed" class="nav-btn__label">{{ item.label }}</span>
+              <span v-if="!collapsed && item.badge" class="nav-btn__badge">{{ item.badge }}</span>
+            </button>
+          </template>
         </template>
       </nav>
 
@@ -120,6 +152,7 @@ export interface NavItem {
   icon: string;
   badge?: string | number;
   route?: string;
+  children?: NavItem[];
 }
 
 export interface NavGroup {
@@ -143,20 +176,44 @@ const router = useRouter();
 const activeTab = ref(props.defaultTab ?? props.navGroups[0]?.items[0]?.key ?? "");
 const collapsed = ref(false);
 const mobileOpen = ref(false);
+const expandedKeys = ref<Set<string>>(new Set());
 
 const initials = computed(() => {
   const name = user.value?.nama_lengkap ?? "";
   return name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
 });
 
-const allItems = computed(() => props.navGroups.flatMap(g => g.items));
-const currentPageLabel = computed(() => allItems.value.find(i => i.key === activeTab.value)?.label ?? "Dashboard");
+const allItems = computed(() => props.navGroups.flatMap(g => g.items.flatMap(i => i.children ? i.children : [i])));
+const currentPageLabel = computed(() => {
+  const flat = props.navGroups.flatMap(g => g.items);
+  const parent = flat.find(i => i.children?.some(c => c.key === activeTab.value));
+  if (parent) return parent.label;
+  return flat.find(i => i.key === activeTab.value)?.label ?? allItems.value.find(i => i.key === activeTab.value)?.label ?? "Dashboard";
+});
+
+function isChildActive(item: NavItem): boolean {
+  return !!item.children?.some(c => c.key === activeTab.value);
+}
 
 function toggleCollapse() {
   collapsed.value = !collapsed.value;
 }
 
+function toggleExpand(key: string) {
+  if (expandedKeys.value.has(key)) {
+    expandedKeys.value.delete(key);
+  } else {
+    expandedKeys.value.add(key);
+  }
+  expandedKeys.value = new Set(expandedKeys.value);
+}
+
 function handleNavClick(item: NavItem) {
+  if (item.children?.length) {
+    if (collapsed.value) collapsed.value = false;
+    toggleExpand(item.key);
+    return;
+  }
   if (item.route) {
     router.push(item.route);
   } else {
@@ -402,6 +459,44 @@ defineExpose({ activeTab });
   padding: 1px 6px;
   flex-shrink: 0;
 }
+
+/* Expandable parent nav */
+.nav-btn__chevron {
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.35);
+  transition: transform 0.2s ease;
+}
+.nav-btn--expanded .nav-btn__chevron { transform: rotate(180deg); }
+.nav-btn--parent.nav-btn--active .nav-btn__chevron { color: var(--green-light); }
+
+/* Children container */
+.nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 4px 0;
+  padding-left: 14px;
+  border-left: 1.5px solid rgba(134,239,172,0.2);
+  margin-left: 18px;
+}
+
+/* Child nav item */
+.nav-btn--child {
+  padding: 7px 10px 7px 8px;
+  font-size: 12px;
+  border-radius: 7px;
+}
+.nav-btn__child-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  flex-shrink: 0;
+  margin-right: 2px;
+  transition: background 0.15s;
+}
+.nav-btn--child.nav-btn--active .nav-btn__child-dot { background: var(--green-accent); }
+.nav-btn--child:hover .nav-btn__child-dot { background: rgba(255,255,255,0.5); }
 
 /* Logout */
 .sidebar-logout {
