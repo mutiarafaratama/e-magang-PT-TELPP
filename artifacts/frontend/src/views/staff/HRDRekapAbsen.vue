@@ -62,10 +62,10 @@
               </td>
               <td class="alasan-cell">{{ item.alasan }}</td>
               <td>
-                <a v-if="item.bukti_path" :href="`/api/uploads/${item.bukti_path}`" target="_blank" class="bukti-link">
+                <button v-if="item.bukti_path" class="bukti-link" @click="lihatBukti(item.bukti_path!)">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg>
                   Lihat
-                </a>
+                </button>
                 <span v-else class="name-sub">–</span>
               </td>
               <td>
@@ -349,6 +349,35 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ── Modal Bukti Surat Sakit ───────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="buktiModal.show" class="bukti-overlay" @click.self="closeBukti">
+      <div class="bukti-box">
+        <div class="bukti-header">
+          <span class="bukti-title">Surat Sakit</span>
+          <div class="bukti-header-actions">
+            <a :href="buktiModal.url" download class="btn-aksi btn-aksi--blue" title="Download">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Download
+            </a>
+            <button class="sp-close" @click="closeBukti">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="bukti-body">
+          <img v-if="buktiModal.type === 'image'" :src="buktiModal.url" class="bukti-img" alt="Surat Sakit" />
+          <iframe v-else-if="buktiModal.type === 'pdf'" :src="buktiModal.url" class="bukti-iframe" />
+          <div v-else class="bukti-unsupported">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#9ca3af" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#9ca3af" stroke-width="1.5"/></svg>
+            <p>File tidak dapat ditampilkan di sini.</p>
+            <a :href="buktiModal.url" download class="btn-aksi btn-aksi--blue">Download File</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -419,6 +448,20 @@ const processingId    = ref<string | null>(null);
 const showTolakModal  = ref(false);
 const tolakTarget     = ref<IzinSakitItem | null>(null);
 const tolakCatatan    = ref("");
+
+// ── Bukti modal state ─────────────────────────────────────────
+const buktiModal = ref<{ show: boolean; url: string; type: 'image' | 'pdf' | 'other' }>({
+  show: false, url: "", type: "other",
+});
+function lihatBukti(path: string) {
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  const type = ["jpg","jpeg","png","gif","webp"].includes(ext) ? "image"
+             : ext === "pdf" ? "pdf" : "other";
+  buktiModal.value = { show: true, url: `/uploads/${path}`, type };
+}
+function closeBukti() {
+  buktiModal.value = { show: false, url: "", type: "other" };
+}
 
 const izinFilters = [
   { key: "pending",   label: "Menunggu" },
@@ -642,8 +685,19 @@ onMounted(() => {
 .status-badge--ok      { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
 .status-badge--tolak   { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 
-.bukti-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #2563eb; text-decoration: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; padding: 2px 8px; white-space: nowrap; }
+.bukti-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; padding: 2px 8px; white-space: nowrap; cursor: pointer; font-family: inherit; }
 .bukti-link:hover { background: #dbeafe; }
+
+/* ── Bukti Modal ── */
+.bukti-overlay { position: fixed; inset: 0; z-index: 600; background: rgba(0,0,0,.65); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.bukti-box { background: #fff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.25); display: flex; flex-direction: column; max-width: 860px; width: 100%; max-height: 90vh; overflow: hidden; }
+.bukti-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f0faf0; flex-shrink: 0; }
+.bukti-title { font-size: 14px; font-weight: 700; color: #111827; }
+.bukti-header-actions { display: flex; align-items: center; gap: 8px; }
+.bukti-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; background: #f9fafb; min-height: 300px; }
+.bukti-img { max-width: 100%; max-height: 75vh; object-fit: contain; display: block; }
+.bukti-iframe { width: 100%; height: 75vh; border: none; display: block; }
+.bukti-unsupported { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px; color: #6b7280; font-size: 13px; }
 
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 10px; text-align: center; }
 .empty-state__icon { width: 64px; height: 64px; background: #f9fafb; border-radius: 50%; display: flex; align-items: center; justify-content: center; }

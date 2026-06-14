@@ -6,6 +6,7 @@ import (
         "time"
 
         "github.com/gin-gonic/gin"
+        "github.com/telpp/emagang/internal/config"
         "github.com/telpp/emagang/internal/database"
         "github.com/telpp/emagang/internal/handler"
         "github.com/telpp/emagang/internal/middleware"
@@ -67,6 +68,9 @@ func Setup() *gin.Engine {
         landingH     := handler.NewLandingHandler(landingRepo)
         adminH       := handler.NewAdminHandler(userRepo)
         divisiH      := handler.NewDivisiHandler(divisiRepo)
+
+        // Serve uploaded files (surat sakit, dll) secara langsung
+        r.Static("/uploads", config.App.UploadDir)
 
         // ============================================================
         // HEALTH CHECK
