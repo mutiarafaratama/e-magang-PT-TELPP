@@ -233,7 +233,6 @@
             <div class="fp-doc">
               <div class="fp-doc__label">
                 Proposal Magang <span class="req">*</span>
-                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -258,7 +257,6 @@
             <div class="fp-doc">
               <div class="fp-doc__label">
                 KTP / Kartu Identitas <span class="req">*</span>
-                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -283,7 +281,6 @@
             <div class="fp-doc">
               <div class="fp-doc__label">
                 {{ isSmk ? 'Kartu Pelajar' : 'KTM (Kartu Tanda Mahasiswa)' }} <span class="req">*</span>
-                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -308,7 +305,6 @@
             <div class="fp-doc">
               <div class="fp-doc__label">
                 Pasfoto 3x4 <span class="req">*</span>
-                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -333,7 +329,6 @@
             <div class="fp-doc">
               <div class="fp-doc__label">
                 BPJS / KIS <span class="req">*</span>
-                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
