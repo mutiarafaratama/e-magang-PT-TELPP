@@ -128,12 +128,12 @@
               <div class="jam-row">
                 <div class="jam-field">
                   <label>Buka</label>
-                  <input type="time" v-model="jamForm.jam_masuk_buka" class="jam-input" />
+                  <input type="text" v-model="jamForm.jam_masuk_buka" class="jam-input" placeholder="HH:MM" maxlength="5" @input="autoFormatTime('jam_masuk_buka', $event)" />
                 </div>
                 <span class="jam-sep">–</span>
                 <div class="jam-field">
                   <label>Tutup</label>
-                  <input type="time" v-model="jamForm.jam_masuk_tutup" class="jam-input" />
+                  <input type="text" v-model="jamForm.jam_masuk_tutup" class="jam-input" placeholder="HH:MM" maxlength="5" @input="autoFormatTime('jam_masuk_tutup', $event)" />
                 </div>
               </div>
             </div>
@@ -142,12 +142,12 @@
               <div class="jam-row">
                 <div class="jam-field">
                   <label>Buka</label>
-                  <input type="time" v-model="jamForm.jam_pulang_buka" class="jam-input" />
+                  <input type="text" v-model="jamForm.jam_pulang_buka" class="jam-input" placeholder="HH:MM" maxlength="5" @input="autoFormatTime('jam_pulang_buka', $event)" />
                 </div>
                 <span class="jam-sep">–</span>
                 <div class="jam-field">
                   <label>Tutup</label>
-                  <input type="time" v-model="jamForm.jam_pulang_tutup" class="jam-input" />
+                  <input type="text" v-model="jamForm.jam_pulang_tutup" class="jam-input" placeholder="HH:MM" maxlength="5" @input="autoFormatTime('jam_pulang_tutup', $event)" />
                 </div>
               </div>
             </div>
@@ -242,8 +242,23 @@ async function fetchJam() {
   } catch { /* gunakan default */ } finally { cfgLoading.value = false; }
 }
 
+function autoFormatTime(field: keyof typeof jamForm.value, e: Event) {
+  let v = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
+  if (v.length > 4) v = v.slice(0, 4);
+  if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+  jamForm.value[field] = v;
+  (e.target as HTMLInputElement).value = v;
+}
+
 async function saveJam() {
   cfgSaving.value = true; cfgError.value = ''; cfgSuccess.value = '';
+  const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const fields = ['jam_masuk_buka', 'jam_masuk_tutup', 'jam_pulang_buka', 'jam_pulang_tutup'] as const;
+  if (fields.some(f => !timeRe.test(jamForm.value[f]))) {
+    cfgError.value = 'Format jam tidak valid. Gunakan HH:MM (contoh: 07:30, 16:00)';
+    cfgSaving.value = false;
+    return;
+  }
   try {
     await api.put('/api/admin/absensi/config', jamForm.value);
     cfgSuccess.value = 'Pengaturan jam berhasil disimpan.';
