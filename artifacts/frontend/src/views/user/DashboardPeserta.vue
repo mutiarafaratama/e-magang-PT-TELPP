@@ -249,7 +249,7 @@
         <div class="modal-box__desc">Kamu akan dicatat hadir pada pukul <strong>{{ currentTimeWIB }} WIB</strong>.</div>
         <div class="modal-box__geo">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#16a34a"/></svg>
-          Lokasi terdeteksi — verifikasi area kantor dilakukan server
+          GPS berhasil dibaca · saat konfirmasi, server akan cek apakah kamu dalam radius kantor
         </div>
         <div class="modal-box__actions">
           <button class="btn-cancel" @click="showCheckinModal = false">Batal</button>
