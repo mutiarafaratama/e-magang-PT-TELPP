@@ -215,6 +215,8 @@ type Absensi struct {
         ApprovedBy    *uuid.UUID `json:"approved_by" db:"approved_by"`
         ApprovedAt    *time.Time `json:"approved_at" db:"approved_at"`
         Catatan       *string    `json:"catatan" db:"catatan"`
+        Latitude      *float64   `json:"latitude" db:"latitude"`
+        Longitude     *float64   `json:"longitude" db:"longitude"`
         CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
@@ -224,6 +226,9 @@ type AbsensiConfig struct {
         JamMasukTutup  string     `json:"jam_masuk_tutup" db:"jam_masuk_tutup"`
         JamPulangBuka  string     `json:"jam_pulang_buka" db:"jam_pulang_buka"`
         JamPulangTutup string     `json:"jam_pulang_tutup" db:"jam_pulang_tutup"`
+        KantorLat      float64    `json:"kantor_lat" db:"kantor_lat"`
+        KantorLng      float64    `json:"kantor_lng" db:"kantor_lng"`
+        RadiusMeter    int        `json:"radius_meter" db:"radius_meter"`
         UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
         UpdatedBy      *uuid.UUID `json:"updated_by" db:"updated_by"`
 }
@@ -370,7 +375,10 @@ type SetJadwalRequest struct {
         PembimbingID   string `json:"pembimbing_id"`
 }
 
-type AbsensiCheckInRequest struct{}
+type AbsensiCheckInRequest struct {
+        Latitude  float64 `json:"latitude"`
+        Longitude float64 `json:"longitude"`
+}
 
 type AbsensiCheckOutRequest struct {
         Kegiatan string `json:"kegiatan" binding:"required"`

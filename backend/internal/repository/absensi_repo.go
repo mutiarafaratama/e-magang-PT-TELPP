@@ -18,10 +18,10 @@ func NewAbsensiRepository(db *pgxpool.Pool) *AbsensiRepository {
 
 func (r *AbsensiRepository) CheckIn(ctx context.Context, a *models.Absensi) error {
         query := `
-                INSERT INTO absensi (pelaksanaan_id, tanggal, jam_masuk, keterangan, kegiatan)
-                VALUES ($1, $2, $3, $4, $5)
+                INSERT INTO absensi (pelaksanaan_id, tanggal, jam_masuk, keterangan, kegiatan, latitude, longitude)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING id, created_at`
-        return r.db.QueryRow(ctx, query, a.PelaksanaanID, a.Tanggal, a.JamMasuk, a.Keterangan, a.Kegiatan).
+        return r.db.QueryRow(ctx, query, a.PelaksanaanID, a.Tanggal, a.JamMasuk, a.Keterangan, a.Kegiatan, a.Latitude, a.Longitude).
                 Scan(&a.ID, &a.CreatedAt)
 }
 

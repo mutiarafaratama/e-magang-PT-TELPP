@@ -127,7 +127,11 @@
             <div class="ap-title">Sesi Absen Masuk Dibuka</div>
             <div class="ap-desc">{{ cfg?.jam_masuk_buka }} – {{ cfg?.jam_masuk_tutup }} WIB</div>
             <div v-if="absensiError" class="ap-error">{{ absensiError }}</div>
-            <button class="btn-absen" @click="showCheckinModal = true">Absen Masuk Sekarang</button>
+            <div v-if="gpsError" class="ap-error">{{ gpsError }}</div>
+            <button class="btn-absen" :disabled="gpsLoading" @click="openCheckinModal">
+              <span v-if="gpsLoading" class="btn-spinner"></span>
+              {{ gpsLoading ? 'Mendapatkan lokasi...' : 'Absen Masuk Sekarang' }}
+            </button>
           </div>
 
           <!-- Menunggu jam pulang -->
@@ -242,7 +246,11 @@
     <div v-if="showCheckinModal" class="modal-backdrop" @click.self="showCheckinModal = false">
       <div class="modal-box">
         <div class="modal-box__title">Konfirmasi Absen Masuk</div>
-        <div class="modal-box__desc">Kamu akan dicatat hadir pada pukul <strong>{{ currentTimeWIB }} WIB</strong>. Lanjutkan?</div>
+        <div class="modal-box__desc">Kamu akan dicatat hadir pada pukul <strong>{{ currentTimeWIB }} WIB</strong>.</div>
+        <div class="modal-box__geo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#16a34a"/></svg>
+          Lokasi terdeteksi — verifikasi area kantor dilakukan server
+        </div>
         <div class="modal-box__actions">
           <button class="btn-cancel" @click="showCheckinModal = false">Batal</button>
           <button class="btn-confirm" @click="doCheckin" :disabled="checkingIn">{{ checkingIn ? 'Memproses...' : 'Ya, Absen Sekarang' }}</button>
@@ -262,6 +270,11 @@ const { user } = useAuth();
 const layout    = ref<InstanceType<typeof DashboardLayout> | null>(null);
 const activeTab = computed(() => layout.value?.activeTab ?? "beranda");
 const firstName = computed(() => user.value?.nama_lengkap?.split(" ")[0] ?? "");
+
+const gpsLoading = ref(false);
+const gpsError   = ref('');
+const userLat    = ref(0);
+const userLng    = ref(0);
 
 const now       = new Date();
 const todayDay  = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -392,11 +405,39 @@ async function fetchAbsensi() {
   }
 }
 
+function openCheckinModal() {
+  gpsError.value = '';
+  absensiError.value = '';
+  if (!navigator.geolocation) {
+    gpsError.value = 'Browser tidak mendukung GPS. Gunakan Chrome/Firefox versi terbaru.';
+    return;
+  }
+  gpsLoading.value = true;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLat.value = pos.coords.latitude;
+      userLng.value = pos.coords.longitude;
+      gpsLoading.value = false;
+      showCheckinModal.value = true;
+    },
+    (err) => {
+      gpsLoading.value = false;
+      if (err.code === 1)
+        gpsError.value = 'Izin lokasi ditolak. Aktifkan izin lokasi di pengaturan browser untuk absen.';
+      else if (err.code === 2)
+        gpsError.value = 'Lokasi tidak dapat dideteksi. Pastikan GPS aktif di perangkatmu.';
+      else
+        gpsError.value = 'Gagal mendapatkan lokasi. Coba lagi.';
+    },
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+}
+
 async function doCheckin() {
   checkingIn.value = true;
   absensiError.value = '';
   try {
-    await api.post('/api/absensi/checkin');
+    await api.post('/api/absensi/checkin', { latitude: userLat.value, longitude: userLng.value });
     showCheckinModal.value = false;
     showToast('Absen masuk berhasil!');
     await fetchAbsensi();
@@ -606,7 +647,8 @@ const navGroups = [
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
 .modal-box__title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 10px; }
-.modal-box__desc  { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 20px; }
+.modal-box__desc  { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 10px; }
+.modal-box__geo   { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 7px 12px; margin-bottom: 18px; }
 .modal-box__actions { display: flex; gap: 10px; justify-content: flex-end; }
 .btn-cancel  { background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
 .btn-confirm { background: #48AF4A; color: #fff; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }

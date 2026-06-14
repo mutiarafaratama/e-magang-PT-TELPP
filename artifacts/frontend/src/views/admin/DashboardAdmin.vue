@@ -151,6 +151,34 @@
                 </div>
               </div>
             </div>
+
+            <div class="jam-divider"></div>
+
+            <div class="jam-section">
+              <div class="jam-section__label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="display:inline;margin-right:5px"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#6b7280"/></svg>
+                Geofencing — Area yang Diizinkan
+              </div>
+              <div class="geo-desc">Peserta hanya dapat absen jika berada dalam radius yang ditentukan dari koordinat kantor.</div>
+              <div class="jam-row" style="flex-wrap:wrap;gap:16px">
+                <div class="jam-field">
+                  <label>Latitude Kantor</label>
+                  <input type="text" v-model="jamForm.kantor_lat" class="jam-input jam-input--wide" placeholder="-3.432194" />
+                </div>
+                <div class="jam-field">
+                  <label>Longitude Kantor</label>
+                  <input type="text" v-model="jamForm.kantor_lng" class="jam-input jam-input--wide" placeholder="104.035361" />
+                </div>
+                <div class="jam-field">
+                  <label>Radius (meter)</label>
+                  <input type="number" v-model.number="jamForm.radius_meter" class="jam-input jam-input--sm" min="100" max="50000" step="100" />
+                </div>
+              </div>
+              <div class="geo-hint">
+                💡 Cara dapat koordinat: Google Maps → klik kanan di kantor → salin angka pertama (lat) dan kedua (lng)
+              </div>
+            </div>
+
             <div v-if="cfgError" class="cfg-error">{{ cfgError }}</div>
             <div v-if="cfgSuccess" class="cfg-success">{{ cfgSuccess }}</div>
             <div class="jam-actions">
@@ -227,7 +255,11 @@ const navGroups = [
 ];
 
 // ── Jam Absensi Config ────────────────────────────────────────
-const jamForm  = ref({ jam_masuk_buka: '07:30', jam_masuk_tutup: '08:00', jam_pulang_buka: '15:00', jam_pulang_tutup: '16:00' });
+const jamForm  = ref({
+  jam_masuk_buka: '07:30', jam_masuk_tutup: '08:00',
+  jam_pulang_buka: '15:00', jam_pulang_tutup: '16:00',
+  kantor_lat: -3.432194, kantor_lng: 104.035361, radius_meter: 1500,
+});
 const cfgLoading = ref(false);
 const cfgSaving  = ref(false);
 const cfgError   = ref('');
@@ -238,7 +270,13 @@ async function fetchJam() {
   try {
     const r = await api.get('/api/absensi/config');
     const d = r.data?.data;
-    if (d) jamForm.value = { jam_masuk_buka: d.jam_masuk_buka, jam_masuk_tutup: d.jam_masuk_tutup, jam_pulang_buka: d.jam_pulang_buka, jam_pulang_tutup: d.jam_pulang_tutup };
+    if (d) jamForm.value = {
+      jam_masuk_buka: d.jam_masuk_buka, jam_masuk_tutup: d.jam_masuk_tutup,
+      jam_pulang_buka: d.jam_pulang_buka, jam_pulang_tutup: d.jam_pulang_tutup,
+      kantor_lat: d.kantor_lat ?? -3.432194,
+      kantor_lng: d.kantor_lng ?? 104.035361,
+      radius_meter: d.radius_meter ?? 1500,
+    };
   } catch { /* gunakan default */ } finally { cfgLoading.value = false; }
 }
 
@@ -253,15 +291,25 @@ function autoFormatTime(field: keyof typeof jamForm.value, e: Event) {
 async function saveJam() {
   cfgSaving.value = true; cfgError.value = ''; cfgSuccess.value = '';
   const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
-  const fields = ['jam_masuk_buka', 'jam_masuk_tutup', 'jam_pulang_buka', 'jam_pulang_tutup'] as const;
-  if (fields.some(f => !timeRe.test(jamForm.value[f]))) {
+  const timeFields = ['jam_masuk_buka', 'jam_masuk_tutup', 'jam_pulang_buka', 'jam_pulang_tutup'] as const;
+  if (timeFields.some(f => !timeRe.test(jamForm.value[f]))) {
     cfgError.value = 'Format jam tidak valid. Gunakan HH:MM (contoh: 07:30, 16:00)';
+    cfgSaving.value = false;
+    return;
+  }
+  if (!jamForm.value.kantor_lat || !jamForm.value.kantor_lng) {
+    cfgError.value = 'Koordinat kantor harus diisi untuk geofencing';
+    cfgSaving.value = false;
+    return;
+  }
+  if (jamForm.value.radius_meter < 100) {
+    cfgError.value = 'Radius minimal 100 meter';
     cfgSaving.value = false;
     return;
   }
   try {
     await api.put('/api/admin/absensi/config', jamForm.value);
-    cfgSuccess.value = 'Pengaturan jam berhasil disimpan.';
+    cfgSuccess.value = 'Pengaturan berhasil disimpan.';
     setTimeout(() => { cfgSuccess.value = ''; }, 3000);
   } catch (e: any) {
     cfgError.value = e.response?.data?.message ?? 'Gagal menyimpan';
@@ -300,6 +348,12 @@ watch(activeTab, (tab) => { if (tab === 'jamabsen') fetchJam(); });
 
 .btn-green    { background: #48AF4A; color: #fff; border: none; border-radius: 9px; padding: 10px 22px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
 .btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; white-space: nowrap; }
+
+.jam-divider { height: 1px; background: #f0faf0; margin: 4px 0; }
+.geo-desc { font-size: 12px; color: #6b7280; margin-bottom: 14px; line-height: 1.6; }
+.geo-hint { font-size: 11.5px; color: #9ca3af; margin-top: 12px; line-height: 1.6; }
+.jam-input--wide { width: 140px; }
+.jam-input--sm   { width: 100px; }
 
 @media (max-width: 700px) { .stats-row, .quick-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 420px) { .stats-row, .quick-grid { grid-template-columns: 1fr; } }
