@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS status_history (
 CREATE TABLE IF NOT EXISTS dokumen (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pengajuan_id    UUID REFERENCES pengajuan_magang(id) ON DELETE CASCADE,
-    user_id         UUID NOT NULL REFERENCES users(id),
+    user_id         UUID REFERENCES users(id),
     jenis           jenis_dokumen NOT NULL,
     nama_file       VARCHAR(255) NOT NULL,
     path_file       VARCHAR(500) NOT NULL,
