@@ -156,7 +156,11 @@ func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID)
                 if err := s.repo.SetAkunTerkirim(ctx, pengajuanID, existingUser.ID); err != nil {
                         return err
                 }
-                if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, "", suratBalasanPath); err != nil {
+                catatanHRD := ""
+                if p.CatatanHRD != nil {
+                        catatanHRD = *p.CatatanHRD
+                }
+                if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, "", catatanHRD, suratBalasanPath); err != nil {
                         fmt.Printf("[WARN] Gagal kirim email ke %s: %v\n", p.Email, err)
                 }
                 return nil
@@ -185,8 +189,12 @@ func (s *PengajuanService) KirimAkun(ctx context.Context, pengajuanID uuid.UUID)
                 return fmt.Errorf("gagal update pengajuan: %w", err)
         }
 
+        catatanHRD := ""
+        if p.CatatanHRD != nil {
+                catatanHRD = *p.CatatanHRD
+        }
         // Kirim email dengan password + surat balasan (non-fatal)
-        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, suratBalasanPath); err != nil {
+        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, catatanHRD, suratBalasanPath); err != nil {
                 fmt.Printf("[WARN] Gagal kirim email ke %s: %v\n", p.Email, err)
         }
 
@@ -258,10 +266,10 @@ func (s *PengajuanService) UpdateStatus(ctx context.Context, id uuid.UUID, statu
                         }
                 }
 
-                // Kirim email diterima + kredensial + surat balasan (non-fatal)
+                // Kirim email diterima + kredensial + catatan + surat balasan (non-fatal)
                 suratBalasanPath := s.dokumenRepo.FindSuratBalasanPath(ctx, id)
                 go func() {
-                        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, suratBalasanPath); err != nil {
+                        if err := s.emailSvc.KirimKredensial(p.Email, p.NamaLengkap, password, catatan, suratBalasanPath); err != nil {
                                 fmt.Printf("[WARN] Gagal kirim email diterima ke %s: %v\n", p.Email, err)
                         }
                 }()

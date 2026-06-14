@@ -1,104 +1,104 @@
 package service
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"os"
+        "bytes"
+        "encoding/base64"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "os"
 )
 
 type EmailService struct{}
 
 func NewEmailService() *EmailService {
-	return &EmailService{}
+        return &EmailService{}
 }
 
 type resendAttachment struct {
-	Filename string `json:"filename"`
-	Content  string `json:"content"`
+        Filename string `json:"filename"`
+        Content  string `json:"content"`
 }
 
 type resendEmailRequest struct {
-	From        string             `json:"from"`
-	To          []string           `json:"to"`
-	Subject     string             `json:"subject"`
-	Html        string             `json:"html"`
-	Attachments []resendAttachment `json:"attachments,omitempty"`
+        From        string             `json:"from"`
+        To          []string           `json:"to"`
+        Subject     string             `json:"subject"`
+        Html        string             `json:"html"`
+        Attachments []resendAttachment `json:"attachments,omitempty"`
 }
 
 func (s *EmailService) kirimViaResend(to, subject, html string, attachments []resendAttachment) error {
-	apiKey := os.Getenv("RESEND_API_KEY")
-	if apiKey == "" {
-		return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
-	}
+        apiKey := os.Getenv("RESEND_API_KEY")
+        if apiKey == "" {
+                return fmt.Errorf("RESEND_API_KEY tidak dikonfigurasi")
+        }
 
-	from := os.Getenv("RESEND_FROM_EMAIL")
-	if from == "" {
-		from = "e-Magang TELPP <onboarding@resend.dev>"
-	}
+        from := os.Getenv("RESEND_FROM_EMAIL")
+        if from == "" {
+                from = "e-Magang TELPP <onboarding@resend.dev>"
+        }
 
-	payload := resendEmailRequest{
-		From:        from,
-		To:          []string{to},
-		Subject:     subject,
-		Html:        html,
-		Attachments: attachments,
-	}
+        payload := resendEmailRequest{
+                From:        from,
+                To:          []string{to},
+                Subject:     subject,
+                Html:        html,
+                Attachments: attachments,
+        }
 
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
-	if err != nil {
-		return fmt.Errorf("gagal membuat request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "application/json")
+        body, _ := json.Marshal(payload)
+        req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
+        if err != nil {
+                return fmt.Errorf("gagal membuat request: %w", err)
+        }
+        req.Header.Set("Authorization", "Bearer "+apiKey)
+        req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("gagal mengirim email: %w", err)
-	}
-	defer resp.Body.Close()
+        resp, err := http.DefaultClient.Do(req)
+        if err != nil {
+                return fmt.Errorf("gagal mengirim email: %w", err)
+        }
+        defer resp.Body.Close()
 
-	if resp.StatusCode >= 300 {
-		return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
-	}
-	return nil
+        if resp.StatusCode >= 300 {
+                return fmt.Errorf("Resend API error: status %d", resp.StatusCode)
+        }
+        return nil
 }
 
 func frontendURL() string {
-	u := os.Getenv("FRONTEND_URL")
-	if u == "" {
-		u = "http://localhost:5000"
-	}
-	return u
+        u := os.Getenv("FRONTEND_URL")
+        if u == "" {
+                u = "http://localhost:5000"
+        }
+        return u
 }
 
 func buatLampiranSuratBalasan(pathFile string) []resendAttachment {
-	if pathFile == "" {
-		return nil
-	}
-	data, err := os.ReadFile(pathFile)
-	if err != nil {
-		return nil
-	}
-	return []resendAttachment{
-		{
-			Filename: "Surat_Balasan_Magang_TELPP.pdf",
-			Content:  base64.StdEncoding.EncodeToString(data),
-		},
-	}
+        if pathFile == "" {
+                return nil
+        }
+        data, err := os.ReadFile(pathFile)
+        if err != nil {
+                return nil
+        }
+        return []resendAttachment{
+                {
+                        Filename: "Surat_Balasan_Magang_TELPP.pdf",
+                        Content:  base64.StdEncoding.EncodeToString(data),
+                },
+        }
 }
 
 // KirimKredensial — email pemberitahuan diterima beserta kredensial login
-func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBalasanPath string) error {
-	loginURL := frontendURL() + "/login"
+func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, catatan, suratBalasanPath string) error {
+        loginURL := frontendURL() + "/login"
 
-	var credentialRows string
-	if password != "" {
-		// Akun baru — tampilkan email + password sementara
-		credentialRows = fmt.Sprintf(`
+        var credentialRows string
+        if password != "" {
+                // Akun baru — tampilkan email + password sementara
+                credentialRows = fmt.Sprintf(`
               <tr>
                 <td style="padding-bottom:12px;border-bottom:1px solid #e5e7eb;">
                   <p style="margin:0 0 2px;font-size:11px;color:#9ca3af;">Email</p>
@@ -111,9 +111,9 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
                   <p style="margin:0;font-size:24px;font-weight:800;color:#166534;letter-spacing:0.14em;font-family:'Courier New',monospace;">%s</p>
                 </td>
               </tr>`, toEmail, password)
-	} else {
-		// Akun lama — hanya tampilkan email, password tidak berubah
-		credentialRows = fmt.Sprintf(`
+        } else {
+                // Akun lama — hanya tampilkan email, password tidak berubah
+                credentialRows = fmt.Sprintf(`
               <tr>
                 <td>
                   <p style="margin:0 0 2px;font-size:11px;color:#9ca3af;">Email</p>
@@ -121,11 +121,11 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
                   <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Gunakan password akun Anda yang sudah ada.</p>
                 </td>
               </tr>`, toEmail)
-	}
+        }
 
-	var warningSection string
-	if password != "" {
-		warningSection = `
+        var warningSection string
+        if password != "" {
+                warningSection = `
   <!-- WARNING -->
   <tr>
     <td style="padding:20px 40px 0;">
@@ -139,11 +139,30 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
       </table>
     </td>
   </tr>`
-	}
+        }
 
-	var suratNote string
-	if suratBalasanPath != "" {
-		suratNote = `
+        var catatanSection string
+        if catatan != "" {
+                catatanSection = fmt.Sprintf(`
+  <!-- CATATAN HRD -->
+  <tr>
+    <td style="padding:20px 40px 0;">
+      <table width="100%%" cellpadding="0" cellspacing="0"
+             style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.1em;">Catatan dari HRD</p>
+            <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">%s</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>`, catatan)
+        }
+
+        var suratNote string
+        if suratBalasanPath != "" {
+                suratNote = `
   <tr>
     <td style="padding:16px 40px 0;">
       <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
@@ -151,9 +170,9 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
       </p>
     </td>
   </tr>`
-	}
+        }
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+        html := fmt.Sprintf(`<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -226,6 +245,7 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
 
   %s
   %s
+  %s
 
   <!-- FOOTER -->
   <tr>
@@ -241,16 +261,16 @@ func (s *EmailService) KirimKredensial(toEmail, namaLengkap, password, suratBala
 </td></tr>
 </table>
 </body>
-</html>`, namaLengkap, credentialRows, loginURL, warningSection, suratNote)
+</html>`, namaLengkap, credentialRows, loginURL, warningSection, catatanSection, suratNote)
 
-	return s.kirimViaResend(toEmail, "Akun e-Magang PT TELPP Anda Sudah Siap", html, buatLampiranSuratBalasan(suratBalasanPath))
+        return s.kirimViaResend(toEmail, "Akun e-Magang PT TELPP Anda Sudah Siap", html, buatLampiranSuratBalasan(suratBalasanPath))
 }
 
 // KirimDitolak — email pemberitahuan hasil seleksi tidak diterima
 func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan, suratBalasanPath string) error {
-	var catatanSection string
-	if catatan != "" {
-		catatanSection = fmt.Sprintf(`
+        var catatanSection string
+        if catatan != "" {
+                catatanSection = fmt.Sprintf(`
   <!-- CATATAN HRD -->
   <tr>
     <td style="padding:20px 40px 0;">
@@ -265,11 +285,11 @@ func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan, suratBalasanP
       </table>
     </td>
   </tr>`, catatan)
-	}
+        }
 
-	var suratNote string
-	if suratBalasanPath != "" {
-		suratNote = `
+        var suratNote string
+        if suratBalasanPath != "" {
+                suratNote = `
   <tr>
     <td style="padding:16px 40px 0;">
       <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">
@@ -277,9 +297,9 @@ func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan, suratBalasanP
       </p>
     </td>
   </tr>`
-	}
+        }
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+        html := fmt.Sprintf(`<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -354,5 +374,5 @@ func (s *EmailService) KirimDitolak(toEmail, namaLengkap, catatan, suratBalasanP
 </body>
 </html>`, namaLengkap, catatanSection, suratNote)
 
-	return s.kirimViaResend(toEmail, "Informasi Hasil Seleksi Magang PT TELPP", html, buatLampiranSuratBalasan(suratBalasanPath))
+        return s.kirimViaResend(toEmail, "Informasi Hasil Seleksi Magang PT TELPP", html, buatLampiranSuratBalasan(suratBalasanPath))
 }
