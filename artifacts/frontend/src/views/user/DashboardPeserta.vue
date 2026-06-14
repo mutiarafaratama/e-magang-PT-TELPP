@@ -239,6 +239,104 @@
         </div>
       </template>
 
+      <!-- ── PROFIL ── -->
+      <template v-else-if="activeTab === 'profil'">
+
+        <!-- Hero -->
+        <div class="profil-hero">
+          <div class="profil-hero__av">{{ profilInitials }}</div>
+          <div class="profil-hero__info">
+            <div class="profil-hero__name">{{ user?.nama_lengkap }}</div>
+            <div class="profil-hero__chips">
+              <span class="profil-chip profil-chip--role">Peserta Magang</span>
+              <span :class="['profil-chip', profileData?.is_active !== false ? 'profil-chip--ok' : 'profil-chip--off']">
+                {{ profileData?.is_active !== false ? 'Aktif' : 'Tidak Aktif' }}
+              </span>
+            </div>
+          </div>
+          <button class="btn-ubah-pw" @click="showPasswordModal = true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Ubah Password
+          </button>
+        </div>
+
+        <!-- Grid Info -->
+        <div class="profil-cols">
+
+          <!-- Informasi Akun -->
+          <div class="profil-card">
+            <div class="profil-card__head">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="#48AF4A" stroke-width="2"/><circle cx="12" cy="7" r="4" stroke="#48AF4A" stroke-width="2"/></svg>
+              Informasi Akun
+            </div>
+            <div class="profil-field-list">
+              <div class="profil-field">
+                <span class="profil-field__label">Nama Lengkap</span>
+                <span class="profil-field__value">{{ profileData?.nama_lengkap ?? user?.nama_lengkap ?? '—' }}</span>
+              </div>
+              <div class="profil-field">
+                <span class="profil-field__label">Email</span>
+                <span class="profil-field__value">{{ profileData?.email ?? user?.email ?? '—' }}</span>
+              </div>
+              <div class="profil-field">
+                <span class="profil-field__label">Status Akun</span>
+                <span :class="['profil-status-badge', profileData?.is_active !== false ? 'profil-status-badge--ok' : 'profil-status-badge--off']">
+                  {{ profileData?.is_active !== false ? 'Aktif' : 'Tidak Aktif' }}
+                </span>
+              </div>
+              <div class="profil-field">
+                <span class="profil-field__label">Bergabung Sejak</span>
+                <span class="profil-field__value">{{ profileData?.created_at ? formatTanggal(profileData.created_at) : '—' }}</span>
+              </div>
+            </div>
+            <div v-if="profileLoading" class="profil-skeleton">
+              <div class="profil-skeleton__bar"></div><div class="profil-skeleton__bar profil-skeleton__bar--short"></div>
+            </div>
+          </div>
+
+          <!-- Informasi Magang -->
+          <div class="profil-card">
+            <div class="profil-card__head">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z" stroke="#48AF4A" stroke-width="2"/><path d="M6 12v5c3.33 1.67 8.67 1.67 12 0v-5" stroke="#48AF4A" stroke-width="2"/></svg>
+              Informasi Magang
+            </div>
+            <template v-if="pengajuanSaya">
+              <div class="profil-field-list">
+                <div class="profil-field">
+                  <span class="profil-field__label">Asal Institusi</span>
+                  <span class="profil-field__value">{{ pengajuanSaya.asal_institusi ?? '—' }}</span>
+                </div>
+                <div class="profil-field">
+                  <span class="profil-field__label">Jurusan / Bidang</span>
+                  <span class="profil-field__value">{{ pengajuanSaya.jurusan ?? '—' }}</span>
+                </div>
+                <div class="profil-field">
+                  <span class="profil-field__label">Kategori Magang</span>
+                  <span class="profil-field__value">{{ labelKategoriMagang(pengajuanSaya.kategori_magang) }}</span>
+                </div>
+                <div class="profil-field">
+                  <span class="profil-field__label">Status Pengajuan</span>
+                  <span :class="['profil-pj-badge', `profil-pj-badge--${pengajuanSaya.status}`]">
+                    {{ statusPengajuanLabel }}
+                  </span>
+                </div>
+                <div class="profil-field">
+                  <span class="profil-field__label">Tanggal Pengajuan</span>
+                  <span class="profil-field__value">{{ formatTanggal(pengajuanSaya.created_at) }}</span>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="profil-empty">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#d1d5db" stroke-width="1.5"/><polyline points="14 2 14 8 20 8" stroke="#d1d5db" stroke-width="1.5"/></svg>
+                <p>Belum ada pengajuan magang</p>
+              </div>
+            </template>
+          </div>
+
+        </div>
+      </template>
+
     </template>
   </DashboardLayout>
 
@@ -257,6 +355,41 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Ubah Password -->
+    <div v-if="showPasswordModal" class="modal-backdrop" @click.self="closePasswordModal">
+      <div class="modal-box modal-pw">
+        <div class="modal-pw__head">
+          <div class="modal-pw__title">Ubah Password</div>
+          <button class="modal-pw__close" @click="closePasswordModal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="pw-form">
+          <div class="pw-field">
+            <label class="pw-label">Password Lama <span class="ap-required">*</span></label>
+            <input v-model="pwLama" type="password" class="pw-input" placeholder="Masukkan password saat ini" autocomplete="current-password" />
+          </div>
+          <div class="pw-field">
+            <label class="pw-label">Password Baru <span class="ap-required">*</span></label>
+            <input v-model="pwBaru" type="password" class="pw-input" placeholder="Min 8 karakter" autocomplete="new-password" />
+            <span class="pw-hint">Min 8 karakter · harus ada huruf, angka, dan karakter spesial (!@#$%^&*...)</span>
+          </div>
+          <div class="pw-field">
+            <label class="pw-label">Konfirmasi Password Baru <span class="ap-required">*</span></label>
+            <input v-model="pwKonfirmasi" type="password" class="pw-input" placeholder="Ulangi password baru" autocomplete="new-password" @keyup.enter="changePassword" />
+          </div>
+          <div v-if="pwError"   class="pw-alert pw-alert--err">{{ pwError }}</div>
+          <div v-if="pwSuccess" class="pw-alert pw-alert--ok">{{ pwSuccess }}</div>
+        </div>
+        <div class="modal-box__actions" style="margin-top:0">
+          <button class="btn-cancel" @click="closePasswordModal">Batal</button>
+          <button class="btn-confirm" @click="changePassword" :disabled="pwLoading">
+            {{ pwLoading ? 'Menyimpan...' : 'Simpan Password' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </Teleport>
 </template>
 
@@ -270,6 +403,81 @@ const { user } = useAuth();
 const layout    = ref<InstanceType<typeof DashboardLayout> | null>(null);
 const activeTab = computed(() => layout.value?.activeTab ?? "beranda");
 const firstName = computed(() => user.value?.nama_lengkap?.split(" ")[0] ?? "");
+
+const profilInitials = computed(() => {
+  const name = user.value?.nama_lengkap ?? "";
+  return name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() || "?";
+});
+
+// ── Profil & Ubah Password ──────────────────────────────────
+const profileData      = ref<any>(null);
+const profileLoading   = ref(false);
+const showPasswordModal = ref(false);
+const pwLama           = ref("");
+const pwBaru           = ref("");
+const pwKonfirmasi     = ref("");
+const pwLoading        = ref(false);
+const pwError          = ref("");
+const pwSuccess        = ref("");
+
+function labelKategoriMagang(k: string) {
+  const m: Record<string, string> = { smk: "SMK", d3_s1_s2: "D3 / S1 / S2", penelitian: "Penelitian" };
+  return m[k] ?? k;
+}
+
+async function fetchProfile() {
+  if (profileData.value) return;
+  profileLoading.value = true;
+  try {
+    const r = await api.get("/api/auth/me");
+    profileData.value = r.data?.data;
+  } catch { /* silent */ } finally {
+    profileLoading.value = false;
+  }
+}
+
+function validateNewPassword(s: string): boolean {
+  if (s.length < 8) return false;
+  const special = "!@#$%^&*()_+=.,><?/";
+  let hasLetter = false, hasDigit = false, hasSpecial = false;
+  for (const c of s) {
+    if (/[a-zA-Z]/.test(c)) hasLetter = true;
+    else if (/[0-9]/.test(c)) hasDigit = true;
+    else if (special.includes(c)) hasSpecial = true;
+  }
+  return hasLetter && hasDigit && hasSpecial;
+}
+
+async function changePassword() {
+  pwError.value   = "";
+  pwSuccess.value = "";
+  if (!pwLama.value || !pwBaru.value || !pwKonfirmasi.value) {
+    pwError.value = "Semua field wajib diisi"; return;
+  }
+  if (pwBaru.value !== pwKonfirmasi.value) {
+    pwError.value = "Konfirmasi password baru tidak cocok"; return;
+  }
+  if (!validateNewPassword(pwBaru.value)) {
+    pwError.value = "Password baru harus min 8 karakter, mengandung huruf, angka, dan karakter spesial"; return;
+  }
+  pwLoading.value = true;
+  try {
+    await api.post("/api/auth/change-password", { old_password: pwLama.value, new_password: pwBaru.value });
+    pwSuccess.value = "Password berhasil diubah!";
+    pwLama.value = ""; pwBaru.value = ""; pwKonfirmasi.value = "";
+    setTimeout(() => { showPasswordModal.value = false; pwSuccess.value = ""; }, 2000);
+  } catch (e: any) {
+    pwError.value = e.response?.data?.message ?? "Gagal mengubah password";
+  } finally {
+    pwLoading.value = false;
+  }
+}
+
+function closePasswordModal() {
+  showPasswordModal.value = false;
+  pwLama.value = ""; pwBaru.value = ""; pwKonfirmasi.value = "";
+  pwError.value = ""; pwSuccess.value = "";
+}
 
 const gpsLoading    = ref(false);
 const gpsError      = ref('');
@@ -501,6 +709,7 @@ function formatTanggalShort(iso: string) {
 
 watch(activeTab, (tab) => {
   if (tab === 'absensi') fetchAbsensi();
+  if (tab === 'profil')  fetchProfile();
 });
 
 onMounted(() => {
@@ -532,6 +741,7 @@ const ICON = {
   calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>`,
   bell:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="2"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="2"/></svg>`,
   chat:     `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="2"/></svg>`,
+  profil:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>`,
 };
 
 const navGroups = [
@@ -548,6 +758,12 @@ const navGroups = [
     items: [
       { key: "notifikasi", label: "Notifikasi",    icon: ICON.bell },
       { key: "chat",       label: "Chat Helpdesk", icon: ICON.chat },
+    ],
+  },
+  {
+    label: "Akun",
+    items: [
+      { key: "profil", label: "Profil Saya", icon: ICON.profil },
     ],
   },
 ];
@@ -685,5 +901,97 @@ const navGroups = [
 @media (max-width: 600px) {
   .rekap-row { grid-template-columns: 1fr 1fr; }
   .abs-table th:nth-child(5), .abs-table td:nth-child(5) { display: none; }
+}
+
+/* ── Profil ─────────────────────────────────── */
+.profil-hero {
+  background: linear-gradient(135deg, #0d2818 0%, #1a5c20 100%);
+  border-radius: 14px; padding: 24px 28px; margin-bottom: 0;
+  display: flex; align-items: center; gap: 18px;
+}
+.profil-hero__av {
+  width: 62px; height: 62px; border-radius: 16px; flex-shrink: 0;
+  background: rgba(134,239,172,0.2); border: 2px solid rgba(134,239,172,0.4);
+  color: #86efac; font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.profil-hero__info { flex: 1; min-width: 0; }
+.profil-hero__name { font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profil-hero__chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.profil-chip { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+.profil-chip--role { background: rgba(255,255,255,0.12); color: #d1fae5; }
+.profil-chip--ok   { background: rgba(134,239,172,0.2); color: #86efac; border: 1px solid rgba(134,239,172,0.4); }
+.profil-chip--off  { background: rgba(239,68,68,0.2);   color: #fca5a5;  border: 1px solid rgba(239,68,68,0.4); }
+.btn-ubah-pw {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: rgba(255,255,255,0.1); color: #d1fae5; border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 9px; padding: 9px 16px; font-size: 12.5px; font-weight: 600;
+  font-family: "Poppins", sans-serif; cursor: pointer; transition: background .15s;
+}
+.btn-ubah-pw:hover { background: rgba(255,255,255,0.18); }
+
+.profil-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.profil-card {
+  background: #fff; border-radius: 14px; border: 1px solid #e9f5e9;
+  box-shadow: 0 1px 3px rgba(13,40,24,0.05); overflow: hidden;
+}
+.profil-card__head {
+  display: flex; align-items: center; gap: 7px; padding: 14px 20px;
+  font-size: 12.5px; font-weight: 700; color: #111827;
+  border-bottom: 1px solid #f0faf0; background: #fafffe;
+}
+.profil-field-list { padding: 6px 20px 12px; }
+.profil-field {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid #f9fafb;
+}
+.profil-field:last-child { border-bottom: none; }
+.profil-field__label { font-size: 12px; color: #9ca3af; font-weight: 500; flex-shrink: 0; padding-top: 2px; }
+.profil-field__value { font-size: 13px; color: #111827; font-weight: 600; text-align: right; word-break: break-word; }
+.profil-status-badge { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 100px; }
+.profil-status-badge--ok  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.profil-status-badge--off { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.profil-pj-badge { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 100px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.profil-pj-badge--diterima   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.profil-pj-badge--ditolak    { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.profil-pj-badge--diproses   { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.profil-pj-badge--diajukan   { background: #fefce8; color: #92400e; border-color: #fde68a; }
+.profil-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px; text-align: center; }
+.profil-empty p { font-size: 13px; color: #9ca3af; margin: 0; }
+.profil-skeleton { padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+.profil-skeleton__bar { height: 12px; background: #f0f0f0; border-radius: 6px; animation: shimmer 1.2s infinite; }
+.profil-skeleton__bar--short { width: 60%; }
+@keyframes shimmer { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Password Modal ──────────────────────────── */
+.modal-pw { max-width: 420px; padding: 0; overflow: hidden; }
+.modal-pw__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px; border-bottom: 1px solid #f0faf0;
+}
+.modal-pw__title { font-size: 15px; font-weight: 700; color: #111827; }
+.modal-pw__close {
+  background: none; border: none; cursor: pointer; color: #9ca3af;
+  display: flex; align-items: center; padding: 2px;
+}
+.modal-pw__close:hover { color: #374151; }
+.pw-form { padding: 18px 22px 14px; display: flex; flex-direction: column; gap: 14px; }
+.pw-field { display: flex; flex-direction: column; gap: 5px; }
+.pw-label { font-size: 12px; font-weight: 600; color: #374151; }
+.pw-input {
+  border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px;
+  font-size: 13px; font-family: "Poppins", sans-serif; outline: none; transition: border-color .15s;
+}
+.pw-input:focus { border-color: #48AF4A; }
+.pw-hint { font-size: 11px; color: #9ca3af; line-height: 1.5; }
+.pw-alert { font-size: 12.5px; padding: 9px 12px; border-radius: 8px; font-weight: 500; }
+.pw-alert--err { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.pw-alert--ok  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.modal-pw .modal-box__actions { padding: 14px 22px 20px; border-top: 1px solid #f0faf0; }
+
+@media (max-width: 700px) {
+  .profil-cols { grid-template-columns: 1fr; }
+  .profil-hero { flex-wrap: wrap; }
+  .btn-ubah-pw { width: 100%; justify-content: center; }
 }
 </style>

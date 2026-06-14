@@ -31,7 +31,7 @@
       </div>
 
       <!-- User Card -->
-      <div class="sidebar-user">
+      <div class="sidebar-user" @click="goToProfile" style="cursor:pointer" title="Profil Saya">
         <div class="sidebar-user__avatar">{{ initials }}</div>
         <div v-if="!collapsed" class="sidebar-user__info">
           <div class="sidebar-user__name">{{ user?.nama_lengkap }}</div>
@@ -129,7 +129,7 @@
             <span class="topbar-role-chip__dot"></span>
             {{ roleName }}
           </div>
-          <div class="topbar-avatar" :title="user?.nama_lengkap">{{ initials }}</div>
+          <div class="topbar-avatar" :title="user?.nama_lengkap" @click="goToProfile" style="cursor:pointer">{{ initials }}</div>
         </div>
       </header>
 
@@ -221,6 +221,12 @@ function handleNavClick(item: NavItem) {
     mobileOpen.value = false;
     emit("tab-change", item.key);
   }
+}
+
+function goToProfile() {
+  activeTab.value = "profil";
+  mobileOpen.value = false;
+  emit("tab-change", "profil");
 }
 
 defineExpose({ activeTab });
