@@ -9,7 +9,7 @@ const router = Router();
 // ── PESERTA: Riwayat pengajuan saya ─────────────────────────
 // NOTE: /saya harus didaftarkan sebelum /:id agar tidak tertukar
 router.get("/izin-sakit/saya", requireAuth, requireRole("peserta"), async (req: AuthRequest, res: Response): Promise<void> => {
-  const userId = req.user!.id;
+  const userId = req.user!.user_id;
   try {
     const r = await pool.query(
       `SELECT isr.id, isr.tanggal, isr.jenis, isr.alasan, isr.status, isr.catatan_hrd, isr.created_at
@@ -28,7 +28,7 @@ router.get("/izin-sakit/saya", requireAuth, requireRole("peserta"), async (req: 
 
 // ── PESERTA: Ajukan izin/sakit ────────────────────────────────
 router.post("/izin-sakit", requireAuth, requireRole("peserta"), async (req: AuthRequest, res: Response): Promise<void> => {
-  const userId = req.user!.id;
+  const userId = req.user!.user_id;
   const { tanggal, jenis, alasan } = req.body as { tanggal: string; jenis: string; alasan: string };
 
   if (!tanggal || !jenis || !alasan?.trim()) {
@@ -106,7 +106,7 @@ router.get("/izin-sakit", requireAuth, requireRole("hrd", "admin"), async (req: 
 // ── HRD: Setujui pengajuan ────────────────────────────────────
 router.patch("/izin-sakit/:id/approve", requireAuth, requireRole("hrd", "admin"), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const hrdId = req.user!.id;
+  const hrdId = req.user!.user_id;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -156,7 +156,7 @@ router.patch("/izin-sakit/:id/approve", requireAuth, requireRole("hrd", "admin")
 // ── HRD: Tolak pengajuan ──────────────────────────────────────
 router.patch("/izin-sakit/:id/tolak", requireAuth, requireRole("hrd", "admin"), async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
-  const hrdId = req.user!.id;
+  const hrdId = req.user!.user_id;
   const { catatan_hrd } = req.body as { catatan_hrd?: string };
 
   try {
