@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS periode_magang (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS pengajuan_magang (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id         UUID REFERENCES users(id) ON DELETE CASCADE,
     nama_lengkap    VARCHAR(255) NOT NULL,
     tempat_lahir    VARCHAR(100) NOT NULL,
     tanggal_lahir   DATE NOT NULL,
