@@ -39,14 +39,15 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- USERS & AUTH
 -- ============================================================
 CREATE TABLE IF NOT EXISTS users (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nama_lengkap    VARCHAR(255) NOT NULL,
-    email           VARCHAR(255) UNIQUE NOT NULL,
-    password_hash   VARCHAR(255) NOT NULL,
-    role            user_role NOT NULL DEFAULT 'peserta',
-    is_active       BOOLEAN DEFAULT TRUE,
-    created_at      TIMESTAMPTZ DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ DEFAULT NOW()
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nama_lengkap     VARCHAR(255) NOT NULL,
+    email            VARCHAR(255) UNIQUE NOT NULL,
+    password_hash    VARCHAR(255) NOT NULL,
+    role             user_role NOT NULL DEFAULT 'peserta',
+    is_active        BOOLEAN DEFAULT TRUE,
+    password_changed BOOLEAN DEFAULT FALSE,
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -232,6 +233,33 @@ CREATE TABLE IF NOT EXISTS faq (
 );
 
 -- ============================================================
+-- DIVISI
+-- ============================================================
+CREATE TABLE IF NOT EXISTS divisi (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nama       VARCHAR(255) NOT NULL,
+    is_active  BOOLEAN DEFAULT TRUE,
+    urutan     INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- KONFIGURASI ABSENSI (singleton, selalu id=1)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS absensi_config (
+    id               SERIAL PRIMARY KEY,
+    jam_masuk_buka   TIME NOT NULL DEFAULT '07:00',
+    jam_masuk_tutup  TIME NOT NULL DEFAULT '09:00',
+    jam_pulang_buka  TIME NOT NULL DEFAULT '16:00',
+    jam_pulang_tutup TIME NOT NULL DEFAULT '18:00',
+    kantor_lat       DOUBLE PRECISION,
+    kantor_lng       DOUBLE PRECISION,
+    radius_meter     INTEGER DEFAULT 1500,
+    updated_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_by       UUID REFERENCES users(id)
+);
+
+-- ============================================================
 -- SEED DATA (upsert — aman dijalankan ulang)
 -- ============================================================
 
@@ -277,4 +305,19 @@ INSERT INTO faq (pertanyaan, jawaban, urutan) VALUES
   ('Apakah peserta magang mendapat uang saku?', 'Informasi mengenai uang saku dapat ditanyakan langsung kepada HRD saat proses penerimaan.', 4),
   ('Divisi apa saja yang menerima peserta magang?', 'Tersedia berbagai divisi seperti produksi, teknik, IT, keuangan, HRD, dan lingkungan. Penempatan disesuaikan dengan latar belakang pendidikan.', 5),
   ('Bagaimana format laporan magang?', 'Format laporan akan diberikan oleh pembimbing magang. Laporan dikumpulkan dalam format PDF maksimal 1 minggu setelah masa magang berakhir.', 6)
+ON CONFLICT DO NOTHING;
+
+-- Seed default konfigurasi absensi
+INSERT INTO absensi_config (jam_masuk_buka, jam_masuk_tutup, jam_pulang_buka, jam_pulang_tutup)
+VALUES ('07:00', '09:00', '16:00', '18:00')
+ON CONFLICT DO NOTHING;
+
+-- Seed divisi
+INSERT INTO divisi (nama, urutan) VALUES
+  ('IT & Sistem Informasi', 1),
+  ('Produksi', 2),
+  ('Teknik', 3),
+  ('Keuangan & Akuntansi', 4),
+  ('HRD & Umum', 5),
+  ('Lingkungan & K3', 6)
 ON CONFLICT DO NOTHING;
