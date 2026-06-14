@@ -229,10 +229,10 @@
           </div>
 
           <div class="fp-doc-list">
-            <!-- Proposal Magang -->
+            <!-- 1. Proposal Magang / Penelitian -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                Proposal Magang <span class="req">*</span>
+                {{ labelProposal }} <span class="req">*</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -253,7 +253,31 @@
               <input ref="pick_proposal_magang" type="file" accept=".pdf,.doc,.docx" style="display:none" @change="onFilePick('proposal_magang', $event)" />
             </div>
 
-            <!-- KTP -->
+            <!-- 2. Surat Pengantar -->
+            <div class="fp-doc">
+              <div class="fp-doc__label">
+                {{ labelSuratPengantar }} <span class="req">*</span>
+              </div>
+              <div
+                class="fp-dropzone"
+                :class="{ 'fp-dropzone--done': dokumenFiles.surat_pengantar }"
+                @click="triggerPick('surat_pengantar')"
+              >
+                <template v-if="!dokumenFiles.surat_pengantar">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="fp-dropzone__icon"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  <span class="fp-dropzone__text">Klik atau drag file ke sini</span>
+                  <span class="fp-dropzone__hint">PDF atau Word, maks 10 MB</span>
+                </template>
+                <template v-else>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span class="fp-dropzone__filename">{{ dokumenFiles.surat_pengantar.name }}</span>
+                  <button class="fp-dropzone__remove" @click.stop="removeFile('surat_pengantar')" type="button">Hapus</button>
+                </template>
+              </div>
+              <input ref="pick_surat_pengantar" type="file" accept=".pdf,.doc,.docx" style="display:none" @change="onFilePick('surat_pengantar', $event)" />
+            </div>
+
+            <!-- 3. KTP -->
             <div class="fp-doc">
               <div class="fp-doc__label">
                 KTP / Kartu Identitas <span class="req">*</span>
@@ -277,10 +301,12 @@
               <input ref="pick_ktp" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none" @change="onFilePick('ktp', $event)" />
             </div>
 
-            <!-- KTM / Kartu Pelajar -->
+            <!-- 4. KTM / Kartu Pelajar (wajib SMK & PT, opsional lainnya) -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                {{ isSmk ? 'Kartu Pelajar' : 'KTM (Kartu Tanda Mahasiswa)' }} <span class="req">*</span>
+                {{ labelKtm }}
+                <span v-if="isKtmRequired" class="req">*</span>
+                <span v-else class="fp-badge fp-badge--optional">Opsional</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -301,7 +327,7 @@
               <input ref="pick_ktm" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none" @change="onFilePick('ktm', $event)" />
             </div>
 
-            <!-- Pasfoto -->
+            <!-- 5. Pasfoto -->
             <div class="fp-doc">
               <div class="fp-doc__label">
                 Pasfoto 3x4 <span class="req">*</span>
@@ -325,7 +351,7 @@
               <input ref="pick_pasfoto" type="file" accept=".jpg,.jpeg,.png" style="display:none" @change="onFilePick('pasfoto', $event)" />
             </div>
 
-            <!-- BPJS / KIS -->
+            <!-- 6. BPJS / KIS -->
             <div class="fp-doc">
               <div class="fp-doc__label">
                 BPJS / KIS <span class="req">*</span>
@@ -388,8 +414,11 @@
             <div class="fp-review-docs">
               <div v-for="d in docsReviewList" :key="d.jenis" class="fp-review-doc">
                 <svg v-if="d.done" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#16a34a" stroke-width="2"/></svg>
-                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>
-                <span :class="d.done ? 'fp-review-doc--ok' : 'fp-review-doc--miss'">{{ d.label }}</span>
+                <svg v-else-if="d.required" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/></svg>
+                <span :class="d.done ? 'fp-review-doc--ok' : d.required ? 'fp-review-doc--miss' : 'fp-review-doc--skip'">
+                  {{ d.label }}{{ !d.required && !d.done ? ' (opsional)' : '' }}
+                </span>
               </div>
             </div>
           </div>
@@ -469,6 +498,7 @@ const akademis = reactive({
 
 const dokumenFiles = reactive<Record<string, File | null>>({
   proposal_magang: null,
+  surat_pengantar: null,
   ktp: null,
   ktm: null,
   pasfoto: null,
@@ -540,6 +570,7 @@ function onKategoriChange() {
 
 // Refs untuk hidden file inputs
 const pick_proposal_magang = ref<HTMLInputElement | null>(null);
+const pick_surat_pengantar  = ref<HTMLInputElement | null>(null);
 const pick_ktp              = ref<HTMLInputElement | null>(null);
 const pick_ktm              = ref<HTMLInputElement | null>(null);
 const pick_pasfoto          = ref<HTMLInputElement | null>(null);
@@ -548,6 +579,7 @@ const pick_bpjs_kis         = ref<HTMLInputElement | null>(null);
 function triggerPick(jenis: string) {
   const refs: Record<string, any> = {
     proposal_magang: pick_proposal_magang,
+    surat_pengantar: pick_surat_pengantar,
     ktp: pick_ktp,
     ktm: pick_ktm,
     pasfoto: pick_pasfoto,
@@ -566,13 +598,29 @@ function removeFile(jenis: string) {
   dokumenFiles[jenis] = null;
 }
 
-// Semua dokumen wajib
+// KTM wajib hanya untuk SMK dan PT (D3/S1/S2)
+const isKtmRequired = computed(() => isSmk.value || isPT.value);
+
+// Label dinamis dokumen
+const labelProposal = computed(() =>
+  isPenelitian.value ? "Proposal Penelitian" : "Proposal Magang"
+);
+const labelSuratPengantar = computed(() => {
+  if (isSmk.value) return "Surat Pengantar dari Sekolah";
+  if (isPT.value)  return "Surat Pengantar dari Universitas";
+  return "Surat Pengantar dari Institusi";
+});
+const labelKtm = computed(() =>
+  isSmk.value ? "Kartu Pelajar" : "KTM (Kartu Tanda Mahasiswa)"
+);
+
 const docsReviewList = computed(() => [
-  { jenis: "proposal_magang", label: "Proposal Magang",                                        done: !!dokumenFiles.proposal_magang },
-  { jenis: "ktp",             label: "KTP / Kartu Identitas",                                  done: !!dokumenFiles.ktp },
-  { jenis: "ktm",             label: isSmk.value ? "Kartu Pelajar" : "KTM",                   done: !!dokumenFiles.ktm },
-  { jenis: "pasfoto",         label: "Pasfoto 3x4",                                            done: !!dokumenFiles.pasfoto },
-  { jenis: "bpjs_kis",        label: "BPJS / KIS",                                             done: !!dokumenFiles.bpjs_kis },
+  { jenis: "proposal_magang", label: labelProposal.value,       required: true,                done: !!dokumenFiles.proposal_magang },
+  { jenis: "surat_pengantar", label: labelSuratPengantar.value, required: true,                done: !!dokumenFiles.surat_pengantar },
+  { jenis: "ktp",             label: "KTP / Kartu Identitas",   required: true,                done: !!dokumenFiles.ktp },
+  { jenis: "ktm",             label: labelKtm.value,            required: isKtmRequired.value, done: !!dokumenFiles.ktm },
+  { jenis: "pasfoto",         label: "Pasfoto 3x4",             required: true,                done: !!dokumenFiles.pasfoto },
+  { jenis: "bpjs_kis",        label: "BPJS / KIS",              required: true,                done: !!dokumenFiles.bpjs_kis },
 ]);
 
 function formatDate(d: string) {
@@ -623,9 +671,10 @@ function validateStep1(): string | null {
 }
 
 function validateStep2(): string | null {
-  if (!dokumenFiles.proposal_magang) return "Proposal Magang wajib diupload";
+  if (!dokumenFiles.proposal_magang) return `${labelProposal.value} wajib diupload`;
+  if (!dokumenFiles.surat_pengantar) return `${labelSuratPengantar.value} wajib diupload`;
   if (!dokumenFiles.ktp)             return "KTP / Kartu Identitas wajib diupload";
-  if (!dokumenFiles.ktm)             return isSmk.value ? "Kartu Pelajar wajib diupload" : "KTM wajib diupload";
+  if (isKtmRequired.value && !dokumenFiles.ktm) return `${labelKtm.value} wajib diupload`;
   if (!dokumenFiles.pasfoto)         return "Pasfoto wajib diupload";
   if (!dokumenFiles.bpjs_kis)        return "BPJS / KIS wajib diupload";
   return null;
@@ -916,6 +965,7 @@ async function submitForm() {
 }
 .fp-review-doc--ok   { color: #16a34a; }
 .fp-review-doc--miss { color: #dc2626; }
+.fp-review-doc--skip { color: #9ca3af; }
 
 /* ── progress ── */
 .fp-progress { margin: 16px 0 4px; }

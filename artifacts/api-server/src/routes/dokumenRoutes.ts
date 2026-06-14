@@ -24,7 +24,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-const VALID_JENIS = ["proposal_magang", "ktp", "ktm", "pasfoto", "bpjs_kis", "surat_balasan", "laporan_magang", "sertifikat"];
+const VALID_JENIS = ["proposal_magang", "surat_pengantar", "ktp", "ktm", "pasfoto", "bpjs_kis", "surat_balasan", "laporan_magang", "sertifikat"];
 
 const router = Router();
 

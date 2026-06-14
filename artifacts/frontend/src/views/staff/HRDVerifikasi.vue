@@ -600,10 +600,10 @@ function formatKategori(k: string) {
 }
 function formatJK(jk: string) { return jk === "l" ? "Laki-laki" : jk === "p" ? "Perempuan" : jk; }
 function formatJenisDok(j: string) {
-  return ({ proposal_magang:"Proposal", ktp:"KTP", ktm:"KTM", pasfoto:"Pas Foto", bpjs_kis:"BPJS/KIS", surat_balasan:"Surat Balasan", laporan_magang:"Laporan", sertifikat:"Sertifikat" } as Record<string,string>)[j] ?? j;
+  return ({ proposal_magang:"Proposal", surat_pengantar:"Surat Pengantar", ktp:"KTP", ktm:"KTM", pasfoto:"Pas Foto", bpjs_kis:"BPJS/KIS", surat_balasan:"Surat Balasan", laporan_magang:"Laporan", sertifikat:"Sertifikat" } as Record<string,string>)[j] ?? j;
 }
 function docTypeColor(jenis: string) {
-  return ({ proposal_magang:"red", ktp:"blue", ktm:"blue", pasfoto:"purple", bpjs_kis:"green", surat_balasan:"orange", laporan_magang:"indigo", sertifikat:"gold" } as Record<string,string>)[jenis] ?? "gray";
+  return ({ proposal_magang:"red", surat_pengantar:"teal", ktp:"blue", ktm:"blue", pasfoto:"purple", bpjs_kis:"green", surat_balasan:"orange", laporan_magang:"indigo", sertifikat:"gold" } as Record<string,string>)[jenis] ?? "gray";
 }
 function formatSize(b: number | null) {
   if (!b) return "";

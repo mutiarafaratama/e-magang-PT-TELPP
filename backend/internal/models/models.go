@@ -46,8 +46,9 @@ const (
 type JenisDokumen string
 
 const (
-        DokumenProposal   JenisDokumen = "proposal_magang"
-        DokumenKTP        JenisDokumen = "ktp"
+        DokumenProposal        JenisDokumen = "proposal_magang"
+        DokumenSuratPengantar  JenisDokumen = "surat_pengantar"
+        DokumenKTP             JenisDokumen = "ktp"
         DokumenKTM        JenisDokumen = "ktm"
         DokumenPasfoto    JenisDokumen = "pasfoto"
         DokumenBPJS       JenisDokumen = "bpjs_kis"
