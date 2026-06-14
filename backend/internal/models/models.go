@@ -442,7 +442,6 @@ type RekapAbsensiRow struct {
         AsalInstitusi   string     `json:"asal_institusi"`
         KategoriMagang  string     `json:"kategori_magang"`
         Divisi          *string    `json:"divisi"`
-        Pembimbing      *string    `json:"pembimbing"`
         TanggalMulai    time.Time  `json:"tanggal_mulai"`
         TanggalSelesai  time.Time  `json:"tanggal_selesai"`
         Status          string     `json:"status"`

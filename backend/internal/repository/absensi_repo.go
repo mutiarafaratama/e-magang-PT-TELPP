@@ -79,7 +79,6 @@ func (r *AbsensiRepository) GetRekapAll(ctx context.Context) ([]models.RekapAbse
                 pj.asal_institusi,
                 pj.kategori_magang,
                 pl.divisi,
-                pl.pembimbing,
                 pl.tanggal_mulai,
                 pl.tanggal_selesai,
                 pl.status,
@@ -93,7 +92,7 @@ func (r *AbsensiRepository) GetRekapAll(ctx context.Context) ([]models.RekapAbse
         LEFT JOIN absensi a ON a.pelaksanaan_id = pl.id
         WHERE pl.status NOT IN ('menunggu_mulai')
         GROUP BY pl.id, pj.nama_lengkap, pj.asal_institusi, pj.kategori_magang,
-                 pl.divisi, pl.pembimbing, pl.tanggal_mulai, pl.tanggal_selesai, pl.status
+                 pl.divisi, pl.tanggal_mulai, pl.tanggal_selesai, pl.status
         ORDER BY pl.tanggal_mulai DESC`
 
         rows, err := r.db.Query(ctx, query)
@@ -107,7 +106,7 @@ func (r *AbsensiRepository) GetRekapAll(ctx context.Context) ([]models.RekapAbse
                 var row models.RekapAbsensiRow
                 if err := rows.Scan(
                         &row.PelaksanaanID, &row.NamaLengkap, &row.AsalInstitusi, &row.KategoriMagang,
-                        &row.Divisi, &row.Pembimbing, &row.TanggalMulai, &row.TanggalSelesai, &row.Status,
+                        &row.Divisi, &row.TanggalMulai, &row.TanggalSelesai, &row.Status,
                         &row.Hadir, &row.Izin, &row.Sakit, &row.Alpha, &row.PendingApproval,
                 ); err != nil {
                         return nil, err
