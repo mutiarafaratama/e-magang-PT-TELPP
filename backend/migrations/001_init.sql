@@ -24,7 +24,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TYPE jenis_dokumen AS ENUM ('proposal_magang','ktp','ktm','pasfoto','bpjs_kis','surat_balasan','laporan_magang','sertifikat');
+  CREATE TYPE jenis_dokumen AS ENUM ('proposal_magang','surat_pengantar','ktp','ktm','pasfoto','bpjs_kis','surat_balasan','laporan_magang','sertifikat');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
