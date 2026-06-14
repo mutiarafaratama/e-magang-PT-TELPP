@@ -214,17 +214,6 @@
 
       </template>
 
-      <!-- ── NOTIFIKASI ── -->
-      <template v-else-if="activeTab === 'notifikasi'">
-        <div class="card">
-          <div class="card-header"><h3 class="card-title">Notifikasi</h3></div>
-          <div class="empty-state">
-            <div class="empty-state__icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#d1d5db" stroke-width="1.5"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="#d1d5db" stroke-width="1.5"/></svg></div>
-            <p>Belum ada notifikasi.</p>
-          </div>
-        </div>
-      </template>
-
       <!-- ── CHAT ── -->
       <template v-else-if="activeTab === 'chat'">
         <div class="card">
@@ -756,8 +745,7 @@ const navGroups = [
   {
     label: "Komunikasi",
     items: [
-      { key: "notifikasi", label: "Notifikasi",    icon: ICON.bell },
-      { key: "chat",       label: "Chat Helpdesk", icon: ICON.chat },
+      { key: "chat", label: "Chat Helpdesk", icon: ICON.chat },
     ],
   },
   {

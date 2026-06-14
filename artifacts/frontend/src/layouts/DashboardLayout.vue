@@ -129,6 +129,45 @@
             <span class="topbar-role-chip__dot"></span>
             {{ roleName }}
           </div>
+
+          <!-- Bell Notifikasi -->
+          <div class="notif-wrap" ref="notifWrap">
+            <button class="notif-btn" @click.stop="toggleNotif" :title="notifBadge ? `${notifBadge} notifikasi baru` : 'Notifikasi'">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span v-if="notifBadge > 0" class="notif-badge">{{ notifBadge > 99 ? '99+' : notifBadge }}</span>
+            </button>
+
+            <div v-if="notifOpen" class="notif-dropdown">
+              <div class="notif-dropdown__head">
+                <span class="notif-dropdown__title">Notifikasi</span>
+                <button v-if="notifBadge > 0" class="notif-baca-semua" @click="markAllRead">Tandai semua dibaca</button>
+              </div>
+              <div v-if="notifLoading" class="notif-loading">
+                <div class="notif-spinner"></div>
+              </div>
+              <div v-else-if="notifList.length === 0" class="notif-empty">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#d1d5db" stroke-width="1.5"/><path d="M13.73 21a2 2 0 01-3.46 0" stroke="#d1d5db" stroke-width="1.5"/></svg>
+                <span>Belum ada notifikasi</span>
+              </div>
+              <div v-else class="notif-list">
+                <div
+                  v-for="n in notifList"
+                  :key="n.id"
+                  :class="['notif-item', !n.is_read && 'notif-item--unread']"
+                  @click="markRead(n)"
+                >
+                  <div v-if="!n.is_read" class="notif-item__dot"></div>
+                  <div v-else class="notif-item__dot notif-item__dot--read"></div>
+                  <div class="notif-item__body">
+                    <div class="notif-item__title">{{ n.judul }}</div>
+                    <div class="notif-item__msg">{{ n.pesan }}</div>
+                    <div class="notif-item__time">{{ formatNotifTime(n.created_at) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="topbar-avatar" :title="user?.nama_lengkap" @click="goToProfile" style="cursor:pointer">{{ initials }}</div>
         </div>
       </header>
@@ -142,9 +181,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
 
 export interface NavItem {
   key: string;
@@ -228,6 +268,87 @@ function goToProfile() {
   mobileOpen.value = false;
   emit("tab-change", "profil");
 }
+
+// ── Notifikasi ─────────────────────────────────────────────
+interface Notif {
+  id: string;
+  judul: string;
+  pesan: string;
+  tipe: string;
+  referensi_id: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+const notifOpen    = ref(false);
+const notifList    = ref<Notif[]>([]);
+const notifBadge   = ref(0);
+const notifLoading = ref(false);
+const notifWrap    = ref<HTMLElement | null>(null);
+
+async function fetchNotifBadge() {
+  try {
+    const r = await api.get("/api/notifikasi/badge");
+    notifBadge.value = r.data?.data?.total_unread ?? 0;
+  } catch { /* silent */ }
+}
+
+async function fetchNotifList() {
+  notifLoading.value = true;
+  try {
+    const r = await api.get("/api/notifikasi");
+    notifList.value = r.data?.data ?? [];
+  } catch { /* silent */ } finally {
+    notifLoading.value = false;
+  }
+}
+
+async function toggleNotif() {
+  notifOpen.value = !notifOpen.value;
+  if (notifOpen.value) fetchNotifList();
+}
+
+function markRead(n: Notif) {
+  if (!n.is_read) {
+    n.is_read = true;
+    notifBadge.value = Math.max(0, notifBadge.value - 1);
+    api.patch(`/api/notifikasi/${n.id}/read`).catch(() => {});
+  }
+}
+
+function markAllRead() {
+  notifList.value.forEach(n => { n.is_read = true; });
+  notifBadge.value = 0;
+  api.patch("/api/notifikasi/read-all").catch(() => {});
+}
+
+function formatNotifTime(iso: string) {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60)    return "Baru saja";
+  if (diff < 3600)  return `${Math.floor(diff / 60)} menit lalu`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+}
+
+function onClickOutside(e: MouseEvent) {
+  if (notifWrap.value && !notifWrap.value.contains(e.target as Node)) {
+    notifOpen.value = false;
+  }
+}
+
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  document.addEventListener("click", onClickOutside);
+  fetchNotifBadge();
+  pollInterval = setInterval(fetchNotifBadge, 30_000);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", onClickOutside);
+  if (pollInterval) clearInterval(pollInterval);
+});
 
 defineExpose({ activeTab });
 </script>
@@ -624,6 +745,74 @@ defineExpose({ activeTab });
   cursor: pointer;
   border: 2px solid #d1fae5;
 }
+
+/* ── Notifikasi Dropdown ───────────────────────────────── */
+.notif-wrap { position: relative; }
+.notif-btn {
+  position: relative; background: none; border: none; cursor: pointer;
+  padding: 5px; color: #6b7280; display: flex; align-items: center;
+  border-radius: 8px; transition: background .15s, color .15s;
+}
+.notif-btn:hover { background: #f0fdf4; color: #15803d; }
+.notif-badge {
+  position: absolute; top: -3px; right: -5px;
+  background: #ef4444; color: #fff; font-size: 9px; font-weight: 800;
+  min-width: 16px; height: 16px; border-radius: 100px; padding: 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid #fff; line-height: 1;
+}
+.notif-dropdown {
+  position: absolute; top: calc(100% + 10px); right: -4px; z-index: 9000;
+  width: 340px; background: #fff; border-radius: 14px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #e9f5e9; overflow: hidden;
+  animation: notif-pop .14s ease;
+}
+@keyframes notif-pop {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.notif-dropdown__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px; border-bottom: 1px solid #f0faf0;
+}
+.notif-dropdown__title { font-size: 13px; font-weight: 700; color: #111827; }
+.notif-baca-semua {
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-size: 11.5px; font-weight: 600; color: #48AF4A;
+  font-family: inherit; transition: opacity .15s;
+}
+.notif-baca-semua:hover { opacity: .75; }
+.notif-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 32px 20px; color: #9ca3af; font-size: 12.5px;
+}
+.notif-loading { display: flex; justify-content: center; padding: 28px; }
+.notif-spinner {
+  width: 22px; height: 22px; border: 2.5px solid #e5e7eb;
+  border-top-color: #48AF4A; border-radius: 50%;
+  animation: nspin .7s linear infinite;
+}
+@keyframes nspin { to { transform: rotate(360deg); } }
+.notif-list { max-height: 340px; overflow-y: auto; }
+.notif-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 16px; cursor: pointer;
+  border-bottom: 1px solid #f9fafb; transition: background .12s;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: #f9fafb; }
+.notif-item--unread { background: #f0fdf4; }
+.notif-item--unread:hover { background: #e9faf0; }
+.notif-item__dot {
+  width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+  background: #22c55e;
+}
+.notif-item__dot--read { background: transparent; }
+.notif-item__body { flex: 1; min-width: 0; }
+.notif-item__title { font-size: 12.5px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.notif-item__msg { font-size: 11.5px; color: #6b7280; line-height: 1.5; }
+.notif-item__time { font-size: 10.5px; color: #9ca3af; margin-top: 4px; }
 
 /* Page Content */
 .page-content {
