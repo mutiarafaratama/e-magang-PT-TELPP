@@ -249,7 +249,7 @@
         <div class="modal-box__desc">Kamu akan dicatat hadir pada pukul <strong>{{ currentTimeWIB }} WIB</strong>.</div>
         <div class="modal-box__geo">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#16a34a"/></svg>
-          GPS berhasil dibaca · saat konfirmasi, server akan cek apakah kamu dalam radius kantor
+          Dalam area kantor · jarak {{ userDistanceM.toLocaleString('id-ID') }} m dari kantor
         </div>
         <div class="modal-box__actions">
           <button class="btn-cancel" @click="showCheckinModal = false">Batal</button>
@@ -271,10 +271,20 @@ const layout    = ref<InstanceType<typeof DashboardLayout> | null>(null);
 const activeTab = computed(() => layout.value?.activeTab ?? "beranda");
 const firstName = computed(() => user.value?.nama_lengkap?.split(" ")[0] ?? "");
 
-const gpsLoading = ref(false);
-const gpsError   = ref('');
-const userLat    = ref(0);
-const userLng    = ref(0);
+const gpsLoading    = ref(false);
+const gpsError      = ref('');
+const userLat       = ref(0);
+const userLng       = ref(0);
+const userDistanceM = ref(0);
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const now       = new Date();
 const todayDay  = now.toLocaleDateString("id-ID", { weekday: "long" });
@@ -298,7 +308,7 @@ async function fetchBeranda() {
 onMounted(fetchBeranda);
 
 // ── Absensi ──────────────────────────────────────────────────
-type AbsensiCfg = { jam_masuk_buka: string; jam_masuk_tutup: string; jam_pulang_buka: string; jam_pulang_tutup: string }
+type AbsensiCfg = { jam_masuk_buka: string; jam_masuk_tutup: string; jam_pulang_buka: string; jam_pulang_tutup: string; kantor_lat?: number; kantor_lng?: number; radius_meter?: number }
 
 const cfg            = ref<AbsensiCfg | null>(null);
 const absensiList    = ref<any[]>([]);
@@ -418,6 +428,20 @@ function openCheckinModal() {
       userLat.value = pos.coords.latitude;
       userLng.value = pos.coords.longitude;
       gpsLoading.value = false;
+
+      // Cek geofence langsung di sini sebelum modal muncul
+      const kantorLat  = cfg.value?.kantor_lat  ?? -3.432194;
+      const kantorLng  = cfg.value?.kantor_lng  ?? 104.035361;
+      const radiusM    = cfg.value?.radius_meter ?? 1500;
+      const jarakM     = haversineM(userLat.value, userLng.value, kantorLat, kantorLng);
+      userDistanceM.value = Math.round(jarakM);
+
+      if (jarakM > radiusM) {
+        const lebih = Math.round(jarakM - radiusM);
+        gpsError.value = `Lokasi kamu berada ${lebih.toLocaleString('id-ID')} meter di luar area kantor. Absen hanya bisa dilakukan di dalam radius ${radiusM} meter dari kantor.`;
+        return;
+      }
+
       showCheckinModal.value = true;
     },
     (err) => {
