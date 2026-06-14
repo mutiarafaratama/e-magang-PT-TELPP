@@ -80,23 +80,25 @@ const (
 // ============================================================
 
 type User struct {
-        ID           uuid.UUID `json:"id" db:"id"`
-        NamaLengkap  string    `json:"nama_lengkap" db:"nama_lengkap"`
-        Email        string    `json:"email" db:"email"`
-        PasswordHash string    `json:"-" db:"password_hash"`
-        Role         UserRole  `json:"role" db:"role"`
-        IsActive     bool      `json:"is_active" db:"is_active"`
-        CreatedAt    time.Time `json:"created_at" db:"created_at"`
-        UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+        ID              uuid.UUID `json:"id" db:"id"`
+        NamaLengkap     string    `json:"nama_lengkap" db:"nama_lengkap"`
+        Email           string    `json:"email" db:"email"`
+        PasswordHash    string    `json:"-" db:"password_hash"`
+        Role            UserRole  `json:"role" db:"role"`
+        IsActive        bool      `json:"is_active" db:"is_active"`
+        PasswordChanged bool      `json:"password_changed" db:"password_changed"`
+        CreatedAt       time.Time `json:"created_at" db:"created_at"`
+        UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type UserPublic struct {
-        ID          uuid.UUID `json:"id"`
-        NamaLengkap string    `json:"nama_lengkap"`
-        Email       string    `json:"email"`
-        Role        UserRole  `json:"role"`
-        IsActive    bool      `json:"is_active"`
-        CreatedAt   time.Time `json:"created_at"`
+        ID              uuid.UUID `json:"id"`
+        NamaLengkap     string    `json:"nama_lengkap"`
+        Email           string    `json:"email"`
+        Role            UserRole  `json:"role"`
+        IsActive        bool      `json:"is_active"`
+        PasswordChanged bool      `json:"password_changed"`
+        CreatedAt       time.Time `json:"created_at"`
 }
 
 type RefreshToken struct {

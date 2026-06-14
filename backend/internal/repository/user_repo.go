@@ -28,11 +28,11 @@ func (r *UserRepository) Create(ctx context.Context, u *models.User) error {
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models.User, error) {
         u := &models.User{}
-        query := `SELECT id, nama_lengkap, email, password_hash, role, is_active, created_at, updated_at
+        query := `SELECT id, nama_lengkap, email, password_hash, role, is_active, password_changed, created_at, updated_at
                           FROM users WHERE email = $1`
         err := r.db.QueryRow(ctx, query, email).Scan(
                 &u.ID, &u.NamaLengkap, &u.Email, &u.PasswordHash,
-                &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
+                &u.Role, &u.IsActive, &u.PasswordChanged, &u.CreatedAt, &u.UpdatedAt,
         )
         if err != nil {
                 return nil, err
@@ -42,11 +42,11 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*models
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
         u := &models.User{}
-        query := `SELECT id, nama_lengkap, email, password_hash, role, is_active, created_at, updated_at
+        query := `SELECT id, nama_lengkap, email, password_hash, role, is_active, password_changed, created_at, updated_at
                           FROM users WHERE id = $1`
         err := r.db.QueryRow(ctx, query, id).Scan(
                 &u.ID, &u.NamaLengkap, &u.Email, &u.PasswordHash,
-                &u.Role, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
+                &u.Role, &u.IsActive, &u.PasswordChanged, &u.CreatedAt, &u.UpdatedAt,
         )
         if err != nil {
                 return nil, err
@@ -102,7 +102,7 @@ func (r *UserRepository) UpdateActive(ctx context.Context, id uuid.UUID, isActiv
 
 func (r *UserRepository) UpdatePassword(ctx context.Context, id uuid.UUID, hash string) error {
         _, err := r.db.Exec(ctx,
-                "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+                "UPDATE users SET password_hash = $1, password_changed = true, updated_at = NOW() WHERE id = $2",
                 hash, id)
         return err
 }

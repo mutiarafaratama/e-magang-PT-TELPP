@@ -119,12 +119,13 @@ func (s *AuthService) generateTokenPair(ctx context.Context, user *models.User) 
                 AccessToken:  accessToken,
                 RefreshToken: refreshToken,
                 User: models.UserPublic{
-                        ID:          user.ID,
-                        NamaLengkap: user.NamaLengkap,
-                        Email:       user.Email,
-                        Role:        user.Role,
-                        IsActive:    user.IsActive,
-                        CreatedAt:   user.CreatedAt,
+                        ID:              user.ID,
+                        NamaLengkap:     user.NamaLengkap,
+                        Email:           user.Email,
+                        Role:            user.Role,
+                        IsActive:        user.IsActive,
+                        PasswordChanged: user.PasswordChanged,
+                        CreatedAt:       user.CreatedAt,
                 },
         }, nil
 }
@@ -135,12 +136,13 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uuid.UUID) (*models
                 return nil, err
         }
         return &models.UserPublic{
-                ID:          user.ID,
-                NamaLengkap: user.NamaLengkap,
-                Email:       user.Email,
-                Role:        user.Role,
-                IsActive:    user.IsActive,
-                CreatedAt:   user.CreatedAt,
+                ID:              user.ID,
+                NamaLengkap:     user.NamaLengkap,
+                Email:           user.Email,
+                Role:            user.Role,
+                IsActive:        user.IsActive,
+                PasswordChanged: user.PasswordChanged,
+                CreatedAt:       user.CreatedAt,
         }, nil
 }
 

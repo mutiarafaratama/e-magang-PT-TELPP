@@ -178,6 +178,33 @@
       </main>
     </div>
   </div>
+
+  <!-- Modal Peringatan Ganti Password -->
+  <Teleport to="body">
+    <div v-if="showPwWarning" class="pw-warn-backdrop">
+      <div class="pw-warn-box">
+        <div class="pw-warn-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="11" width="18" height="11" rx="2" stroke="#f59e0b" stroke-width="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="16" r="1.5" fill="#f59e0b"/>
+          </svg>
+        </div>
+        <div class="pw-warn-title">Segera Ganti Password</div>
+        <div class="pw-warn-msg">
+          Akun Anda masih menggunakan <strong>password default</strong> yang dikirimkan melalui email.
+          Demi keamanan, harap ganti password Anda sekarang.
+        </div>
+        <div class="pw-warn-actions">
+          <button class="pw-warn-btn pw-warn-btn--later" @click="showPwWarning = false">Nanti</button>
+          <button class="pw-warn-btn pw-warn-btn--now" @click="goToProfileFromWarning">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Ubah Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -280,6 +307,23 @@ interface Notif {
   created_at: string;
 }
 
+// ── Password warning ────────────────────────────────────────
+const showPwWarning = ref(false);
+
+async function checkPasswordChanged() {
+  try {
+    const r = await api.get("/api/auth/me");
+    if (r.data?.data?.password_changed === false) {
+      showPwWarning.value = true;
+    }
+  } catch { /* silent */ }
+}
+
+function goToProfileFromWarning() {
+  showPwWarning.value = false;
+  goToProfile();
+}
+
 const notifOpen    = ref(false);
 const notifList    = ref<Notif[]>([]);
 const notifBadge   = ref(0);
@@ -342,6 +386,7 @@ let pollInterval: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
   document.addEventListener("click", onClickOutside);
   fetchNotifBadge();
+  checkPasswordChanged();
   pollInterval = setInterval(fetchNotifBadge, 30_000);
 });
 
@@ -860,4 +905,94 @@ defineExpose({ activeTab });
   .topbar { padding: 0 14px; }
   .topbar-role-chip { display: none; }
 }
+
+/* ── Password Warning Modal ── */
+.pw-warn-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(3px);
+}
+
+.pw-warn-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  width: min(420px, calc(100vw - 32px));
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.pw-warn-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.pw-warn-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pw-warn-msg {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.pw-warn-msg strong {
+  color: #b45309;
+}
+
+.pw-warn-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.pw-warn-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.pw-warn-btn:active { transform: scale(0.98); }
+
+.pw-warn-btn--later {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pw-warn-btn--later:hover { background: #e2e8f0; }
+
+.pw-warn-btn--now {
+  background: #f59e0b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pw-warn-btn--now:hover { background: #d97706; }
 </style>
