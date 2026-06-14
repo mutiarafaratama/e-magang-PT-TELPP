@@ -24,10 +24,6 @@ args = "Frontend"
 task = "workflow.run"
 args = "Go API Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "IzinSakit API Server"
-
 [[workflows.workflow]]
 name = "Frontend"
 author = "agent"
@@ -48,18 +44,6 @@ author = "agent"
 task = "shell.exec"
 args = "cd backend && ./bin/server"
 waitForPort = 8080
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow]]
-name = "IzinSakit API Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=3001 pnpm --filter @workspace/api-server run dev"
-waitForPort = 3001
 
 [workflows.workflow.metadata]
 outputType = "console"
