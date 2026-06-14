@@ -1,0 +1,124 @@
+package handler
+
+import (
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/telpp/emagang/internal/middleware"
+	"github.com/telpp/emagang/internal/models"
+	"github.com/telpp/emagang/internal/repository"
+)
+
+type IzinSakitHandler struct {
+	repo            *repository.IzinSakitRepository
+	pelaksanaanRepo *repository.PelaksanaanRepository
+}
+
+func NewIzinSakitHandler(repo *repository.IzinSakitRepository, pelaksanaanRepo *repository.PelaksanaanRepository) *IzinSakitHandler {
+	return &IzinSakitHandler{repo: repo, pelaksanaanRepo: pelaksanaanRepo}
+}
+
+// POST /api/izin-sakit — peserta ajukan izin atau sakit
+func (h *IzinSakitHandler) Ajukan(c *gin.Context) {
+	var req models.AjukanIzinSakitRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Data tidak valid"})
+		return
+	}
+	if req.Jenis != "izin" && req.Jenis != "sakit" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Jenis harus 'izin' atau 'sakit'"})
+		return
+	}
+	if len(req.Alasan) < 5 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Alasan terlalu singkat (min 5 karakter)"})
+		return
+	}
+
+	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Format tanggal tidak valid (YYYY-MM-DD)"})
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	pelaksanaan, err := h.pelaksanaanRepo.FindByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "not_found", Message: "Data magang tidak ditemukan"})
+		return
+	}
+	if pelaksanaan.Status != models.StatusAktif {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_status", Message: "Magang belum aktif"})
+		return
+	}
+
+	item := &models.IzinSakitRequest{
+		PelaksanaanID: pelaksanaan.ID,
+		UserID:        userID,
+		Tanggal:       tanggal,
+		Jenis:         req.Jenis,
+		Alasan:        req.Alasan,
+	}
+
+	if err := h.repo.Create(c.Request.Context(), item); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "duplicate", Message: "Sudah ada pengajuan untuk tanggal tersebut"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, models.SuccessResponse{Message: "Pengajuan berhasil dikirim", Data: item})
+}
+
+// GET /api/izin-sakit/saya — peserta lihat riwayat izin/sakit miliknya
+func (h *IzinSakitHandler) GetSaya(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	list, err := h.repo.FindByUserID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, models.SuccessResponse{Data: list})
+}
+
+// GET /api/izin-sakit — HRD lihat semua request
+func (h *IzinSakitHandler) GetAll(c *gin.Context) {
+	list, err := h.repo.FindAll(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, models.SuccessResponse{Data: list})
+}
+
+// PATCH /api/izin-sakit/:id/approve — HRD setujui, otomatis insert absensi
+func (h *IzinSakitHandler) Approve(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+		return
+	}
+	approvedBy := middleware.GetUserID(c)
+	if err := h.repo.ApproveAndInsertAbsensi(c.Request.Context(), id, approvedBy); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "failed", Message: "Gagal menyetujui atau request tidak ditemukan / sudah diproses"})
+		return
+	}
+	c.JSON(http.StatusOK, models.SuccessResponse{Message: "Disetujui — absensi telah dicatat otomatis"})
+}
+
+// PATCH /api/izin-sakit/:id/tolak — HRD tolak
+func (h *IzinSakitHandler) Tolak(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+		return
+	}
+	var req models.TolakIzinSakitRequest
+	c.ShouldBindJSON(&req) //nolint — catatan opsional
+
+	rejectedBy := middleware.GetUserID(c)
+	if err := h.repo.Tolak(c.Request.Context(), id, rejectedBy, req.CatatanHRD); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "failed", Message: "Gagal menolak atau request tidak ditemukan / sudah diproses"})
+		return
+	}
+	c.JSON(http.StatusOK, models.SuccessResponse{Message: "Pengajuan ditolak"})
+}

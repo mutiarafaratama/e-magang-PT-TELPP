@@ -5,6 +5,7 @@ import landingRouter from "./landingRoutes.js";
 import pengajuanRouter from "./pengajuanRoutes.js";
 import dokumenRouter from "./dokumenRoutes.js";
 import divisiRouter from "./divisiRoutes.js";
+import izinSakitRouter from "./izinSakitRoutes.js";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(landingRouter);
 router.use(pengajuanRouter);
 router.use(dokumenRouter);
 router.use(divisiRouter);
+router.use(izinSakitRouter);
 
 export default router;

@@ -237,6 +237,41 @@ type AbsensiConfig struct {
 }
 
 // ============================================================
+// IZIN SAKIT REQUEST
+// ============================================================
+
+type IzinSakitRequest struct {
+        ID            uuid.UUID  `json:"id"`
+        PelaksanaanID uuid.UUID  `json:"pelaksanaan_id"`
+        UserID        uuid.UUID  `json:"user_id"`
+        Tanggal       time.Time  `json:"tanggal"`
+        Jenis         string     `json:"jenis"`
+        Alasan        string     `json:"alasan"`
+        BuktiPath     *string    `json:"bukti_path"`
+        Status        string     `json:"status"`
+        CatatanHRD    *string    `json:"catatan_hrd"`
+        DiprosesOleh  *uuid.UUID `json:"diproses_oleh"`
+        DiprosesAt    *time.Time `json:"diproses_at"`
+        CreatedAt     time.Time  `json:"created_at"`
+}
+
+type IzinSakitRequestDetail struct {
+        IzinSakitRequest
+        NamaPeserta string  `json:"nama_peserta"`
+        Divisi      *string `json:"divisi"`
+}
+
+type AjukanIzinSakitRequest struct {
+        Tanggal string `json:"tanggal" binding:"required"`
+        Jenis   string `json:"jenis" binding:"required"`
+        Alasan  string `json:"alasan" binding:"required"`
+}
+
+type TolakIzinSakitRequest struct {
+        CatatanHRD string `json:"catatan_hrd"`
+}
+
+// ============================================================
 // CHAT
 // ============================================================
 

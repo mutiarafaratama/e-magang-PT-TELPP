@@ -1,7 +1,91 @@
 <template>
   <div class="rekap-root">
 
-    <!-- ── HEADER & FILTER ─────────────────────────────────── -->
+    <!-- ── PANEL IZIN & SAKIT (persetujuan pending) ────────────── -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Persetujuan Izin &amp; Sakit</h3>
+          <p class="card-sub">Pengajuan dari peserta yang menunggu konfirmasi</p>
+        </div>
+        <button class="btn-green-sm" @click="fetchIzinSakit">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Filter izin/sakit -->
+      <div class="filter-bar">
+        <div class="filter-pills">
+          <button v-for="f in izinFilters" :key="f.key"
+            :class="['filter-pill', izinActiveFilter === f.key && 'filter-pill--active']"
+            @click="izinActiveFilter = f.key">{{ f.label }}</button>
+        </div>
+      </div>
+
+      <div v-if="izinLoading" class="empty-state"><div class="spinner"></div></div>
+      <div v-else-if="izinError" class="empty-state"><p style="color:#dc2626">{{ izinError }}</p></div>
+      <div v-else-if="filteredIzin.length === 0" class="empty-state">
+        <div class="empty-state__icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#d1d5db" stroke-width="1.5"/></svg>
+        </div>
+        <p>{{ izinActiveFilter === 'pending' ? 'Tidak ada pengajuan yang menunggu.' : 'Tidak ada data.' }}</p>
+      </div>
+      <div v-else class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Peserta</th>
+              <th>Tanggal</th>
+              <th>Jenis</th>
+              <th>Alasan</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in filteredIzin" :key="item.id">
+              <td>
+                <div class="name-cell">
+                  <div class="name-avatar">{{ item.nama_peserta[0] }}</div>
+                  <div>
+                    <div class="name-text">{{ item.nama_peserta }}</div>
+                    <div class="name-sub">{{ item.divisi ?? '–' }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="white-space:nowrap;font-weight:600">{{ fmtDate(item.tanggal) }}</td>
+              <td>
+                <span :class="['jenis-badge', `jenis-badge--${item.jenis}`]">
+                  {{ item.jenis === 'izin' ? 'Izin' : 'Sakit' }}
+                </span>
+              </td>
+              <td class="alasan-cell">{{ item.alasan }}</td>
+              <td>
+                <span v-if="item.status === 'pending'"    class="status-badge status-badge--pending">Menunggu</span>
+                <span v-else-if="item.status === 'disetujui'" class="status-badge status-badge--ok">Disetujui</span>
+                <span v-else class="status-badge status-badge--tolak">Ditolak</span>
+              </td>
+              <td>
+                <div v-if="item.status === 'pending'" class="aksi-cell">
+                  <button class="btn-aksi btn-aksi--green" :disabled="processingId === item.id"
+                    @click="approve(item)">
+                    {{ processingId === item.id ? '…' : '✓ Setujui' }}
+                  </button>
+                  <button class="btn-aksi btn-aksi--red" :disabled="processingId === item.id"
+                    @click="openTolakModal(item)">
+                    ✕ Tolak
+                  </button>
+                </div>
+                <span v-else class="name-sub">–</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── REKAP ABSENSI PESERTA ────────────────────────────────── -->
     <div class="card">
       <div class="card-header">
         <div>
@@ -17,11 +101,9 @@
       <!-- Filter & search -->
       <div class="filter-bar">
         <div class="filter-pills">
-          <button
-            v-for="f in filters" :key="f.key"
+          <button v-for="f in filters" :key="f.key"
             :class="['filter-pill', activeFilter === f.key && 'filter-pill--active']"
-            @click="activeFilter = f.key"
-          >{{ f.label }}</button>
+            @click="activeFilter = f.key">{{ f.label }}</button>
         </div>
         <input v-model="search" type="text" class="search-input" placeholder="Cari nama peserta…"/>
       </div>
@@ -44,15 +126,9 @@
           <span class="stat-chip__val">{{ totalAlpha }}</span>
           <span class="stat-chip__lbl">Alpha</span>
         </div>
-        <div class="stat-chip stat-chip--orange">
-          <span class="stat-chip__val">{{ totalPending }}</span>
-          <span class="stat-chip__lbl">Perlu Disetujui</span>
-        </div>
       </div>
-    </div>
 
-    <!-- ── TABLE ────────────────────────────────────────────── -->
-    <div class="card">
+      <!-- Table -->
       <div v-if="loading" class="empty-state"><div class="spinner"></div></div>
       <div v-else-if="error" class="empty-state">
         <p style="color:#dc2626">{{ error }}</p>
@@ -77,7 +153,6 @@
               <th style="text-align:center">S</th>
               <th style="text-align:center">A</th>
               <th style="text-align:center">% Hadir</th>
-              <th>Perlu Disetujui</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -112,19 +187,11 @@
                 <span class="pct-label">{{ persen(r) }}%</span>
               </td>
               <td>
-                <span v-if="r.pending_approval > 0" class="pending-badge">
-                  {{ r.pending_approval }} pending
-                </span>
-                <span v-else class="approved-badge">✓ Semua</span>
-              </td>
-              <td>
                 <div class="aksi-cell">
                   <button class="btn-aksi btn-aksi--ghost" @click="openDetail(r)">Detail</button>
-                  <a
-                    class="btn-aksi btn-aksi--blue"
+                  <a class="btn-aksi btn-aksi--blue"
                     :href="`/api/absensi/pelaksanaan/${r.pelaksanaan_id}/pdf`"
-                    target="_blank"
-                  >PDF</a>
+                    target="_blank">PDF</a>
                 </div>
               </td>
             </tr>
@@ -143,15 +210,9 @@
             <span v-if="selectedRow.divisi"> · {{ selectedRow.divisi }}</span>
           </p>
         </div>
-        <div class="card-header-actions">
-          <button class="btn-green-sm" @click="approveAll" :disabled="approvingAll || !pendingInDetail.length">
-            <template v-if="approvingAll"><span class="spinner-sm"></span> Memproses…</template>
-            <template v-else>✓ Setujui Semua ({{ pendingInDetail.length }})</template>
-          </button>
-          <button class="btn-close" @click="selectedRow = null">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-        </div>
+        <button class="btn-close" @click="selectedRow = null">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </button>
       </div>
 
       <!-- rekap chips detail -->
@@ -170,7 +231,7 @@
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead>
-            <tr><th>Tanggal</th><th>Masuk</th><th>Keluar</th><th>Keterangan</th><th>Kegiatan</th><th>Status TTD</th><th>Aksi</th></tr>
+            <tr><th>Tanggal</th><th>Masuk</th><th>Keluar</th><th>Keterangan</th><th>Kegiatan</th></tr>
           </thead>
           <tbody>
             <tr v-for="a in detailList" :key="a.id">
@@ -179,19 +240,6 @@
               <td>{{ a.jam_keluar ?? '–' }}</td>
               <td><span :class="ketClass(a.keterangan)">{{ fmtKet(a.keterangan) }}</span></td>
               <td class="kegiatan-cell">{{ a.kegiatan ?? '–' }}</td>
-              <td>
-                <span v-if="a.approved_at" class="approved-badge">✓ Disetujui</span>
-                <span v-else class="pending-badge">Belum</span>
-              </td>
-              <td>
-                <button
-                  v-if="!a.approved_at"
-                  class="btn-aksi btn-aksi--green"
-                  :disabled="approvingId === a.id"
-                  @click="approveOne(a)"
-                >{{ approvingId === a.id ? '…' : 'Setujui' }}</button>
-                <span v-else class="name-sub">–</span>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -199,13 +247,36 @@
     </div>
 
   </div>
+
+  <!-- ── MODAL TOLAK ─────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="showTolakModal" class="modal-backdrop" @click.self="closeTolakModal">
+      <div class="modal-box">
+        <div class="modal-title">Tolak Pengajuan</div>
+        <div class="modal-desc">
+          Pengajuan <strong>{{ tolakTarget?.jenis }}</strong> dari <strong>{{ tolakTarget?.nama_peserta }}</strong>
+          untuk tanggal <strong>{{ tolakTarget ? fmtDate(tolakTarget.tanggal) : '' }}</strong>.
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Catatan (opsional)</label>
+          <textarea v-model="tolakCatatan" class="modal-textarea" rows="3"
+            placeholder="Tulis alasan penolakan jika diperlukan..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" @click="closeTolakModal">Batal</button>
+          <button class="btn-red" @click="submitTolak" :disabled="processingId === tolakTarget?.id">
+            {{ processingId === tolakTarget?.id ? '…' : 'Ya, Tolak' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import api from "@/lib/api";
 
-// ── types ──────────────────────────────────────────────────────
 interface RekapRow {
   pelaksanaan_id: string;
   nama_lengkap:   string;
@@ -223,31 +294,34 @@ interface RekapRow {
   pending_approval: number;
 }
 interface AbsensiItem {
-  id:           string;
-  tanggal:      string;
-  jam_masuk:    string | null;
-  jam_keluar:   string | null;
-  keterangan:   string;
-  kegiatan:     string | null;
-  ttd_pembimbing: boolean;
-  approved_by:  string | null;
-  approved_at:  string | null;
+  id:         string;
+  tanggal:    string;
+  jam_masuk:  string | null;
+  jam_keluar: string | null;
+  keterangan: string;
+  kegiatan:   string | null;
+}
+interface IzinSakitItem {
+  id:          string;
+  tanggal:     string;
+  jenis:       string;
+  alasan:      string;
+  status:      string;
+  nama_peserta: string;
+  divisi:      string | null;
+  catatan_hrd?: string | null;
 }
 
-// ── state ──────────────────────────────────────────────────────
+// ── Rekap state ─────────────────────────────────────────────
 const rows    = ref<RekapRow[]>([]);
 const loading = ref(false);
 const error   = ref<string | null>(null);
-
 const search       = ref("");
 const activeFilter = ref("semua");
-
 const selectedRow  = ref<RekapRow | null>(null);
 const detailList   = ref<AbsensiItem[]>([]);
 const detailLoading = ref(false);
 const detailError  = ref<string>("");
-const approvingId  = ref<string | null>(null);
-const approvingAll = ref(false);
 
 const filters = [
   { key: "semua",    label: "Semua" },
@@ -257,7 +331,24 @@ const filters = [
   { key: "penilaian",     label: "Penilaian" },
 ];
 
-// ── computed ───────────────────────────────────────────────────
+// ── Izin/Sakit state ─────────────────────────────────────────
+const izinList        = ref<IzinSakitItem[]>([]);
+const izinLoading     = ref(false);
+const izinError       = ref<string | null>(null);
+const izinActiveFilter = ref("pending");
+const processingId    = ref<string | null>(null);
+const showTolakModal  = ref(false);
+const tolakTarget     = ref<IzinSakitItem | null>(null);
+const tolakCatatan    = ref("");
+
+const izinFilters = [
+  { key: "pending",   label: "Menunggu" },
+  { key: "disetujui", label: "Disetujui" },
+  { key: "ditolak",   label: "Ditolak" },
+  { key: "semua",     label: "Semua" },
+];
+
+// ── Computed ─────────────────────────────────────────────────
 const filteredRows = computed(() => {
   let list = rows.value;
   if (activeFilter.value !== "semua") list = list.filter(r => r.status === activeFilter.value);
@@ -268,15 +359,17 @@ const filteredRows = computed(() => {
   return list;
 });
 
-const totalHadir   = computed(() => filteredRows.value.reduce((s, r) => s + r.hadir, 0));
-const totalIzin    = computed(() => filteredRows.value.reduce((s, r) => s + r.izin, 0));
-const totalSakit   = computed(() => filteredRows.value.reduce((s, r) => s + r.sakit, 0));
-const totalAlpha   = computed(() => filteredRows.value.reduce((s, r) => s + r.alpha, 0));
-const totalPending = computed(() => filteredRows.value.reduce((s, r) => s + r.pending_approval, 0));
+const totalHadir = computed(() => filteredRows.value.reduce((s, r) => s + r.hadir, 0));
+const totalIzin  = computed(() => filteredRows.value.reduce((s, r) => s + r.izin, 0));
+const totalSakit = computed(() => filteredRows.value.reduce((s, r) => s + r.sakit, 0));
+const totalAlpha = computed(() => filteredRows.value.reduce((s, r) => s + r.alpha, 0));
 
-const pendingInDetail = computed(() => detailList.value.filter(a => !a.approved_at));
+const filteredIzin = computed(() => {
+  if (izinActiveFilter.value === "semua") return izinList.value;
+  return izinList.value.filter(i => i.status === izinActiveFilter.value);
+});
 
-// ── data fetch ─────────────────────────────────────────────────
+// ── Data fetch ──────────────────────────────────────────────
 async function fetchRekap() {
   loading.value = true; error.value = null;
   try {
@@ -285,6 +378,16 @@ async function fetchRekap() {
   } catch (e: any) {
     error.value = e.response?.data?.message ?? "Gagal memuat data rekap";
   } finally { loading.value = false; }
+}
+
+async function fetchIzinSakit() {
+  izinLoading.value = true; izinError.value = null;
+  try {
+    const r = await api.get("/api/izin-sakit");
+    izinList.value = Array.isArray(r.data?.data) ? r.data.data : [];
+  } catch (e: any) {
+    izinError.value = e.response?.data?.message ?? "Gagal memuat data izin/sakit";
+  } finally { izinLoading.value = false; }
 }
 
 async function openDetail(row: RekapRow) {
@@ -301,40 +404,52 @@ async function openDetail(row: RekapRow) {
   } finally { detailLoading.value = false; }
 }
 
-// ── approve ────────────────────────────────────────────────────
-async function approveOne(a: AbsensiItem) {
-  approvingId.value = a.id;
+// ── Izin/Sakit actions ───────────────────────────────────────
+async function approve(item: IzinSakitItem) {
+  processingId.value = item.id;
   try {
-    await api.patch(`/api/absensi/${a.id}/approve`, {});
-    a.approved_at = new Date().toISOString();
-    a.ttd_pembimbing = true;
-    if (selectedRow.value) {
-      const idx = rows.value.findIndex(r => r.pelaksanaan_id === selectedRow.value!.pelaksanaan_id);
-      if (idx !== -1 && rows.value[idx].pending_approval > 0) rows.value[idx].pending_approval--;
-      selectedRow.value = { ...selectedRow.value, pending_approval: Math.max(0, selectedRow.value.pending_approval - 1) };
-    }
-  } catch { /* ignore */ }
-  finally { approvingId.value = null; }
+    await api.patch(`/api/izin-sakit/${item.id}/approve`, {});
+    item.status = "disetujui";
+    showToast(`Pengajuan ${item.jenis} ${item.nama_peserta} disetujui`);
+    // refresh rekap setelah approve karena absensi sudah berubah
+    fetchRekap();
+  } catch (e: any) {
+    alert(e.response?.data?.message ?? "Gagal menyetujui");
+  } finally { processingId.value = null; }
 }
 
-async function approveAll() {
-  approvingAll.value = true;
-  const pending = pendingInDetail.value.slice();
-  for (const a of pending) {
-    try {
-      await api.patch(`/api/absensi/${a.id}/approve`, {});
-      a.approved_at = new Date().toISOString();
-    } catch { /* skip */ }
-  }
-  if (selectedRow.value) {
-    const idx = rows.value.findIndex(r => r.pelaksanaan_id === selectedRow.value!.pelaksanaan_id);
-    if (idx !== -1) rows.value[idx].pending_approval = 0;
-    selectedRow.value = { ...selectedRow.value, pending_approval: 0 };
-  }
-  approvingAll.value = false;
+function openTolakModal(item: IzinSakitItem) {
+  tolakTarget.value = item;
+  tolakCatatan.value = "";
+  showTolakModal.value = true;
 }
 
-// ── helpers ────────────────────────────────────────────────────
+function closeTolakModal() {
+  showTolakModal.value = false;
+  tolakTarget.value = null;
+  tolakCatatan.value = "";
+}
+
+async function submitTolak() {
+  if (!tolakTarget.value) return;
+  processingId.value = tolakTarget.value.id;
+  try {
+    await api.patch(`/api/izin-sakit/${tolakTarget.value.id}/tolak`, { catatan_hrd: tolakCatatan.value });
+    tolakTarget.value.status = "ditolak";
+    closeTolakModal();
+    showToast("Pengajuan ditolak");
+  } catch (e: any) {
+    alert(e.response?.data?.message ?? "Gagal menolak");
+  } finally { processingId.value = null; }
+}
+
+const toastMsg = ref("");
+function showToast(msg: string) {
+  toastMsg.value = msg;
+  setTimeout(() => { toastMsg.value = ""; }, 3000);
+}
+
+// ── Helpers ─────────────────────────────────────────────────
 function persen(r: RekapRow) {
   const total = r.hadir + r.izin + r.sakit + r.alpha;
   if (!total) return 0;
@@ -353,7 +468,6 @@ function statusClass(s: string) {
   if (s === "aktif")          return "sp-badge sp-badge--green";
   if (s === "upload_laporan") return "sp-badge sp-badge--blue";
   if (s === "penilaian")      return "sp-badge sp-badge--orange";
-  if (s === "selesai")        return "sp-badge sp-badge--gray";
   return "sp-badge sp-badge--gray";
 }
 function fmtKet(k: string) {
@@ -366,20 +480,20 @@ function ketClass(k: string) {
   return "ket-badge ket-badge--red";
 }
 
-onMounted(fetchRekap);
+onMounted(() => {
+  fetchRekap();
+  fetchIzinSakit();
+});
 </script>
 
 <style scoped>
 .rekap-root { display: flex; flex-direction: column; gap: 16px; }
 
-/* card */
 .card { background: #fff; border-radius: 14px; border: 1px solid #e9f5e9; box-shadow: 0 1px 3px rgba(13,40,24,0.05); overflow: hidden; }
 .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f0faf0; gap: 12px; flex-wrap: wrap; }
 .card-title { font-size: 13.5px; font-weight: 700; color: #111827; margin: 0; }
 .card-sub { font-size: 11.5px; color: #9ca3af; margin: 2px 0 0; }
-.card-header-actions { display: flex; align-items: center; gap: 8px; }
 
-/* filter */
 .filter-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #f9fafb; flex-wrap: wrap; }
 .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .filter-pill { border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280; font-size: 12px; font-weight: 600; padding: 5px 13px; border-radius: 100px; cursor: pointer; font-family: inherit; transition: all .15s; }
@@ -388,7 +502,6 @@ onMounted(fetchRekap);
 .search-input { border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 7px 13px; font-size: 12.5px; font-family: inherit; outline: none; color: #111827; min-width: 200px; }
 .search-input:focus { border-color: #48AF4A; }
 
-/* stat chips */
 .stat-chips { display: flex; gap: 10px; padding: 12px 20px; flex-wrap: wrap; }
 .stat-chip { display: flex; flex-direction: column; align-items: center; background: #f9fafb; border-radius: 10px; padding: 8px 18px; border: 1px solid #f1f5f9; min-width: 70px; }
 .stat-chip__val { font-size: 20px; font-weight: 700; }
@@ -397,36 +510,28 @@ onMounted(fetchRekap);
 .stat-chip--yellow .stat-chip__val { color: #ca8a04; }
 .stat-chip--blue .stat-chip__val { color: #2563eb; }
 .stat-chip--red .stat-chip__val { color: #dc2626; }
-.stat-chip--orange .stat-chip__val { color: #ea580c; }
 
-/* table */
 .table-wrap { overflow-x: auto; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { padding: 10px 14px; text-align: left; font-size: 10.5px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 .data-table td { padding: 12px 14px; border-bottom: 1px solid #f9fafb; color: #374151; vertical-align: middle; }
 
-/* name cell */
 .name-cell { display: flex; align-items: center; gap: 10px; }
 .name-avatar { width: 32px; height: 32px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .name-text { font-weight: 600; color: #111827; font-size: 13px; }
 .name-sub { font-size: 11.5px; color: #9ca3af; }
 .tag { background: #f0fdf4; color: #16a34a; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
 
-/* abs num */
 .abs-num { display: inline-block; min-width: 26px; text-align: center; font-size: 13px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
 .abs-num--green  { color: #15803d; background: #dcfce7; }
 .abs-num--yellow { color: #92400e; background: #fef9c3; }
 .abs-num--blue   { color: #1d4ed8; background: #dbeafe; }
 .abs-num--red    { color: #dc2626; background: #fee2e2; }
 
-/* progress */
 .progress-wrap { height: 5px; background: #f1f5f9; border-radius: 100px; overflow: hidden; margin-bottom: 3px; }
 .progress-bar  { height: 100%; background: #48AF4A; border-radius: 100px; transition: width .4s; }
 .pct-label { font-size: 11px; color: #6b7280; font-weight: 600; }
 
-/* badges */
-.pending-badge  { background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
-.approved-badge { background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
 .sp-badge { display: inline-flex; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .sp-badge--green  { background: #dcfce7; color: #15803d; }
 .sp-badge--blue   { background: #dbeafe; color: #1d4ed8; }
@@ -438,7 +543,16 @@ onMounted(fetchRekap);
 .ket-badge--blue   { background: #dbeafe; color: #1d4ed8; }
 .ket-badge--red    { background: #fee2e2; color: #dc2626; }
 
-/* action btns */
+.jenis-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+.jenis-badge--izin  { background: #eff6ff; color: #1d4ed8; }
+.jenis-badge--sakit { background: #fffbeb; color: #b45309; }
+
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+.status-badge--pending { background: #fef3c7; color: #92400e; }
+.status-badge--ok      { background: #dcfce7; color: #15803d; }
+.status-badge--tolak   { background: #fee2e2; color: #dc2626; }
+
+.alasan-cell { max-width: 200px; font-size: 12px; color: #6b7280; white-space: normal; word-break: break-word; }
 .aksi-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .btn-aksi { border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block; }
 .btn-aksi--ghost { background: #f3f4f6; color: #374151; }
@@ -446,17 +560,17 @@ onMounted(fetchRekap);
 .btn-aksi--green { background: #dcfce7; color: #15803d; }
 .btn-aksi--green:hover:not(:disabled) { background: #bbf7d0; }
 .btn-aksi--green:disabled { opacity: .5; cursor: default; }
-.btn-aksi--blue  { background: #dbeafe; color: #1d4ed8; }
-.btn-aksi--blue:hover  { background: #bfdbfe; }
+.btn-aksi--red { background: #fee2e2; color: #dc2626; }
+.btn-aksi--red:hover:not(:disabled) { background: #fecaca; }
+.btn-aksi--red:disabled { opacity: .5; cursor: default; }
+.btn-aksi--blue { background: #dbeafe; color: #1d4ed8; }
+.btn-aksi--blue:hover { background: #bfdbfe; }
 
-/* btn-green-sm */
 .btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
 .btn-green-sm:hover:not(:disabled) { background: #3d9e3f; }
-.btn-green-sm:disabled { opacity: .5; cursor: default; }
 .btn-close { background: #f3f4f6; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; flex-shrink: 0; }
 .btn-close:hover { background: #e5e7eb; }
 
-/* detail panel */
 .detail-card { margin-top: 0; }
 .detail-rekap { display: flex; gap: 8px; padding: 12px 20px; flex-wrap: wrap; border-bottom: 1px solid #f0faf0; }
 .drk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; background: #f9fafb; border-radius: 8px; padding: 6px 14px; }
@@ -467,11 +581,24 @@ onMounted(fetchRekap);
 .drk--red    strong { color: #dc2626; }
 .kegiatan-cell { max-width: 180px; font-size: 12px; white-space: normal; word-break: break-word; }
 
-/* spinner */
 .empty-state { display: flex; flex-direction: column; align-items: center; padding: 44px 24px; gap: 12px; text-align: center; }
 .empty-state__icon { width: 72px; height: 72px; background: #f9fafb; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .empty-state p { font-size: 13px; color: #9ca3af; line-height: 1.7; margin: 0; }
 .spinner { width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .8s linear infinite; }
-.spinner-sm { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal tolak */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.modal-title { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 10px; }
+.modal-desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; line-height: 1.6; }
+.modal-field { margin-bottom: 14px; }
+.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; box-sizing: border-box; }
+.modal-textarea:focus { border-color: #48AF4A; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel { background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.btn-red { background: #fee2e2; color: #dc2626; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
+.btn-red:hover:not(:disabled) { background: #fecaca; }
+.btn-red:disabled { opacity: .5; cursor: default; }
 </style>

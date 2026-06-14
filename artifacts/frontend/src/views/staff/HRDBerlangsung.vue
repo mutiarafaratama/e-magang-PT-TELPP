@@ -74,7 +74,6 @@
             </td>
             <td>
               <div class="aksi-cell">
-                <!-- Workflow buttons -->
                 <button
                   v-if="pl.status === 'menunggu_mulai'"
                   class="btn-aksi btn-aksi--green"
@@ -88,9 +87,7 @@
                   @click="updateStatus(pl.id, 'penilaian')"
                 >{{ updatingId === pl.id ? '...' : 'Ke Penilaian' }}</button>
 
-                <!-- Selalu tampil: Detail + Lihat Absensi -->
                 <button class="btn-aksi btn-aksi--ghost" @click="openDetail(pl)">Detail</button>
-                <button class="btn-aksi btn-aksi--ghost-blue" @click="openAbsensi(pl)">Absensi</button>
               </div>
             </td>
           </tr>
@@ -180,12 +177,6 @@
               <div class="nilai-label">/ 100</div>
             </div>
           </div>
-
-          <!-- Tombol Lihat Absensi dari sini juga -->
-          <button class="btn-absensi-link" @click="showDetail = false; openAbsensi(selected)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Lihat Rekap Absensi
-          </button>
         </div>
 
         <!-- Footer: workflow action -->
@@ -206,60 +197,6 @@
       </div>
     </div>
   </Teleport>
-
-  <!-- ── Drawer: Rekap Absensi ──────────────────────────────── -->
-  <Teleport to="body">
-    <div v-if="showAbsensi" class="drawer-overlay" @click.self="showAbsensi = false">
-      <div class="drawer drawer--wide">
-        <div class="drawer-header">
-          <div>
-            <h2 class="drawer-title">Rekap Absensi</h2>
-            <p class="drawer-sub" v-if="absensiTarget">{{ absensiTarget.nama_lengkap }}</p>
-          </div>
-          <button class="drawer-close" @click="showAbsensi = false">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-
-        <div class="drawer-body">
-          <!-- Ringkasan -->
-          <div v-if="!absensiLoading && absensiList.length" class="rekap-summary">
-            <div class="rekap-chip rekap-chip--green">✓ Hadir {{ absensiList.filter(a => a.status === 'hadir').length }}</div>
-            <div class="rekap-chip rekap-chip--yellow">~ Izin {{ absensiList.filter(a => a.status === 'izin').length }}</div>
-            <div class="rekap-chip rekap-chip--blue">+ Sakit {{ absensiList.filter(a => a.status === 'sakit').length }}</div>
-            <div class="rekap-chip rekap-chip--red">✗ Alpha {{ absensiList.filter(a => a.status === 'alpha').length }}</div>
-          </div>
-
-          <div v-if="absensiLoading" class="empty-state" style="padding:40px 0"><div class="spinner"></div></div>
-          <div v-else-if="absensiError" class="empty-state" style="padding:40px 0">
-            <p class="text-red">{{ absensiError }}</p>
-          </div>
-          <div v-else-if="absensiList.length === 0" class="empty-state" style="padding:40px 0">
-            <p>Belum ada data absensi.</p>
-          </div>
-          <div v-else class="abs-table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Tanggal</th><th>Jam Masuk</th><th>Jam Keluar</th>
-                  <th>Status</th><th>Kegiatan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="a in absensiList" :key="a.id">
-                  <td style="white-space:nowrap">{{ formatDate(a.tanggal) }}</td>
-                  <td>{{ a.jam_masuk ?? '–' }}</td>
-                  <td>{{ a.jam_keluar ?? '–' }}</td>
-                  <td><span :class="absensiStatusClass(a.status)">{{ formatAbsensiStatus(a.status) }}</span></td>
-                  <td class="td-kegiatan">{{ a.kegiatan ?? '–' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -269,7 +206,6 @@ import api from "@/lib/api";
 interface Pengajuan { id: string; nama_lengkap: string; asal_institusi: string; jurusan: string; kategori_magang: string; }
 interface Pelaksanaan { id: string; pengajuan_id: string; tanggal_mulai: string; tanggal_selesai: string; divisi: string | null; status: string; nilai: number | null; }
 interface Row extends Pelaksanaan { nama_lengkap: string; asal_institusi: string; jurusan: string; kategori_magang: string; }
-interface Absensi { id: string; tanggal: string; jam_masuk: string | null; jam_keluar: string | null; kegiatan: string | null; status: string; }
 
 const allPelaksanaan = ref<Pelaksanaan[]>([]);
 const allPengajuan   = ref<Pengajuan[]>([]);
@@ -278,16 +214,8 @@ const error          = ref<string | null>(null);
 const updatingId     = ref<string | null>(null);
 const updateError    = ref('');
 
-// Detail drawer
 const showDetail = ref(false);
 const selected   = ref<Row | null>(null);
-
-// Absensi drawer
-const showAbsensi    = ref(false);
-const absensiTarget  = ref<Row | null>(null);
-const absensiList    = ref<Absensi[]>([]);
-const absensiLoading = ref(false);
-const absensiError   = ref('');
 
 const rows = computed<Row[]>(() => {
   const pMap = new Map(allPengajuan.value.map(p => [p.id, p]));
@@ -316,22 +244,6 @@ async function fetchData() {
 function openDetail(row: Row) {
   selected.value = row;
   showDetail.value = true;
-}
-
-async function openAbsensi(row: Row) {
-  absensiTarget.value = row;
-  absensiList.value = [];
-  absensiError.value = '';
-  showAbsensi.value = true;
-  absensiLoading.value = true;
-  try {
-    const r = await api.get(`/api/absensi/pelaksanaan/${row.id}`);
-    absensiList.value = Array.isArray(r.data.data) ? r.data.data : [];
-  } catch (e: any) {
-    absensiError.value = e.response?.data?.message ?? 'Gagal memuat data absensi.';
-  } finally {
-    absensiLoading.value = false;
-  }
 }
 
 async function updateStatus(id: string, status: string) {
@@ -370,16 +282,6 @@ function statusClass(s: string) {
   if (s === "penilaian")      return "sp-badge sp-badge--orange";
   return "sp-badge sp-badge--gray";
 }
-function formatAbsensiStatus(s: string) {
-  return ({ hadir:"Hadir", izin:"Izin", sakit:"Sakit", alpha:"Alpha" } as Record<string,string>)[s] ?? s;
-}
-function absensiStatusClass(s: string) {
-  if (s === "hadir") return "abs-badge abs-badge--green";
-  if (s === "izin")  return "abs-badge abs-badge--yellow";
-  if (s === "sakit") return "abs-badge abs-badge--blue";
-  if (s === "alpha") return "abs-badge abs-badge--red";
-  return "abs-badge";
-}
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("id-ID", { day:"2-digit", month:"short", year:"numeric" });
 }
@@ -404,7 +306,6 @@ onMounted(fetchData);
 .data-table { width:100%; border-collapse:collapse; font-size:13px; }
 .data-table th { padding:11px 16px; text-align:left; font-size:10.5px; font-weight:600; color:#6b7280; background:#f9fafb; border-bottom:1px solid #f1f5f9; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; }
 .data-table td { padding:13px 16px; border-bottom:1px solid #f9fafb; color:#374151; vertical-align:middle; }
-.td-kegiatan { max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .name-cell { display:flex; align-items:center; gap:10px; }
 .name-avatar { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#48AF4A,#2d8f30); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -425,12 +326,6 @@ onMounted(fetchData);
 .sp-badge--blue   { background:#dbeafe; color:#2563eb; }
 .sp-badge--orange { background:#ffedd5; color:#ea580c; }
 
-.abs-badge { display:inline-flex; align-items:center; font-size:11px; font-weight:700; padding:3px 9px; border-radius:100px; }
-.abs-badge--green  { background:#dcfce7; color:#15803d; }
-.abs-badge--yellow { background:#fef9c3; color:#a16207; }
-.abs-badge--blue   { background:#dbeafe; color:#1d4ed8; }
-.abs-badge--red    { background:#fee2e2; color:#dc2626; }
-
 .progress-wrap  { display:flex; flex-direction:column; gap:4px; }
 .progress-bar   { height:6px; background:#e5e7eb; border-radius:100px; overflow:hidden; }
 .progress-fill  { height:100%; background:linear-gradient(90deg,#48AF4A,#22c55e); border-radius:100px; transition:width 0.4s; }
@@ -442,21 +337,18 @@ onMounted(fetchData);
 .aksi-cell { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .btn-aksi { border:none; border-radius:7px; padding:5px 11px; font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
 .btn-aksi:disabled { opacity:0.5; cursor:default; }
-.btn-aksi--green      { background:#dcfce7; color:#15803d; }
-.btn-aksi--green:hover:not(:disabled)      { background:#bbf7d0; }
-.btn-aksi--orange     { background:#ffedd5; color:#c2410c; }
-.btn-aksi--orange:hover:not(:disabled)     { background:#fed7aa; }
-.btn-aksi--ghost      { background:#f3f4f6; color:#374151; }
+.btn-aksi--green  { background:#dcfce7; color:#15803d; }
+.btn-aksi--green:hover:not(:disabled)  { background:#bbf7d0; }
+.btn-aksi--orange { background:#ffedd5; color:#c2410c; }
+.btn-aksi--orange:hover:not(:disabled) { background:#fed7aa; }
+.btn-aksi--ghost  { background:#f3f4f6; color:#374151; }
 .btn-aksi--ghost:hover { background:#e5e7eb; }
-.btn-aksi--ghost-blue  { background:#eff6ff; color:#1d4ed8; }
-.btn-aksi--ghost-blue:hover { background:#dbeafe; }
 
 .update-error { margin:12px 16px; background:#fff1f2; border:1px solid #fecdd3; color:#be123c; font-size:12.5px; padding:8px 14px; border-radius:8px; }
 
 /* ── Drawer ────────────────────────────────────────────────── */
 .drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); backdrop-filter:blur(2px); z-index:200; display:flex; justify-content:flex-end; }
 .drawer { width:min(480px,100vw); height:100vh; background:#fff; display:flex; flex-direction:column; box-shadow:-4px 0 24px rgba(0,0,0,0.12); overflow:hidden; }
-.drawer--wide { width:min(620px,100vw); }
 .drawer-header { display:flex; align-items:flex-start; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid #f0faf0; flex-shrink:0; }
 .drawer-title { font-size:16px; font-weight:700; color:#111827; margin:0 0 2px; }
 .drawer-sub { font-size:12.5px; color:#6b7280; margin:0; }
@@ -465,13 +357,11 @@ onMounted(fetchData);
 .drawer-body { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px; }
 .drawer-footer { flex-shrink:0; padding:16px 24px; border-top:1px solid #f0faf0; background:#fff; }
 
-/* Profile banner */
 .profile-banner { display:flex; align-items:center; gap:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px; }
 .profile-avatar { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#48AF4A,#2d8f30); color:#fff; font-size:20px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .profile-name { font-size:15px; font-weight:700; color:#111827; }
 .profile-sub  { font-size:12px; color:#6b7280; margin-top:2px; }
 
-/* Info section */
 .info-section { display:flex; flex-direction:column; gap:10px; }
 .info-section__title { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.06em; }
 .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -479,21 +369,14 @@ onMounted(fetchData);
 .info-label { font-size:11px; color:#9ca3af; font-weight:500; margin-bottom:3px; }
 .info-value { font-size:13px; font-weight:600; color:#111827; }
 
-/* Progress large */
 .progress-wrap-lg { display:flex; align-items:center; gap:12px; }
 .progress-bar-lg { flex:1; height:10px; background:#e5e7eb; border-radius:100px; overflow:hidden; }
 .progress-pct { font-size:13px; font-weight:700; color:#48AF4A; white-space:nowrap; }
 
-/* Nilai */
 .nilai-display { display:flex; align-items:baseline; gap:6px; }
 .nilai-score { font-size:36px; font-weight:800; color:#48AF4A; }
 .nilai-label { font-size:14px; color:#9ca3af; }
 
-/* Link ke absensi */
-.btn-absensi-link { display:flex; align-items:center; gap:8px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:10px; padding:11px 16px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; width:100%; justify-content:center; }
-.btn-absensi-link:hover { background:#dbeafe; }
-
-/* Full-width buttons drawer footer */
 .btn-full { width:100%; border:none; border-radius:10px; padding:12px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer; }
 .btn-full:disabled { opacity:0.5; cursor:default; }
 .btn-full--green  { background:#48AF4A; color:#fff; }
@@ -501,15 +384,5 @@ onMounted(fetchData);
 .btn-full--orange { background:#ea580c; color:#fff; }
 .btn-full--orange:hover:not(:disabled) { background:#c2410c; }
 
-/* Rekap summary chips */
-.rekap-summary { display:flex; gap:8px; flex-wrap:wrap; }
-.rekap-chip { font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:100px; }
-.rekap-chip--green  { background:#dcfce7; color:#15803d; }
-.rekap-chip--yellow { background:#fef9c3; color:#a16207; }
-.rekap-chip--blue   { background:#dbeafe; color:#1d4ed8; }
-.rekap-chip--red    { background:#fee2e2; color:#dc2626; }
-
-.abs-table-wrap { overflow-x:auto; border:1px solid #f1f5f9; border-radius:10px; }
-
-@media (max-width:600px) { .info-grid { grid-template-columns:1fr; } .drawer, .drawer--wide { width:100vw; } }
+@media (max-width:600px) { .info-grid { grid-template-columns:1fr; } .drawer { width:100vw; } }
 </style>

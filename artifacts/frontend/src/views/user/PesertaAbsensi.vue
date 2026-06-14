@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- ── ABSENSI HARI INI ─────────────────────────────────── -->
     <div class="card">
       <div class="card-header">
         <h3 class="card-title">Absensi Hari Ini</h3>
@@ -66,7 +67,7 @@
       <div v-else-if="absensiState === 'missed_checkin' || absensiState === 'missed_checkout'" class="absensi-panel">
         <div class="ap-icon ap-icon--miss"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
         <div class="ap-title">{{ absensiState === 'missed_checkin' ? 'Sesi Absen Masuk Terlewat' : 'Sesi Absen Pulang Terlewat' }}</div>
-        <div class="ap-desc">Jika ada keperluan, silakan hubungi HRD.</div>
+        <div class="ap-desc">Jika ada keperluan, silakan ajukan izin di bawah.</div>
       </div>
     </div>
 
@@ -74,6 +75,42 @@
       <div v-if="absensiSuccess" class="ap-toast">{{ absensiSuccess }}</div>
     </Transition>
 
+    <!-- ── PENGAJUAN IZIN / SAKIT ────────────────────────────── -->
+    <div v-if="pelaksanaanSaya?.status === 'aktif'" class="card" style="margin-top:14px">
+      <div class="card-header">
+        <div>
+          <h3 class="card-title">Izin &amp; Sakit</h3>
+          <p class="card-sub">Ajukan ketidakhadiran untuk tanggal tertentu</p>
+        </div>
+        <button class="btn-green-sm" @click="openIzinModal">
+          + Ajukan
+        </button>
+      </div>
+
+      <div v-if="izinLoading" class="empty-state" style="padding:28px"><div class="spinner"></div></div>
+      <div v-else-if="izinList.length === 0" class="empty-state" style="padding:28px">
+        <p>Belum ada riwayat pengajuan izin/sakit.</p>
+      </div>
+      <div v-else class="izin-list">
+        <div v-for="item in izinList" :key="item.id" class="izin-row">
+          <div class="izin-row__left">
+            <span :class="['izin-badge', `izin-badge--${item.jenis}`]">{{ item.jenis === 'izin' ? 'Izin' : 'Sakit' }}</span>
+            <div>
+              <div class="izin-tanggal">{{ formatTanggalShort(item.tanggal) }}</div>
+              <div class="izin-alasan">{{ item.alasan }}</div>
+            </div>
+          </div>
+          <div class="izin-row__right">
+            <span :class="['izin-status', `izin-status--${item.status}`]">
+              {{ { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' }[item.status] ?? item.status }}
+            </span>
+            <div v-if="item.catatan_hrd" class="izin-catatan">{{ item.catatan_hrd }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REKAP ABSENSI ─────────────────────────────────────── -->
     <div class="card" style="margin-top:14px">
       <div class="card-header">
         <h3 class="card-title">Rekap Absensi</h3>
@@ -105,6 +142,7 @@
     </div>
   </div>
 
+  <!-- ── MODAL CHECKIN ──────────────────────────────────────── -->
   <Teleport to="body">
     <div v-if="showCheckinModal" class="modal-backdrop" @click.self="showCheckinModal = false">
       <div class="modal-box">
@@ -121,6 +159,50 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ── MODAL IZIN / SAKIT ─────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="showIzinModal" class="modal-backdrop" @click.self="closeIzinModal">
+      <div class="modal-box modal-box--izin">
+        <div class="modal-box__title">Ajukan Izin / Sakit</div>
+
+        <div class="modal-field">
+          <label class="modal-label">Tanggal <span class="ap-required">*</span></label>
+          <input v-model="izinForm.tanggal" type="date" class="modal-input" :max="maxTanggalIzin" />
+        </div>
+
+        <div class="modal-field">
+          <label class="modal-label">Jenis <span class="ap-required">*</span></label>
+          <div class="radio-group">
+            <label class="radio-opt" :class="{ 'radio-opt--active': izinForm.jenis === 'izin' }">
+              <input type="radio" v-model="izinForm.jenis" value="izin" style="display:none" />
+              Izin
+            </label>
+            <label class="radio-opt" :class="{ 'radio-opt--active': izinForm.jenis === 'sakit' }">
+              <input type="radio" v-model="izinForm.jenis" value="sakit" style="display:none" />
+              Sakit
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-field">
+          <label class="modal-label">Alasan <span class="ap-required">*</span></label>
+          <textarea v-model="izinForm.alasan" class="modal-textarea" rows="3"
+            :placeholder="izinForm.jenis === 'sakit' ? 'Contoh: Demam tinggi dan dianjurkan istirahat oleh dokter' : 'Contoh: Ada keperluan keluarga mendadak'">
+          </textarea>
+        </div>
+
+        <div v-if="izinError" class="ap-error" style="margin-top:4px">{{ izinError }}</div>
+
+        <div class="modal-box__actions" style="margin-top:18px">
+          <button class="btn-cancel" @click="closeIzinModal">Batal</button>
+          <button class="btn-confirm" @click="submitIzin" :disabled="submittingIzin || !izinForm.tanggal || !izinForm.jenis || izinForm.alasan.length < 5">
+            {{ submittingIzin ? 'Mengirim...' : 'Kirim Pengajuan' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -132,6 +214,15 @@ type AbsensiCfg = {
   jam_pulang_buka: string; jam_pulang_tutup: string;
   kantor_lat?: number; kantor_lng?: number; radius_meter?: number;
 };
+
+interface IzinSakitItem {
+  id: string;
+  tanggal: string;
+  jenis: string;
+  alasan: string;
+  status: string;
+  catatan_hrd?: string | null;
+}
 
 const cfg            = ref<AbsensiCfg | null>(null);
 const absensiList    = ref<any[]>([]);
@@ -151,6 +242,14 @@ const userLng       = ref(0);
 const userDistanceM = ref(0);
 
 const pelaksanaanSaya = ref<any>(null);
+
+// Izin/Sakit state
+const izinList       = ref<IzinSakitItem[]>([]);
+const izinLoading    = ref(false);
+const showIzinModal  = ref(false);
+const submittingIzin = ref(false);
+const izinError      = ref('');
+const izinForm       = ref({ tanggal: '', jenis: 'izin', alasan: '' });
 
 const nowWIB = ref(getNowWIB());
 let clockTimer: ReturnType<typeof setInterval> | null = null;
@@ -181,6 +280,8 @@ const currentTimeWIB = computed(() => {
   const d = nowWIB.value;
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 });
+
+const maxTanggalIzin = computed(() => todayStr.value);
 
 const todayAbsensi = computed(() =>
   absensiList.value.find(a => a.tanggal?.startsWith(todayStr.value)) ?? null
@@ -245,6 +346,18 @@ async function fetchAbsensi() {
     }
   } finally {
     absensiLoading.value = false;
+  }
+}
+
+async function fetchIzin() {
+  izinLoading.value = true;
+  try {
+    const r = await api.get('/api/izin-sakit/saya');
+    izinList.value = Array.isArray(r.data?.data) ? r.data.data : [];
+  } catch {
+    izinList.value = [];
+  } finally {
+    izinLoading.value = false;
   }
 }
 
@@ -327,6 +440,37 @@ async function doCheckout() {
   }
 }
 
+function openIzinModal() {
+  izinForm.value = { tanggal: todayStr.value, jenis: 'izin', alasan: '' };
+  izinError.value = '';
+  showIzinModal.value = true;
+}
+
+function closeIzinModal() {
+  showIzinModal.value = false;
+  izinError.value = '';
+}
+
+async function submitIzin() {
+  if (!izinForm.value.tanggal || !izinForm.value.jenis || izinForm.value.alasan.length < 5) return;
+  submittingIzin.value = true;
+  izinError.value = '';
+  try {
+    await api.post('/api/izin-sakit', {
+      tanggal: izinForm.value.tanggal,
+      jenis: izinForm.value.jenis,
+      alasan: izinForm.value.alasan.trim(),
+    });
+    closeIzinModal();
+    showToast(`Pengajuan ${izinForm.value.jenis} berhasil dikirim!`);
+    await fetchIzin();
+  } catch (e: any) {
+    izinError.value = e.response?.data?.message ?? 'Gagal mengirim pengajuan';
+  } finally {
+    submittingIzin.value = false;
+  }
+}
+
 function showToast(msg: string) {
   absensiSuccess.value = msg;
   setTimeout(() => { absensiSuccess.value = ''; }, 3000);
@@ -339,6 +483,7 @@ function formatTanggalShort(iso: string) {
 
 onMounted(() => {
   fetchAbsensi();
+  fetchIzin();
   clockTimer = setInterval(() => { nowWIB.value = getNowWIB(); }, 1000);
 });
 
@@ -351,6 +496,7 @@ onUnmounted(() => {
 .card { background: #fff; border-radius: 14px; border: 1px solid #e9f5e9; box-shadow: 0 1px 3px rgba(13,40,24,0.05); overflow: hidden; }
 .card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f0faf0; }
 .card-title  { font-size: 13.5px; font-weight: 700; color: #111827; margin: 0; }
+.card-sub    { font-size: 11.5px; color: #9ca3af; margin: 2px 0 0; }
 
 .today-chip { font-size: 11px; font-weight: 600; color: #48AF4A; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 100px; padding: 4px 12px; }
 
@@ -395,13 +541,31 @@ onUnmounted(() => {
 .btn-absen--pulang { background: #1d4ed8; }
 .btn-absen--pulang:hover:not(:disabled) { background: #1e40af; }
 
-.btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: "Poppins", sans-serif; cursor: pointer; text-decoration: none; }
+.btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: "Poppins", sans-serif; cursor: pointer; text-decoration: none; display: inline-block; }
 .btn-green-sm:hover { background: #3d9e3f; }
 
 .ap-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #0d2818; color: #86efac; font-size: 13px; font-weight: 600; padding: 12px 24px; border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 9999; white-space: nowrap; }
 .toast-enter-active, .toast-leave-active { transition: all .3s ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(16px); }
 
+/* Izin/Sakit list */
+.izin-list { padding: 4px 0 8px; }
+.izin-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 20px; border-bottom: 1px solid #f9fafb; gap: 12px; }
+.izin-row:last-child { border-bottom: none; }
+.izin-row__left { display: flex; align-items: flex-start; gap: 10px; }
+.izin-row__right { text-align: right; flex-shrink: 0; }
+.izin-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.izin-badge--izin  { background: #eff6ff; color: #1d4ed8; }
+.izin-badge--sakit { background: #fffbeb; color: #b45309; }
+.izin-tanggal { font-size: 12.5px; font-weight: 600; color: #111827; }
+.izin-alasan  { font-size: 12px; color: #6b7280; margin-top: 2px; max-width: 220px; }
+.izin-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
+.izin-status--pending   { background: #fef3c7; color: #92400e; }
+.izin-status--disetujui { background: #dcfce7; color: #15803d; }
+.izin-status--ditolak   { background: #fee2e2; color: #dc2626; }
+.izin-catatan { font-size: 11px; color: #9ca3af; margin-top: 4px; max-width: 160px; }
+
+/* Rekap */
 .rekap-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 16px 20px; }
 .rekap-item { border-radius: 12px; padding: 14px; text-align: center; border: 1.5px solid; }
 .rekap-item--hadir { background: #f0fdf4; border-color: #bbf7d0; }
@@ -422,12 +586,23 @@ onUnmounted(() => {
 .ket-badge--sakit { background: #fffbeb; color: #92400e; }
 .ket-badge--alpha { background: #fff1f2; color: #be123c; }
 
+/* Modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.modal-box--izin { max-width: 420px; }
 .modal-box__title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 10px; }
 .modal-box__desc  { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 10px; }
 .modal-box__geo   { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 7px 12px; margin-bottom: 18px; }
 .modal-box__actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-field { margin-bottom: 14px; }
+.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.modal-input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; box-sizing: border-box; }
+.modal-input:focus { border-color: #48AF4A; }
+.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; box-sizing: border-box; }
+.modal-textarea:focus { border-color: #48AF4A; }
+.radio-group { display: flex; gap: 10px; }
+.radio-opt { display: flex; align-items: center; justify-content: center; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .15s; user-select: none; }
+.radio-opt--active { border-color: #48AF4A; background: #f0fdf4; color: #15803d; }
 .btn-cancel  { background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
 .btn-confirm { background: #48AF4A; color: #fff; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
 .btn-confirm:disabled { background: #d1d5db; cursor: default; }
@@ -438,5 +613,6 @@ onUnmounted(() => {
 @media (max-width: 600px) {
   .rekap-row { grid-template-columns: 1fr 1fr; }
   .abs-table th:nth-child(5), .abs-table td:nth-child(5) { display: none; }
+  .izin-alasan { max-width: 140px; }
 }
 </style>

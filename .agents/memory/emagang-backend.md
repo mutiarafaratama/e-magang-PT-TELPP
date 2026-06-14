@@ -8,9 +8,11 @@ Backend Go selesai — 35 file .go (termasuk divisi), siap di-compile dan dijala
 Migration 001–006 sudah dijalankan ke database Replit.
 
 ## Go Build di Replit
-- GOPROXY default Replit memblokir paket CVE (pgx v5.6.0 diblokir)
-- Solusi: `GOPROXY=direct GONOSUMCHECK=* GONOSUMDB=* go build -o bin/server ./cmd/server/main.go`
-- Setelah berhasil, module cache terisi dan build berikutnya normal
+- GOPROXY Replit memblokir SEMUA versi pgx/v5 (termasuk v5.6.0 dan v5.7.2) karena CVE policy
+- Go binary di Replit tidak bisa di-rebuild — user HARUS rebuild di lokal
+- go.mod sudah diupgrade ke pgx v5.7.2 + crypto v0.31.0 (fix CVEs); go.sum dihapus → jalankan `go mod tidy` dulu
+- Solusi Replit: endpoint baru (izin-sakit) diimplementasikan di api-server Node.js (port 3001)
+- Vite proxy split: `/api/izin-sakit` → localhost:3001, `/api` → localhost:8080 (Go)
 
 ## Struktur Folder
 
