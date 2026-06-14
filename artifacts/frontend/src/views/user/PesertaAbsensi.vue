@@ -101,9 +101,15 @@
             </div>
           </div>
           <div class="izin-row__right">
-            <span :class="['izin-status', `izin-status--${item.status}`]">
-              {{ { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' }[item.status] ?? item.status }}
-            </span>
+            <div class="izin-row__right-top">
+              <span :class="['izin-status', `izin-status--${item.status}`]">
+                {{ { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' }[item.status] ?? item.status }}
+              </span>
+              <a v-if="item.bukti_path" :href="`/api/uploads/${item.bukti_path}`" target="_blank" class="bukti-link">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg>
+                Surat Sakit
+              </a>
+            </div>
             <div v-if="item.catatan_hrd" class="izin-catatan">{{ item.catatan_hrd }}</div>
           </div>
         </div>
@@ -162,46 +168,103 @@
 
   <!-- ── MODAL IZIN / SAKIT ─────────────────────────────────── -->
   <Teleport to="body">
-    <div v-if="showIzinModal" class="modal-backdrop" @click.self="closeIzinModal">
-      <div class="modal-box modal-box--izin">
-        <div class="modal-box__title">Ajukan Izin / Sakit</div>
+    <Transition name="modal-fade">
+      <div v-if="showIzinModal" class="modal-backdrop" @click.self="closeIzinModal">
+        <div class="modal-box modal-box--izin">
+          <div class="modal-box__header">
+            <div class="modal-box__title">Ajukan Izin / Sakit</div>
+            <button class="modal-close-btn" @click="closeIzinModal">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
 
-        <div class="modal-field">
-          <label class="modal-label">Tanggal <span class="ap-required">*</span></label>
-          <input v-model="izinForm.tanggal" type="date" class="modal-input" :max="maxTanggalIzin" />
-        </div>
+          <!-- Pilih Jenis -->
+          <div class="modal-field">
+            <label class="modal-label">Jenis Ketidakhadiran <span class="ap-required">*</span></label>
+            <div class="jenis-tabs">
+              <button
+                :class="['jenis-tab', izinForm.jenis === 'izin' && 'jenis-tab--active']"
+                @click="izinForm.jenis = 'izin'; izinForm.buktiFile = null; resetFileInput()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Izin
+              </button>
+              <button
+                :class="['jenis-tab', izinForm.jenis === 'sakit' && 'jenis-tab--active jenis-tab--sakit']"
+                @click="izinForm.jenis = 'sakit'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2z" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Sakit
+              </button>
+            </div>
+          </div>
 
-        <div class="modal-field">
-          <label class="modal-label">Jenis <span class="ap-required">*</span></label>
-          <div class="radio-group">
-            <label class="radio-opt" :class="{ 'radio-opt--active': izinForm.jenis === 'izin' }">
-              <input type="radio" v-model="izinForm.jenis" value="izin" style="display:none" />
-              Izin
-            </label>
-            <label class="radio-opt" :class="{ 'radio-opt--active': izinForm.jenis === 'sakit' }">
-              <input type="radio" v-model="izinForm.jenis" value="sakit" style="display:none" />
-              Sakit
-            </label>
+          <!-- Tanggal -->
+          <div class="modal-field">
+            <label class="modal-label">Tanggal <span class="ap-required">*</span></label>
+            <input v-model="izinForm.tanggal" type="date" class="modal-input" :min="minTanggalIzin" />
+            <div class="modal-hint">Boleh memilih tanggal hari ini atau ke depan</div>
+          </div>
+
+          <!-- Alasan -->
+          <div class="modal-field">
+            <label class="modal-label">Alasan <span class="ap-required">*</span></label>
+            <textarea v-model="izinForm.alasan" class="modal-textarea" rows="3"
+              :placeholder="izinForm.jenis === 'sakit' ? 'Contoh: Demam tinggi dan dianjurkan istirahat oleh dokter' : 'Contoh: Ada keperluan keluarga mendadak'">
+            </textarea>
+          </div>
+
+          <!-- Upload Surat Sakit (hanya untuk jenis=sakit) -->
+          <Transition name="slide-down">
+            <div v-if="izinForm.jenis === 'sakit'" class="modal-field">
+              <label class="modal-label">
+                Surat Sakit
+                <span class="modal-label--optional">(opsional)</span>
+              </label>
+              <div
+                class="upload-zone"
+                :class="{ 'upload-zone--has-file': izinForm.buktiFile }"
+                @click="triggerFileInput"
+                @dragover.prevent
+                @drop.prevent="onFileDrop">
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  style="display:none"
+                  @change="onFileChange" />
+
+                <template v-if="!izinForm.buktiFile">
+                  <div class="upload-zone__icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </div>
+                  <div class="upload-zone__text">Klik atau seret file ke sini</div>
+                  <div class="upload-zone__hint">JPG, PNG, atau PDF · Maks. 10MB</div>
+                </template>
+                <template v-else>
+                  <div class="upload-zone__preview">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#16a34a" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="#16a34a" stroke-width="2"/></svg>
+                    <span class="upload-zone__filename">{{ izinForm.buktiFile.name }}</span>
+                    <button class="upload-zone__remove" @click.stop="removeFile">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </Transition>
+
+          <div v-if="izinError" class="ap-error" style="margin-top:4px">{{ izinError }}</div>
+
+          <div class="modal-box__actions" style="margin-top:18px">
+            <button class="btn-cancel" @click="closeIzinModal">Batal</button>
+            <button class="btn-confirm" @click="submitIzin"
+              :disabled="submittingIzin || !izinForm.tanggal || !izinForm.jenis || izinForm.alasan.length < 5">
+              <span v-if="submittingIzin" class="btn-spinner-sm"></span>
+              {{ submittingIzin ? 'Mengirim...' : 'Kirim Pengajuan' }}
+            </button>
           </div>
         </div>
-
-        <div class="modal-field">
-          <label class="modal-label">Alasan <span class="ap-required">*</span></label>
-          <textarea v-model="izinForm.alasan" class="modal-textarea" rows="3"
-            :placeholder="izinForm.jenis === 'sakit' ? 'Contoh: Demam tinggi dan dianjurkan istirahat oleh dokter' : 'Contoh: Ada keperluan keluarga mendadak'">
-          </textarea>
-        </div>
-
-        <div v-if="izinError" class="ap-error" style="margin-top:4px">{{ izinError }}</div>
-
-        <div class="modal-box__actions" style="margin-top:18px">
-          <button class="btn-cancel" @click="closeIzinModal">Batal</button>
-          <button class="btn-confirm" @click="submitIzin" :disabled="submittingIzin || !izinForm.tanggal || !izinForm.jenis || izinForm.alasan.length < 5">
-            {{ submittingIzin ? 'Mengirim...' : 'Kirim Pengajuan' }}
-          </button>
-        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -221,6 +284,7 @@ interface IzinSakitItem {
   jenis: string;
   alasan: string;
   status: string;
+  bukti_path?: string | null;
   catatan_hrd?: string | null;
 }
 
@@ -249,7 +313,10 @@ const izinLoading    = ref(false);
 const showIzinModal  = ref(false);
 const submittingIzin = ref(false);
 const izinError      = ref('');
-const izinForm       = ref({ tanggal: '', jenis: 'izin', alasan: '' });
+const izinForm       = ref<{ tanggal: string; jenis: string; alasan: string; buktiFile: File | null }>({
+  tanggal: '', jenis: 'izin', alasan: '', buktiFile: null
+});
+const fileInputRef   = ref<HTMLInputElement | null>(null);
 
 const nowWIB = ref(getNowWIB());
 let clockTimer: ReturnType<typeof setInterval> | null = null;
@@ -281,7 +348,8 @@ const currentTimeWIB = computed(() => {
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 });
 
-const maxTanggalIzin = computed(() => todayStr.value);
+// Tanggal minimal = hari ini (boleh ke depan)
+const minTanggalIzin = computed(() => todayStr.value);
 
 const todayAbsensi = computed(() =>
   absensiList.value.find(a => a.tanggal?.startsWith(todayStr.value)) ?? null
@@ -441,7 +509,7 @@ async function doCheckout() {
 }
 
 function openIzinModal() {
-  izinForm.value = { tanggal: todayStr.value, jenis: 'izin', alasan: '' };
+  izinForm.value = { tanggal: todayStr.value, jenis: 'izin', alasan: '', buktiFile: null };
   izinError.value = '';
   showIzinModal.value = true;
 }
@@ -451,16 +519,54 @@ function closeIzinModal() {
   izinError.value = '';
 }
 
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement;
+  if (input.files?.[0]) {
+    izinForm.value.buktiFile = input.files[0];
+  }
+}
+
+function onFileDrop(e: DragEvent) {
+  const file = e.dataTransfer?.files?.[0];
+  if (file) izinForm.value.buktiFile = file;
+}
+
+function removeFile() {
+  izinForm.value.buktiFile = null;
+  resetFileInput();
+}
+
+function resetFileInput() {
+  if (fileInputRef.value) fileInputRef.value.value = '';
+}
+
 async function submitIzin() {
   if (!izinForm.value.tanggal || !izinForm.value.jenis || izinForm.value.alasan.length < 5) return;
   submittingIzin.value = true;
   izinError.value = '';
   try {
-    await api.post('/api/izin-sakit', {
-      tanggal: izinForm.value.tanggal,
-      jenis: izinForm.value.jenis,
-      alasan: izinForm.value.alasan.trim(),
-    });
+    // Kalau ada file: kirim multipart (perlu binary baru hasil go build lokal)
+    // Kalau tidak ada file: kirim JSON (kompatibel dengan binary lama)
+    if (izinForm.value.jenis === 'sakit' && izinForm.value.buktiFile) {
+      const fd = new FormData();
+      fd.append('tanggal', izinForm.value.tanggal);
+      fd.append('jenis', izinForm.value.jenis);
+      fd.append('alasan', izinForm.value.alasan.trim());
+      fd.append('bukti', izinForm.value.buktiFile);
+      await api.post('/api/izin-sakit', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+    } else {
+      await api.post('/api/izin-sakit', {
+        tanggal: izinForm.value.tanggal,
+        jenis: izinForm.value.jenis,
+        alasan: izinForm.value.alasan.trim(),
+      });
+    }
     closeIzinModal();
     showToast(`Pengajuan ${izinForm.value.jenis} berhasil dikirim!`);
     await fetchIzin();
@@ -518,101 +624,134 @@ onUnmounted(() => {
 .ap-countdown { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 13px; font-weight: 600; padding: 6px 18px; border-radius: 100px; margin-top: 6px; }
 .ap-error { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; font-size: 12.5px; padding: 8px 14px; border-radius: 8px; width: 100%; max-width: 420px; text-align: left; }
 
-.ap-done-rows { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; margin: 0 auto; }
+.ap-done-rows { display: flex; flex-direction: column; gap: 8px; align-self: stretch; }
 .ap-done-row  { display: flex; align-items: center; gap: 10px; }
-.ap-badge     { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 100px; }
-.ap-badge--masuk  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-.ap-badge--pulang { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.ap-done-time { font-size: 13px; color: #374151; font-weight: 600; }
+.ap-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 100px; }
+.ap-badge--masuk  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.ap-badge--pulang { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.ap-done-time { font-size: 13px; font-weight: 600; color: #374151; }
 
-.ap-form { width: 100%; max-width: 480px; text-align: left; margin-top: 12px; }
+.ap-kegiatan { background: #f9fafb; border-radius: 10px; padding: 12px 14px; align-self: stretch; text-align: left; margin-top: 8px; }
+.ap-kegiatan__label { font-size: 10.5px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.ap-kegiatan__text  { font-size: 13px; color: #374151; line-height: 1.6; }
+
+.ap-form { align-self: stretch; text-align: left; }
 .ap-form-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.ap-required { color: #ef4444; }
-.ap-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: "Poppins", sans-serif; resize: vertical; outline: none; transition: border-color .15s; box-sizing: border-box; }
+.ap-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; }
 .ap-textarea:focus { border-color: #48AF4A; }
+.ap-required { color: #ef4444; }
 
-.ap-kegiatan { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; width: 100%; max-width: 480px; text-align: left; margin-top: 16px; }
-.ap-kegiatan__label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.ap-kegiatan__text  { font-size: 13px; color: #374151; line-height: 1.6; white-space: pre-line; }
-
-.btn-absen { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 12px 32px; font-size: 14px; font-weight: 700; font-family: "Poppins", sans-serif; cursor: pointer; margin-top: 10px; transition: background .15s; }
-.btn-absen:hover { background: #3d9e3f; }
-.btn-absen:disabled { background: #d1d5db; cursor: default; }
-.btn-absen--pulang { background: #1d4ed8; }
-.btn-absen--pulang:hover:not(:disabled) { background: #1e40af; }
-
-.btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: "Poppins", sans-serif; cursor: pointer; text-decoration: none; display: inline-block; }
-.btn-green-sm:hover { background: #3d9e3f; }
-
-.ap-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #0d2818; color: #86efac; font-size: 13px; font-weight: 600; padding: 12px 24px; border-radius: 100px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 9999; white-space: nowrap; }
-.toast-enter-active, .toast-leave-active { transition: all .3s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(16px); }
-
-/* Izin/Sakit list */
-.izin-list { padding: 4px 0 8px; }
-.izin-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 20px; border-bottom: 1px solid #f9fafb; gap: 12px; }
-.izin-row:last-child { border-bottom: none; }
-.izin-row__left { display: flex; align-items: flex-start; gap: 10px; }
-.izin-row__right { text-align: right; flex-shrink: 0; }
-.izin-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
-.izin-badge--izin  { background: #eff6ff; color: #1d4ed8; }
-.izin-badge--sakit { background: #fffbeb; color: #b45309; }
-.izin-tanggal { font-size: 12.5px; font-weight: 600; color: #111827; }
-.izin-alasan  { font-size: 12px; color: #6b7280; margin-top: 2px; max-width: 220px; }
-.izin-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
-.izin-status--pending   { background: #fef3c7; color: #92400e; }
-.izin-status--disetujui { background: #dcfce7; color: #15803d; }
-.izin-status--ditolak   { background: #fee2e2; color: #dc2626; }
-.izin-catatan { font-size: 11px; color: #9ca3af; margin-top: 4px; max-width: 160px; }
-
-/* Rekap */
-.rekap-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 16px 20px; }
-.rekap-item { border-radius: 12px; padding: 14px; text-align: center; border: 1.5px solid; }
-.rekap-item--hadir { background: #f0fdf4; border-color: #bbf7d0; }
-.rekap-item--izin  { background: #eff6ff; border-color: #bfdbfe; }
-.rekap-item--sakit { background: #fffbeb; border-color: #fde68a; }
-.rekap-item--alpha { background: #fff1f2; border-color: #fecdd3; }
-.rekap-num { font-size: 24px; font-weight: 800; color: #111827; }
-.rekap-lbl { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 2px; }
-
-.abs-table-wrap { overflow-x: auto; padding: 0 20px 16px; }
-.abs-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.abs-table th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #f0faf0; }
-.abs-table td { padding: 9px 10px; border-bottom: 1px solid #f9fafb; color: #374151; }
-.td-kegiatan { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ket-badge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px; }
-.ket-badge--hadir { background: #f0fdf4; color: #15803d; }
-.ket-badge--izin  { background: #eff6ff; color: #1d4ed8; }
-.ket-badge--sakit { background: #fffbeb; color: #92400e; }
-.ket-badge--alpha { background: #fff1f2; color: #be123c; }
-
-/* Modal */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
-.modal-box--izin { max-width: 420px; }
-.modal-box__title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 10px; }
-.modal-box__desc  { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 10px; }
-.modal-box__geo   { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 7px 12px; margin-bottom: 18px; }
-.modal-box__actions { display: flex; gap: 10px; justify-content: flex-end; }
-.modal-field { margin-bottom: 14px; }
-.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.modal-input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; box-sizing: border-box; }
-.modal-input:focus { border-color: #48AF4A; }
-.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; box-sizing: border-box; }
-.modal-textarea:focus { border-color: #48AF4A; }
-.radio-group { display: flex; gap: 10px; }
-.radio-opt { display: flex; align-items: center; justify-content: center; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .15s; user-select: none; }
-.radio-opt--active { border-color: #48AF4A; background: #f0fdf4; color: #15803d; }
-.btn-cancel  { background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
-.btn-confirm { background: #48AF4A; color: #fff; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; }
-.btn-confirm:disabled { background: #d1d5db; cursor: default; }
-
-.spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .8s linear infinite; }
+.btn-absen { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 11px 28px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: inherit; }
+.btn-absen:disabled { opacity: .6; cursor: not-allowed; }
+.btn-absen--pulang { background: #2563eb; }
+.btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 600px) {
-  .rekap-row { grid-template-columns: 1fr 1fr; }
-  .abs-table th:nth-child(5), .abs-table td:nth-child(5) { display: none; }
-  .izin-alasan { max-width: 140px; }
-}
+.btn-green-sm { background: #f0fdf4; color: #16a34a; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.btn-green-sm:hover { background: #dcfce7; }
+
+.ap-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a2e1a; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 22px; border-radius: 100px; box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 9999; white-space: nowrap; }
+.toast-enter-active, .toast-leave-active { transition: all .3s; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 10px); }
+
+/* ── Izin list ── */
+.izin-list { padding: 4px 0; }
+.izin-row  { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 13px 20px; border-bottom: 1px solid #f9fafb; }
+.izin-row:last-child { border-bottom: none; }
+.izin-row__left  { display: flex; align-items: flex-start; gap: 10px; }
+.izin-row__right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.izin-row__right-top { display: flex; align-items: center; gap: 8px; }
+.izin-badge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px; white-space: nowrap; }
+.izin-badge--izin  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.izin-badge--sakit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.izin-tanggal { font-size: 12.5px; font-weight: 600; color: #111827; }
+.izin-alasan  { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.izin-status  { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.izin-status--pending   { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+.izin-status--disetujui { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+.izin-status--ditolak   { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+.izin-catatan { font-size: 11px; color: #9ca3af; max-width: 180px; text-align: right; }
+.bukti-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #2563eb; text-decoration: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; padding: 2px 8px; }
+.bukti-link:hover { background: #dbeafe; }
+
+/* ── Rekap ── */
+.rekap-row  { display: flex; gap: 0; border-bottom: 1px solid #f0faf0; }
+.rekap-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 8px; border-right: 1px solid #f0faf0; }
+.rekap-item:last-child { border-right: none; }
+.rekap-num  { font-size: 26px; font-weight: 800; }
+.rekap-lbl  { font-size: 11px; color: #9ca3af; margin-top: 2px; font-weight: 500; }
+.rekap-item--hadir .rekap-num { color: #16a34a; }
+.rekap-item--izin  .rekap-num { color: #ca8a04; }
+.rekap-item--sakit .rekap-num { color: #2563eb; }
+.rekap-item--alpha .rekap-num { color: #dc2626; }
+
+.abs-table-wrap { overflow-x: auto; }
+.abs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.abs-table th { padding: 10px 14px; font-size: 10.5px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; letter-spacing: .04em; text-align: left; }
+.abs-table td { padding: 11px 14px; border-bottom: 1px solid #f9fafb; color: #374151; }
+.td-kegiatan { font-size: 12px; color: #6b7280; max-width: 200px; }
+.ket-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.ket-badge--hadir { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.ket-badge--izin  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.ket-badge--sakit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.ket-badge--alpha { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+
+/* ── Modal ── */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; backdrop-filter: blur(2px); }
+.modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+.modal-box--izin { max-width: 460px; }
+.modal-box__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modal-box__title { font-size: 16px; font-weight: 700; color: #111827; }
+.modal-close-btn { background: #f3f4f6; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+.modal-close-btn:hover { background: #e5e7eb; }
+.modal-box__desc { font-size: 13.5px; color: #374151; margin-bottom: 16px; line-height: 1.6; }
+.modal-box__geo  { display: flex; align-items: center; gap: 6px; background: #f0fdf4; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #15803d; margin-bottom: 16px; }
+.modal-box__actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+
+.modal-field { margin-bottom: 16px; }
+.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.modal-label--optional { font-size: 11px; font-weight: 400; color: #9ca3af; margin-left: 4px; }
+.modal-hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.modal-input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 9px 13px; font-size: 13px; font-family: inherit; outline: none; color: #111827; box-sizing: border-box; }
+.modal-input:focus { border-color: #48AF4A; }
+.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; }
+.modal-textarea:focus { border-color: #48AF4A; }
+
+/* ── Jenis tabs ── */
+.jenis-tabs { display: flex; gap: 8px; }
+.jenis-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1.5px solid #e5e7eb; background: #f9fafb; color: #6b7280; font-size: 13px; font-weight: 600; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-family: inherit; transition: all .15s; }
+.jenis-tab:hover { border-color: #d1d5db; background: #f3f4f6; }
+.jenis-tab--active { border-color: #48AF4A; background: #f0fdf4; color: #16a34a; }
+.jenis-tab--sakit.jenis-tab--active { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+
+/* ── Upload zone ── */
+.upload-zone { border: 2px dashed #e5e7eb; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all .2s; text-align: center; min-height: 90px; justify-content: center; }
+.upload-zone:hover { border-color: #93c5fd; background: #f0f9ff; }
+.upload-zone--has-file { border-color: #86efac; background: #f0fdf4; border-style: solid; }
+.upload-zone__icon { color: #9ca3af; }
+.upload-zone__text { font-size: 13px; font-weight: 600; color: #374151; }
+.upload-zone__hint { font-size: 11px; color: #9ca3af; }
+.upload-zone__preview { display: flex; align-items: center; gap: 8px; width: 100%; }
+.upload-zone__filename { font-size: 12.5px; font-weight: 600; color: #15803d; flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-zone__remove { background: #fee2e2; border: none; border-radius: 6px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #dc2626; flex-shrink: 0; }
+.upload-zone__remove:hover { background: #fecaca; }
+
+/* ── Buttons ── */
+.btn-cancel  { background: #f3f4f6; color: #374151; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-cancel:hover { background: #e5e7eb; }
+.btn-confirm { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 10px 22px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 7px; }
+.btn-confirm:disabled { opacity: .55; cursor: not-allowed; }
+.btn-confirm:not(:disabled):hover { background: #3d9e3f; }
+.btn-spinner-sm { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+
+/* ── Transitions ── */
+.modal-fade-enter-active, .modal-fade-leave-active { transition: all .25s; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+.modal-fade-enter-from .modal-box, .modal-fade-leave-to .modal-box { transform: scale(.96) translateY(8px); }
+
+.slide-down-enter-active, .slide-down-leave-active { transition: all .2s; overflow: hidden; }
+.slide-down-enter-from, .slide-down-leave-to { opacity: 0; max-height: 0; margin-bottom: 0; }
+.slide-down-enter-to, .slide-down-leave-from { opacity: 1; max-height: 200px; }
+
+.spinner { width: 26px; height: 26px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .7s linear infinite; }
 </style>

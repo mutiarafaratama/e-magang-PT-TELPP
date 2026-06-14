@@ -1,11 +1,15 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/telpp/emagang/internal/config"
 	"github.com/telpp/emagang/internal/middleware"
 	"github.com/telpp/emagang/internal/models"
 	"github.com/telpp/emagang/internal/repository"
@@ -20,23 +24,22 @@ func NewIzinSakitHandler(repo *repository.IzinSakitRepository, pelaksanaanRepo *
 	return &IzinSakitHandler{repo: repo, pelaksanaanRepo: pelaksanaanRepo}
 }
 
-// POST /api/izin-sakit — peserta ajukan izin atau sakit
+// POST /api/izin-sakit — peserta ajukan izin atau sakit (multipart/form-data)
 func (h *IzinSakitHandler) Ajukan(c *gin.Context) {
-	var req models.AjukanIzinSakitRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Data tidak valid"})
-		return
-	}
-	if req.Jenis != "izin" && req.Jenis != "sakit" {
+	jenis := c.PostForm("jenis")
+	alasan := c.PostForm("alasan")
+	tanggalStr := c.PostForm("tanggal")
+
+	if jenis != "izin" && jenis != "sakit" {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Jenis harus 'izin' atau 'sakit'"})
 		return
 	}
-	if len(req.Alasan) < 5 {
+	if len(alasan) < 5 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Alasan terlalu singkat (min 5 karakter)"})
 		return
 	}
 
-	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	tanggal, err := time.Parse("2006-01-02", tanggalStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "validation_error", Message: "Format tanggal tidak valid (YYYY-MM-DD)"})
 		return
@@ -57,8 +60,50 @@ func (h *IzinSakitHandler) Ajukan(c *gin.Context) {
 		PelaksanaanID: pelaksanaan.ID,
 		UserID:        userID,
 		Tanggal:       tanggal,
-		Jenis:         req.Jenis,
-		Alasan:        req.Alasan,
+		Jenis:         jenis,
+		Alasan:        alasan,
+	}
+
+	// Upload bukti surat sakit (opsional, hanya untuk jenis=sakit)
+	if jenis == "sakit" {
+		file, header, ferr := c.Request.FormFile("bukti")
+		if ferr == nil {
+			defer file.Close()
+
+			if header.Size > config.App.MaxUploadSize {
+				c.JSON(http.StatusBadRequest, models.ErrorResponse{
+					Error:   "file_too_large",
+					Message: fmt.Sprintf("Ukuran file maksimal %dMB", config.App.MaxUploadSize/1024/1024),
+				})
+				return
+			}
+
+			ext := filepath.Ext(header.Filename)
+			allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".pdf": true}
+			if !allowed[ext] {
+				c.JSON(http.StatusBadRequest, models.ErrorResponse{
+					Error:   "invalid_file_type",
+					Message: "Tipe file tidak didukung. Gunakan JPG, PNG, atau PDF",
+				})
+				return
+			}
+
+			uploadDir := config.App.UploadDir
+			if err := os.MkdirAll(filepath.Join(uploadDir, "surat_sakit"), 0755); err != nil {
+				c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal menyimpan file"})
+				return
+			}
+
+			filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+			destPath := filepath.Join(uploadDir, "surat_sakit", filename)
+			if err := c.SaveUploadedFile(header, destPath); err != nil {
+				c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal menyimpan file"})
+				return
+			}
+
+			relativePath := fmt.Sprintf("surat_sakit/%s", filename)
+			item.BuktiPath = &relativePath
+		}
 	}
 
 	if err := h.repo.Create(c.Request.Context(), item); err != nil {

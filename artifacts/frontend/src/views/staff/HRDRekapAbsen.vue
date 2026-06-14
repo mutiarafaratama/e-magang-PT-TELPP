@@ -14,7 +14,6 @@
         </button>
       </div>
 
-      <!-- Filter izin/sakit -->
       <div class="filter-bar">
         <div class="filter-pills">
           <button v-for="f in izinFilters" :key="f.key"
@@ -39,6 +38,7 @@
               <th>Tanggal</th>
               <th>Jenis</th>
               <th>Alasan</th>
+              <th>Bukti</th>
               <th>Status</th>
               <th>Aksi</th>
             </tr>
@@ -61,6 +61,13 @@
                 </span>
               </td>
               <td class="alasan-cell">{{ item.alasan }}</td>
+              <td>
+                <a v-if="item.bukti_path" :href="`/api/uploads/${item.bukti_path}`" target="_blank" class="bukti-link">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/></svg>
+                  Lihat
+                </a>
+                <span v-else class="name-sub">–</span>
+              </td>
               <td>
                 <span v-if="item.status === 'pending'"    class="status-badge status-badge--pending">Menunggu</span>
                 <span v-else-if="item.status === 'disetujui'" class="status-badge status-badge--ok">Disetujui</span>
@@ -98,7 +105,6 @@
         </button>
       </div>
 
-      <!-- Filter & search -->
       <div class="filter-bar">
         <div class="filter-pills">
           <button v-for="f in filters" :key="f.key"
@@ -108,7 +114,6 @@
         <input v-model="search" type="text" class="search-input" placeholder="Cari nama peserta…"/>
       </div>
 
-      <!-- Stat chips -->
       <div v-if="!loading && rows.length" class="stat-chips">
         <div class="stat-chip stat-chip--green">
           <span class="stat-chip__val">{{ totalHadir }}</span>
@@ -128,7 +133,6 @@
         </div>
       </div>
 
-      <!-- Table -->
       <div v-if="loading" class="empty-state"><div class="spinner"></div></div>
       <div v-else-if="error" class="empty-state">
         <p style="color:#dc2626">{{ error }}</p>
@@ -157,7 +161,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in filteredRows" :key="r.pelaksanaan_id">
+            <tr v-for="r in filteredRows" :key="r.pelaksanaan_id"
+              :class="selectedRow?.pelaksanaan_id === r.pelaksanaan_id ? 'tr-selected' : ''">
               <td>
                 <div class="name-cell">
                   <div class="name-avatar">{{ r.nama_lengkap[0] }}</div>
@@ -188,7 +193,10 @@
               </td>
               <td>
                 <div class="aksi-cell">
-                  <button class="btn-aksi btn-aksi--ghost" @click="openDetail(r)">Detail</button>
+                  <button class="btn-aksi btn-aksi--ghost" @click="openDetail(r)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                    Detail
+                  </button>
                   <a class="btn-aksi btn-aksi--blue"
                     :href="`/api/absensi/pelaksanaan/${r.pelaksanaan_id}/pdf`"
                     target="_blank">PDF</a>
@@ -200,53 +208,123 @@
       </div>
     </div>
 
-    <!-- ── DETAIL PANEL ─────────────────────────────────────── -->
-    <div v-if="selectedRow" class="detail-card card">
-      <div class="card-header">
-        <div>
-          <h3 class="card-title">Detail Absensi — {{ selectedRow.nama_lengkap }}</h3>
-          <p class="card-sub">
-            {{ fmtDate(selectedRow.tanggal_mulai) }} s/d {{ fmtDate(selectedRow.tanggal_selesai) }}
-            <span v-if="selectedRow.divisi"> · {{ selectedRow.divisi }}</span>
-          </p>
-        </div>
-        <button class="btn-close" @click="selectedRow = null">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-
-      <!-- rekap chips detail -->
-      <div class="detail-rekap">
-        <div class="drk drk--green">Hadir <strong>{{ selectedRow.hadir }}</strong></div>
-        <div class="drk drk--yellow">Izin <strong>{{ selectedRow.izin }}</strong></div>
-        <div class="drk drk--blue">Sakit <strong>{{ selectedRow.sakit }}</strong></div>
-        <div class="drk drk--red">Alpha <strong>{{ selectedRow.alpha }}</strong></div>
-      </div>
-
-      <div v-if="detailLoading" class="empty-state"><div class="spinner"></div></div>
-      <div v-else-if="detailError" class="empty-state"><p style="color:#dc2626">{{ detailError }}</p></div>
-      <div v-else-if="detailList.length === 0" class="empty-state">
-        <p>Peserta ini belum memiliki catatan absensi.</p>
-      </div>
-      <div v-else class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr><th>Tanggal</th><th>Masuk</th><th>Keluar</th><th>Keterangan</th><th>Kegiatan</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="a in detailList" :key="a.id">
-              <td style="white-space:nowrap;font-weight:600">{{ fmtDateShort(a.tanggal) }}</td>
-              <td>{{ a.jam_masuk ?? '–' }}</td>
-              <td>{{ a.jam_keluar ?? '–' }}</td>
-              <td><span :class="ketClass(a.keterangan)">{{ fmtKet(a.keterangan) }}</span></td>
-              <td class="kegiatan-cell">{{ a.kegiatan ?? '–' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </div>
+
+  <!-- ── SIDE PANEL DETAIL ────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="side-panel">
+      <div v-if="selectedRow" class="side-overlay" @click.self="selectedRow = null">
+        <div class="side-panel">
+
+          <!-- Header -->
+          <div class="sp-header">
+            <div class="sp-header__avatar">{{ selectedRow.nama_lengkap[0] }}</div>
+            <div class="sp-header__info">
+              <div class="sp-header__name">{{ selectedRow.nama_lengkap }}</div>
+              <div class="sp-header__meta">
+                <span v-if="selectedRow.divisi" class="sp-tag">{{ selectedRow.divisi }}</span>
+                <span class="sp-header__periode">
+                  {{ fmtDate(selectedRow.tanggal_mulai) }} – {{ fmtDate(selectedRow.tanggal_selesai) }}
+                </span>
+              </div>
+            </div>
+            <button class="sp-close" @click="selectedRow = null">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+
+          <!-- Rekap chips -->
+          <div class="sp-rekap">
+            <div class="sp-rekap__item sp-rekap__item--green">
+              <div class="sp-rekap__num">{{ selectedRow.hadir }}</div>
+              <div class="sp-rekap__lbl">Hadir</div>
+            </div>
+            <div class="sp-rekap__item sp-rekap__item--yellow">
+              <div class="sp-rekap__num">{{ selectedRow.izin }}</div>
+              <div class="sp-rekap__lbl">Izin</div>
+            </div>
+            <div class="sp-rekap__item sp-rekap__item--blue">
+              <div class="sp-rekap__num">{{ selectedRow.sakit }}</div>
+              <div class="sp-rekap__lbl">Sakit</div>
+            </div>
+            <div class="sp-rekap__item sp-rekap__item--red">
+              <div class="sp-rekap__num">{{ selectedRow.alpha }}</div>
+              <div class="sp-rekap__lbl">Alpha</div>
+            </div>
+          </div>
+
+          <!-- Progress bar kehadiran -->
+          <div class="sp-progress-section">
+            <div class="sp-progress-label">
+              <span>Persentase Kehadiran</span>
+              <strong :class="persen(selectedRow) >= 80 ? 'pct-good' : 'pct-warn'">{{ persen(selectedRow) }}%</strong>
+            </div>
+            <div class="sp-progress-track">
+              <div class="sp-progress-fill"
+                :class="persen(selectedRow) >= 80 ? 'sp-progress-fill--green' : 'sp-progress-fill--yellow'"
+                :style="{ width: persen(selectedRow) + '%' }"></div>
+            </div>
+          </div>
+
+          <!-- Aksi PDF -->
+          <div class="sp-actions">
+            <a class="sp-btn-pdf"
+              :href="`/api/absensi/pelaksanaan/${selectedRow.pelaksanaan_id}/pdf`"
+              target="_blank">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Unduh PDF Rekap
+            </a>
+          </div>
+
+          <!-- Divider -->
+          <div class="sp-divider">
+            <span>Riwayat Absensi</span>
+          </div>
+
+          <!-- Tabel detail -->
+          <div v-if="detailLoading" class="sp-loading">
+            <div class="spinner"></div>
+            <span>Memuat data…</span>
+          </div>
+          <div v-else-if="detailError" class="sp-error-msg">{{ detailError }}</div>
+          <div v-else-if="detailList.length === 0" class="sp-empty">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" stroke-width="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#d1d5db" stroke-width="1.5"/></svg>
+            <p>Belum ada catatan absensi</p>
+          </div>
+          <div v-else class="sp-table-wrap">
+            <table class="sp-table">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Masuk</th>
+                  <th>Pulang</th>
+                  <th>Ket.</th>
+                  <th>Kegiatan</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in detailList" :key="a.id">
+                  <td class="td-date">{{ fmtDateShort(a.tanggal) }}</td>
+                  <td class="td-time">{{ a.jam_masuk ?? '–' }}</td>
+                  <td class="td-time">{{ a.jam_keluar ?? '–' }}</td>
+                  <td><span :class="ketClass(a.keterangan)">{{ fmtKet(a.keterangan) }}</span></td>
+                  <td class="td-kegiatan">{{ a.kegiatan ?? '–' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- ── TOAST ────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="toast">
+      <div v-if="toastMsg" class="toast-msg">{{ toastMsg }}</div>
+    </Transition>
+  </Teleport>
 
   <!-- ── MODAL TOLAK ─────────────────────────────────────────── -->
   <Teleport to="body">
@@ -309,6 +387,7 @@ interface IzinSakitItem {
   status:      string;
   nama_peserta: string;
   divisi:      string | null;
+  bukti_path:  string | null;
   catatan_hrd?: string | null;
 }
 
@@ -411,7 +490,6 @@ async function approve(item: IzinSakitItem) {
     await api.patch(`/api/izin-sakit/${item.id}/approve`, {});
     item.status = "disetujui";
     showToast(`Pengajuan ${item.jenis} ${item.nama_peserta} disetujui`);
-    // refresh rekap setelah approve karena absensi sudah berubah
     fetchRekap();
   } catch (e: any) {
     alert(e.response?.data?.message ?? "Gagal menyetujui");
@@ -515,90 +593,223 @@ onMounted(() => {
 .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .data-table th { padding: 10px 14px; text-align: left; font-size: 10.5px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 .data-table td { padding: 12px 14px; border-bottom: 1px solid #f9fafb; color: #374151; vertical-align: middle; }
+.tr-selected td { background: #f0fdf4; }
 
 .name-cell { display: flex; align-items: center; gap: 10px; }
-.name-avatar { width: 32px; height: 32px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.name-text { font-weight: 600; color: #111827; font-size: 13px; }
-.name-sub { font-size: 11.5px; color: #9ca3af; }
-.tag { background: #f0fdf4; color: #16a34a; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
+.name-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#48AF4A,#2d7a2e); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.name-text { font-size: 13px; font-weight: 600; color: #111827; }
+.name-sub  { font-size: 11.5px; color: #9ca3af; }
 
-.abs-num { display: inline-block; min-width: 26px; text-align: center; font-size: 13px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
-.abs-num--green  { color: #15803d; background: #dcfce7; }
-.abs-num--yellow { color: #92400e; background: #fef9c3; }
-.abs-num--blue   { color: #1d4ed8; background: #dbeafe; }
-.abs-num--red    { color: #dc2626; background: #fee2e2; }
+.tag { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 100px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; }
 
-.progress-wrap { height: 5px; background: #f1f5f9; border-radius: 100px; overflow: hidden; margin-bottom: 3px; }
-.progress-bar  { height: 100%; background: #48AF4A; border-radius: 100px; transition: width .4s; }
-.pct-label { font-size: 11px; color: #6b7280; font-weight: 600; }
+.abs-num { font-size: 14px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.abs-num--green  { color: #16a34a; background: #f0fdf4; }
+.abs-num--yellow { color: #ca8a04; background: #fefce8; }
+.abs-num--blue   { color: #2563eb; background: #eff6ff; }
+.abs-num--red    { color: #dc2626; background: #fff1f2; }
 
-.sp-badge { display: inline-flex; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.sp-badge--green  { background: #dcfce7; color: #15803d; }
-.sp-badge--blue   { background: #dbeafe; color: #1d4ed8; }
-.sp-badge--orange { background: #fff7ed; color: #ea580c; }
-.sp-badge--gray   { background: #f3f4f6; color: #6b7280; }
-.ket-badge { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 11px; font-weight: 700; }
-.ket-badge--green  { background: #dcfce7; color: #15803d; }
-.ket-badge--yellow { background: #fef9c3; color: #92400e; }
-.ket-badge--blue   { background: #dbeafe; color: #1d4ed8; }
-.ket-badge--red    { background: #fee2e2; color: #dc2626; }
+.progress-wrap { height: 5px; background: #f1f5f9; border-radius: 100px; overflow: hidden; width: 60px; margin: 0 auto 3px; }
+.progress-bar  { height: 100%; background: linear-gradient(90deg, #48AF4A, #16a34a); border-radius: 100px; transition: width .4s; }
+.pct-label { font-size: 11px; font-weight: 600; color: #374151; }
 
-.jenis-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
-.jenis-badge--izin  { background: #eff6ff; color: #1d4ed8; }
-.jenis-badge--sakit { background: #fffbeb; color: #b45309; }
+.sp-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.sp-badge--green  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+.sp-badge--blue   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.sp-badge--orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.sp-badge--gray   { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
 
-.status-badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
-.status-badge--pending { background: #fef3c7; color: #92400e; }
-.status-badge--ok      { background: #dcfce7; color: #15803d; }
-.status-badge--tolak   { background: #fee2e2; color: #dc2626; }
+.aksi-cell { display: flex; gap: 6px; align-items: center; }
+.btn-aksi { font-size: 11.5px; font-weight: 600; padding: 5px 11px; border-radius: 7px; cursor: pointer; font-family: inherit; border: 1.5px solid transparent; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.btn-aksi--ghost { background: #f9fafb; color: #374151; border-color: #e5e7eb; }
+.btn-aksi--ghost:hover { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.btn-aksi--green { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+.btn-aksi--green:hover { background: #dcfce7; }
+.btn-aksi--green:disabled { opacity:.5; cursor:not-allowed; }
+.btn-aksi--red   { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.btn-aksi--red:hover { background: #ffe4e6; }
+.btn-aksi--red:disabled { opacity:.5; cursor:not-allowed; }
+.btn-aksi--blue  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; text-decoration: none; }
+.btn-aksi--blue:hover { background: #dbeafe; }
 
-.alasan-cell { max-width: 200px; font-size: 12px; color: #6b7280; white-space: normal; word-break: break-word; }
-.aksi-cell { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.btn-aksi { border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block; }
-.btn-aksi--ghost { background: #f3f4f6; color: #374151; }
-.btn-aksi--ghost:hover { background: #e5e7eb; }
-.btn-aksi--green { background: #dcfce7; color: #15803d; }
-.btn-aksi--green:hover:not(:disabled) { background: #bbf7d0; }
-.btn-aksi--green:disabled { opacity: .5; cursor: default; }
-.btn-aksi--red { background: #fee2e2; color: #dc2626; }
-.btn-aksi--red:hover:not(:disabled) { background: #fecaca; }
-.btn-aksi--red:disabled { opacity: .5; cursor: default; }
-.btn-aksi--blue { background: #dbeafe; color: #1d4ed8; }
-.btn-aksi--blue:hover { background: #bfdbfe; }
+.jenis-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 100px; }
+.jenis-badge--izin  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.jenis-badge--sakit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
-.btn-green-sm { background: #48AF4A; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
-.btn-green-sm:hover:not(:disabled) { background: #3d9e3f; }
-.btn-close { background: #f3f4f6; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; flex-shrink: 0; }
-.btn-close:hover { background: #e5e7eb; }
+.alasan-cell { font-size: 12.5px; color: #6b7280; max-width: 200px; }
 
-.detail-card { margin-top: 0; }
-.detail-rekap { display: flex; gap: 8px; padding: 12px 20px; flex-wrap: wrap; border-bottom: 1px solid #f0faf0; }
-.drk { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; background: #f9fafb; border-radius: 8px; padding: 6px 14px; }
-.drk strong { font-size: 16px; font-weight: 700; }
-.drk--green  strong { color: #16a34a; }
-.drk--yellow strong { color: #ca8a04; }
-.drk--blue   strong { color: #2563eb; }
-.drk--red    strong { color: #dc2626; }
-.kegiatan-cell { max-width: 180px; font-size: 12px; white-space: normal; word-break: break-word; }
+.status-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.status-badge--pending { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+.status-badge--ok      { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+.status-badge--tolak   { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 
-.empty-state { display: flex; flex-direction: column; align-items: center; padding: 44px 24px; gap: 12px; text-align: center; }
-.empty-state__icon { width: 72px; height: 72px; background: #f9fafb; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.empty-state p { font-size: 13px; color: #9ca3af; line-height: 1.7; margin: 0; }
-.spinner { width: 28px; height: 28px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.bukti-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #2563eb; text-decoration: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; padding: 2px 8px; white-space: nowrap; }
+.bukti-link:hover { background: #dbeafe; }
 
-/* Modal tolak */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-box { background: #fff; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
-.modal-title { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 10px; }
-.modal-desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; line-height: 1.6; }
+.empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px 24px; gap: 10px; text-align: center; }
+.empty-state__icon { width: 64px; height: 64px; background: #f9fafb; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.empty-state p { font-size: 13px; color: #9ca3af; margin: 0; }
+
+.ket-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+.ket-badge--green  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.ket-badge--yellow { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.ket-badge--blue   { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.ket-badge--red    { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+
+/* ── Side Panel ─────────────────────────────────────────────── */
+.side-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  display: flex; justify-content: flex-end;
+}
+
+.side-panel {
+  width: 480px; max-width: 95vw;
+  height: 100%;
+  background: #fff;
+  display: flex; flex-direction: column;
+  box-shadow: -8px 0 40px rgba(0,0,0,0.14);
+  overflow: hidden;
+}
+
+/* ── Side panel header ── */
+.sp-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid #f0faf0;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 60%);
+  flex-shrink: 0;
+}
+.sp-header__avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: linear-gradient(135deg, #48AF4A, #2d7a2e);
+  color: #fff; font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-shadow: 0 2px 8px rgba(72,175,74,.3);
+}
+.sp-header__info { flex: 1; min-width: 0; }
+.sp-header__name { font-size: 15px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-header__meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.sp-tag { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; border-radius: 100px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+.sp-header__periode { font-size: 11.5px; color: #9ca3af; }
+.sp-close {
+  background: #f3f4f6; border: none; border-radius: 9px;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #6b7280; flex-shrink: 0;
+  transition: all .15s;
+}
+.sp-close:hover { background: #e5e7eb; color: #111827; }
+
+/* ── Rekap chips ── */
+.sp-rekap {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; padding: 0; border-bottom: 1px solid #f0faf0;
+  flex-shrink: 0;
+}
+.sp-rekap__item {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 8px; border-right: 1px solid #f0faf0;
+  transition: background .15s;
+}
+.sp-rekap__item:last-child { border-right: none; }
+.sp-rekap__num { font-size: 22px; font-weight: 800; }
+.sp-rekap__lbl { font-size: 10.5px; color: #9ca3af; font-weight: 500; margin-top: 2px; }
+.sp-rekap__item--green .sp-rekap__num { color: #16a34a; }
+.sp-rekap__item--yellow .sp-rekap__num { color: #ca8a04; }
+.sp-rekap__item--blue .sp-rekap__num { color: #2563eb; }
+.sp-rekap__item--red .sp-rekap__num { color: #dc2626; }
+
+/* ── Progress section ── */
+.sp-progress-section { padding: 14px 22px 10px; flex-shrink: 0; }
+.sp-progress-label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; margin-bottom: 7px; }
+.pct-good { color: #16a34a; }
+.pct-warn { color: #d97706; }
+.sp-progress-track { height: 7px; background: #f1f5f9; border-radius: 100px; overflow: hidden; }
+.sp-progress-fill { height: 100%; border-radius: 100px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.sp-progress-fill--green  { background: linear-gradient(90deg, #48AF4A, #16a34a); }
+.sp-progress-fill--yellow { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+/* ── Aksi PDF ── */
+.sp-actions { padding: 10px 22px 14px; flex-shrink: 0; }
+.sp-btn-pdf {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #f0fdf4; color: #15803d;
+  border: 1.5px solid #bbf7d0; border-radius: 9px;
+  font-size: 12.5px; font-weight: 600; padding: 8px 16px;
+  text-decoration: none; transition: all .15s;
+}
+.sp-btn-pdf:hover { background: #dcfce7; border-color: #86efac; }
+
+/* ── Divider label ── */
+.sp-divider {
+  display: flex; align-items: center; padding: 0 22px;
+  margin-bottom: 0; flex-shrink: 0;
+}
+.sp-divider::before, .sp-divider::after {
+  content: ''; flex: 1; height: 1px; background: #f0faf0;
+}
+.sp-divider span {
+  font-size: 10.5px; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 0 12px; white-space: nowrap;
+}
+
+/* ── Table ── */
+.sp-table-wrap { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+.sp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sp-table th {
+  position: sticky; top: 0; z-index: 1;
+  padding: 9px 14px;
+  font-size: 10px; font-weight: 700; color: #9ca3af;
+  background: #f9fafb; border-bottom: 1px solid #f1f5f9;
+  text-transform: uppercase; letter-spacing: .05em; text-align: left;
+  white-space: nowrap;
+}
+.sp-table td { padding: 10px 14px; border-bottom: 1px solid #f9fafb; color: #374151; vertical-align: middle; }
+.sp-table tr:last-child td { border-bottom: none; }
+.sp-table tr:hover td { background: #f9fafb; }
+.td-date { font-weight: 600; white-space: nowrap; font-size: 12px; }
+.td-time { font-size: 12px; color: #6b7280; white-space: nowrap; }
+.td-kegiatan { font-size: 11.5px; color: #6b7280; max-width: 140px; }
+
+/* ── Loading / empty / error ── */
+.sp-loading { display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 12px; color: #9ca3af; font-size: 13px; }
+.sp-error-msg { padding: 20px 22px; color: #dc2626; font-size: 13px; }
+.sp-empty { display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 12px; color: #9ca3af; }
+.sp-empty p { font-size: 13px; margin: 0; }
+
+/* ── Transition side panel ── */
+.side-panel-enter-active { transition: all .3s cubic-bezier(.4,0,.2,1); }
+.side-panel-leave-active { transition: all .25s cubic-bezier(.4,0,.2,1); }
+.side-panel-enter-from .side-panel { transform: translateX(100%); }
+.side-panel-leave-to .side-panel { transform: translateX(100%); }
+.side-panel-enter-from { opacity: 0; }
+.side-panel-leave-to { opacity: 0; }
+
+/* ── Toast ── */
+.toast-msg { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a2e1a; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 22px; border-radius: 100px; box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 9999; white-space: nowrap; }
+.toast-enter-active, .toast-leave-active { transition: all .3s; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 10px); }
+
+/* ── Modal ── */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; backdrop-filter: blur(2px); }
+.modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 420px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
+.modal-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+.modal-desc  { font-size: 13px; color: #6b7280; margin-bottom: 18px; line-height: 1.6; }
 .modal-field { margin-bottom: 14px; }
-.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; box-sizing: border-box; }
+.modal-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.modal-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; }
 .modal-textarea:focus { border-color: #48AF4A; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.btn-cancel { background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
-.btn-red { background: #fee2e2; color: #dc2626; border: none; border-radius: 9px; padding: 9px 20px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
-.btn-red:hover:not(:disabled) { background: #fecaca; }
-.btn-red:disabled { opacity: .5; cursor: default; }
+.btn-cancel { background: #f3f4f6; color: #374151; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-cancel:hover { background: #e5e7eb; }
+.btn-red { background: #dc2626; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-red:hover { background: #b91c1c; }
+.btn-red:disabled { opacity: .55; cursor: not-allowed; }
+
+.btn-green-sm { background: #f0fdf4; color: #16a34a; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.btn-green-sm:hover { background: #dcfce7; }
+
+.spinner { width: 26px; height: 26px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
