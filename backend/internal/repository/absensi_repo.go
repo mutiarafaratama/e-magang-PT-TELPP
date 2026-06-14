@@ -70,6 +70,56 @@ func (r *AbsensiRepository) Approve(ctx context.Context, id uuid.UUID, approvedB
         return err
 }
 
+// GetRekapAll — ringkasan absensi semua pelaksanaan, dipakai oleh HRD
+func (r *AbsensiRepository) GetRekapAll(ctx context.Context) ([]models.RekapAbsensiRow, error) {
+        query := `
+        SELECT
+                pl.id::text,
+                pj.nama_lengkap,
+                pj.asal_institusi,
+                pj.kategori_magang,
+                pl.divisi,
+                pl.pembimbing,
+                pl.tanggal_mulai,
+                pl.tanggal_selesai,
+                pl.status,
+                COALESCE(COUNT(a.id) FILTER (WHERE a.keterangan = 'hadir'), 0)::int,
+                COALESCE(COUNT(a.id) FILTER (WHERE a.keterangan = 'izin'), 0)::int,
+                COALESCE(COUNT(a.id) FILTER (WHERE a.keterangan = 'sakit'), 0)::int,
+                COALESCE(COUNT(a.id) FILTER (WHERE a.keterangan = 'alpha'), 0)::int,
+                COALESCE(COUNT(a.id) FILTER (WHERE a.approved_at IS NULL), 0)::int
+        FROM pelaksanaan_magang pl
+        JOIN pengajuan_magang pj ON pj.id = pl.pengajuan_id
+        LEFT JOIN absensi a ON a.pelaksanaan_id = pl.id
+        WHERE pl.status NOT IN ('menunggu_mulai')
+        GROUP BY pl.id, pj.nama_lengkap, pj.asal_institusi, pj.kategori_magang,
+                 pl.divisi, pl.pembimbing, pl.tanggal_mulai, pl.tanggal_selesai, pl.status
+        ORDER BY pl.tanggal_mulai DESC`
+
+        rows, err := r.db.Query(ctx, query)
+        if err != nil {
+                return nil, err
+        }
+        defer rows.Close()
+
+        var list []models.RekapAbsensiRow
+        for rows.Next() {
+                var row models.RekapAbsensiRow
+                if err := rows.Scan(
+                        &row.PelaksanaanID, &row.NamaLengkap, &row.AsalInstitusi, &row.KategoriMagang,
+                        &row.Divisi, &row.Pembimbing, &row.TanggalMulai, &row.TanggalSelesai, &row.Status,
+                        &row.Hadir, &row.Izin, &row.Sakit, &row.Alpha, &row.PendingApproval,
+                ); err != nil {
+                        return nil, err
+                }
+                list = append(list, row)
+        }
+        if list == nil {
+                list = []models.RekapAbsensiRow{}
+        }
+        return list, nil
+}
+
 func (r *AbsensiRepository) CountByPelaksanaan(ctx context.Context, pelaksanaanID uuid.UUID) (hadir, izin, sakit, alpha int) {
         r.db.QueryRow(ctx,
                 `SELECT

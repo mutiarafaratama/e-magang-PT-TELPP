@@ -433,6 +433,27 @@ type NotifBadgeCount struct {
 }
 
 // ============================================================
+// REKAP ABSENSI (view untuk HRD)
+// ============================================================
+
+type RekapAbsensiRow struct {
+        PelaksanaanID   string     `json:"pelaksanaan_id"`
+        NamaLengkap     string     `json:"nama_lengkap"`
+        AsalInstitusi   string     `json:"asal_institusi"`
+        KategoriMagang  string     `json:"kategori_magang"`
+        Divisi          *string    `json:"divisi"`
+        Pembimbing      *string    `json:"pembimbing"`
+        TanggalMulai    time.Time  `json:"tanggal_mulai"`
+        TanggalSelesai  time.Time  `json:"tanggal_selesai"`
+        Status          string     `json:"status"`
+        Hadir           int        `json:"hadir"`
+        Izin            int        `json:"izin"`
+        Sakit           int        `json:"sakit"`
+        Alpha           int        `json:"alpha"`
+        PendingApproval int        `json:"pending_approval"`
+}
+
+// ============================================================
 // DIVISI
 // ============================================================
 

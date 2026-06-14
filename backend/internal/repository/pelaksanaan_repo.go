@@ -27,6 +27,19 @@ func (r *PelaksanaanRepository) Create(ctx context.Context, p *models.Pelaksanaa
         ).Scan(&p.ID, &p.Status, &p.CreatedAt, &p.UpdatedAt)
 }
 
+func (r *PelaksanaanRepository) FindByID(ctx context.Context, id uuid.UUID) (*models.PelaksanaanMagang, error) {
+        p := &models.PelaksanaanMagang{}
+        err := r.db.QueryRow(ctx, `
+                SELECT id, pengajuan_id, user_id, periode_id, tanggal_mulai, tanggal_selesai,
+                divisi, pembimbing_id, status, nilai, catatan_nilai, dinilai_oleh, dinilai_at,
+                sertifikat_generated, sertifikat_path, sertifikat_generated_at, created_at, updated_at
+                FROM pelaksanaan_magang WHERE id = $1`, id).
+                Scan(&p.ID, &p.PengajuanID, &p.UserID, &p.PeriodeID, &p.TanggalMulai, &p.TanggalSelesai,
+                        &p.Divisi, &p.PembimbingID, &p.Status, &p.Nilai, &p.CatatanNilai, &p.DinilaiOleh, &p.DinilaiAt,
+                        &p.SertifikatGenerated, &p.SertifikatPath, &p.SertifikatGeneratedAt, &p.CreatedAt, &p.UpdatedAt)
+        return p, err
+}
+
 func (r *PelaksanaanRepository) FindByPengajuanID(ctx context.Context, pengajuanID uuid.UUID) (*models.PelaksanaanMagang, error) {
         p := &models.PelaksanaanMagang{}
         err := r.db.QueryRow(ctx, `

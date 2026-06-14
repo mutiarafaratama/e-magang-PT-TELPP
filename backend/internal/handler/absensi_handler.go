@@ -225,6 +225,49 @@ func (h *AbsensiHandler) GetByPelaksanaan(c *gin.Context) {
         })
 }
 
+// GET /api/absensi/rekap — HRD melihat ringkasan absensi semua peserta
+func (h *AbsensiHandler) GetRekapHRD(c *gin.Context) {
+        list, err := h.repo.GetRekapAll(c.Request.Context())
+        if err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+                return
+        }
+        c.JSON(http.StatusOK, models.SuccessResponse{Data: list})
+}
+
+// GET /api/absensi/pelaksanaan/:id/pdf — HRD download PDF rekap absensi peserta tertentu
+func (h *AbsensiHandler) GetByPelaksanaanPDF(c *gin.Context) {
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+                return
+        }
+
+        pelaksanaan, err := h.pelaksanaanRepo.FindByID(c.Request.Context(), id)
+        if err != nil {
+                c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: "Data pelaksanaan tidak ditemukan"})
+                return
+        }
+
+        pengajuan, err := h.pengajuanRepo.FindByID(c.Request.Context(), pelaksanaan.PengajuanID)
+        if err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+                return
+        }
+
+        list, _ := h.repo.FindByPelaksanaanID(c.Request.Context(), id)
+        hadir, izin, sakit, alpha := h.repo.CountByPelaksanaan(c.Request.Context(), id)
+
+        pdf := generateAbsensiPDF(pengajuan, pelaksanaan, list, hadir, izin, sakit, alpha)
+
+        var buf bytes.Buffer
+        pdf.Output(&buf)
+
+        c.Header("Content-Type", "application/pdf")
+        c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="Absensi_%s.pdf"`, pengajuan.NamaLengkap))
+        c.Data(http.StatusOK, "application/pdf", buf.Bytes())
+}
+
 // PATCH /api/absensi/:id/approve — HRD setujui absensi
 func (h *AbsensiHandler) Approve(c *gin.Context) {
         id, err := uuid.Parse(c.Param("id"))

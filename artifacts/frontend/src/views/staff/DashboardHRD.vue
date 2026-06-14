@@ -130,16 +130,7 @@
 
       <!-- PLACEHOLDER TABS ─────────────────────────────────────── -->
       <template v-else-if="activeTab === 'absensi'">
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">Rekap Absensi</h3>
-            <button class="btn-green-sm">Export PDF</button>
-          </div>
-          <div class="empty-state">
-            <div class="empty-state__icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" stroke-width="1.5"/><line x1="3" y1="10" x2="21" y2="10" stroke="#d1d5db" stroke-width="1.5"/></svg></div>
-            <p>Belum ada data absensi.</p>
-          </div>
-        </div>
+        <HRDRekapAbsen />
       </template>
 
       <template v-else-if="activeTab === 'penilaian'">
@@ -187,6 +178,7 @@ import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import HRDVerifikasi from "./HRDVerifikasi.vue";
 import HRDPenempatanMenunggu from "./HRDPenempatanMenunggu.vue";
 import HRDBerlangsung from "./HRDBerlangsung.vue";
+import HRDRekapAbsen from "./HRDRekapAbsen.vue";
 
 // ── auth ────────────────────────────────────────────────────────────
 const { user } = useAuth();

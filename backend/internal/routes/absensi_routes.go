@@ -17,7 +17,9 @@ func RegisterAbsensiRoutes(peserta, hrd *gin.RouterGroup, h *handler.AbsensiHand
         peserta.GET("/absensi/saya/pdf", h.DownloadPDF)
 
         // HRD / Admin — rekap & approve
+        hrd.GET("/absensi/rekap", h.GetRekapHRD)
         hrd.GET("/absensi/pelaksanaan/:id", h.GetByPelaksanaan)
+        hrd.GET("/absensi/pelaksanaan/:id/pdf", h.GetByPelaksanaanPDF)
         hrd.PATCH("/absensi/:id/approve", h.Approve)
 }
 
