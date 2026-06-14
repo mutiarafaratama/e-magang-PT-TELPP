@@ -190,11 +190,94 @@
         </div>
       </template>
 
+      <!-- ── KELOLA DIVISI ── -->
+      <template v-else-if="activeTab === 'divisi'">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Kelola Divisi</h3>
+              <p class="card-sub">Daftar divisi/unit kerja untuk penempatan peserta magang</p>
+            </div>
+            <button class="btn-green-sm" @click="openDivisiModal(null)">+ Tambah Divisi</button>
+          </div>
+          <div v-if="divisiLoading" class="empty-state"><div class="spinner"></div></div>
+          <div v-else-if="divisiList.length === 0" class="empty-state">
+            <div class="empty-state__icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="#d1d5db" stroke-width="1.5"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="#d1d5db" stroke-width="1.5"/></svg>
+            </div>
+            <p>Belum ada divisi. Tambahkan divisi pertama.</p>
+          </div>
+          <div v-else class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Nama Divisi</th><th>Urutan</th><th>Status</th><th>Dibuat</th><th>Aksi</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in divisiList" :key="d.id">
+                  <td class="td-nama">{{ d.nama }}</td>
+                  <td><span class="urutan-badge">{{ d.urutan }}</span></td>
+                  <td>
+                    <span :class="d.is_active ? 'status-pill status-pill--green' : 'status-pill status-pill--gray'">
+                      {{ d.is_active ? 'Aktif' : 'Nonaktif' }}
+                    </span>
+                  </td>
+                  <td>{{ formatDate(d.created_at) }}</td>
+                  <td>
+                    <div class="aksi-cell">
+                      <button class="btn-aksi btn-aksi--ghost" @click="openDivisiModal(d)">Edit</button>
+                      <button
+                        :class="d.is_active ? 'btn-aksi btn-aksi--warn' : 'btn-aksi btn-aksi--green'"
+                        @click="toggleDivisi(d)"
+                      >{{ d.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button>
+                      <button class="btn-aksi btn-aksi--red" @click="deleteDivisi(d)">Hapus</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
       <!-- ── STATISTIK ── -->
       <AdminStatistik v-else-if="activeTab === 'statistik'" />
 
     </template>
+
   </DashboardLayout>
+
+  <!-- ── MODAL TAMBAH/EDIT DIVISI (di luar DashboardLayout agar tidak bentrok slot) ── -->
+  <Teleport to="body">
+    <div v-if="showDivisiModal" class="modal-overlay" @click.self="showDivisiModal = false">
+      <div class="divisi-modal">
+        <div class="divisi-modal__header">
+          <h3 class="divisi-modal__title">{{ divisiForm.id ? 'Edit Divisi' : 'Tambah Divisi' }}</h3>
+          <button class="modal-close" @click="showDivisiModal = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="divisi-modal__body">
+          <div class="dform-group">
+            <label class="dform-label">Nama Divisi <span class="dform-req">*</span></label>
+            <input v-model="divisiForm.nama" type="text" class="dform-input" placeholder="contoh: IT / Sistem Informasi" :disabled="divisiSaving"/>
+          </div>
+          <div class="dform-group">
+            <label class="dform-label">Urutan Tampil <span class="dform-opt">(opsional)</span></label>
+            <input v-model.number="divisiForm.urutan" type="number" class="dform-input" placeholder="0" min="0" :disabled="divisiSaving"/>
+            <span class="dform-hint">Angka kecil tampil lebih atas di dropdown</span>
+          </div>
+          <div v-if="divisiFormError" class="dform-error">{{ divisiFormError }}</div>
+        </div>
+        <div class="divisi-modal__footer">
+          <button class="btn-cancel" @click="showDivisiModal = false" :disabled="divisiSaving">Batal</button>
+          <button class="btn-green" @click="saveDivisi" :disabled="divisiSaving || !divisiForm.nama.trim()">
+            <div v-if="divisiSaving" class="spinner-sm"></div>
+            {{ divisiSaving ? 'Menyimpan…' : (divisiForm.id ? 'Simpan Perubahan' : 'Tambah Divisi') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -229,12 +312,15 @@ const ICON = {
   clock:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
+const ICON_DIVISI = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="2"/></svg>`;
+
 const navGroups = [
   { items: [{ key: "beranda", label: "Beranda", icon: ICON.home }] },
   {
     label: "Manajemen",
     items: [
       { key: "users",    label: "Manajemen User", icon: ICON.users },
+      { key: "divisi",   label: "Kelola Divisi",  icon: ICON_DIVISI },
       { key: "periode",  label: "Periode Magang",  icon: ICON.period },
       { key: "jamabsen", label: "Jam Absensi",     icon: ICON.clock },
     ],
@@ -316,7 +402,74 @@ async function saveJam() {
   } finally { cfgSaving.value = false; }
 }
 
-watch(activeTab, (tab) => { if (tab === 'jamabsen') fetchJam(); });
+watch(activeTab, (tab) => {
+  if (tab === 'jamabsen') fetchJam();
+  if (tab === 'divisi') fetchDivisi();
+});
+
+// ── Kelola Divisi ─────────────────────────────────────────────
+interface Divisi { id: string; nama: string; is_active: boolean; urutan: number; created_at: string; }
+
+const divisiList    = ref<Divisi[]>([]);
+const divisiLoading = ref(false);
+const showDivisiModal = ref(false);
+const divisiSaving  = ref(false);
+const divisiFormError = ref('');
+const divisiForm = ref<{ id: string | null; nama: string; urutan: number }>({ id: null, nama: '', urutan: 0 });
+
+async function fetchDivisi() {
+  divisiLoading.value = true;
+  try {
+    const r = await api.get('/api/admin/divisi');
+    divisiList.value = Array.isArray(r.data?.data) ? r.data.data : [];
+  } catch { divisiList.value = []; }
+  finally { divisiLoading.value = false; }
+}
+
+function openDivisiModal(d: Divisi | null) {
+  divisiFormError.value = '';
+  if (d) {
+    divisiForm.value = { id: d.id, nama: d.nama, urutan: d.urutan };
+  } else {
+    divisiForm.value = { id: null, nama: '', urutan: divisiList.value.length + 1 };
+  }
+  showDivisiModal.value = true;
+}
+
+async function saveDivisi() {
+  if (!divisiForm.value.nama.trim()) return;
+  divisiSaving.value = true; divisiFormError.value = '';
+  try {
+    if (divisiForm.value.id) {
+      await api.patch(`/api/admin/divisi/${divisiForm.value.id}`, { nama: divisiForm.value.nama.trim(), urutan: divisiForm.value.urutan });
+    } else {
+      await api.post('/api/admin/divisi', { nama: divisiForm.value.nama.trim(), urutan: divisiForm.value.urutan });
+    }
+    showDivisiModal.value = false;
+    await fetchDivisi();
+  } catch (e: any) {
+    divisiFormError.value = e.response?.data?.message ?? 'Gagal menyimpan divisi';
+  } finally { divisiSaving.value = false; }
+}
+
+async function toggleDivisi(d: Divisi) {
+  try {
+    await api.patch(`/api/admin/divisi/${d.id}/toggle`, { is_active: !d.is_active });
+    await fetchDivisi();
+  } catch { /* ignore */ }
+}
+
+async function deleteDivisi(d: Divisi) {
+  if (!confirm(`Hapus divisi "${d.nama}"? Peserta yang sudah ditempatkan tidak akan terpengaruh.`)) return;
+  try {
+    await api.delete(`/api/admin/divisi/${d.id}`);
+    await fetchDivisi();
+  } catch { /* ignore */ }
+}
+
+function formatDate(s: string) {
+  return new Date(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 </script>
 
 <style scoped>
@@ -374,5 +527,53 @@ watch(activeTab, (tab) => { if (tab === 'jamabsen') fetchJam(); });
 
 /* Spinner (shared) */
 .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .8s linear infinite; margin: 40px auto; }
+.spinner-sm { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Divisi table ── */
+.card-sub { font-size: 11.5px; color: #9ca3af; margin: 2px 0 0; }
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { padding: 11px 16px; text-align: left; font-size: 10.5px; font-weight: 600; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f1f5f9; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.data-table td { padding: 13px 16px; border-bottom: 1px solid #f9fafb; color: #374151; vertical-align: middle; }
+.td-nama { font-weight: 600; color: #111827; }
+.urutan-badge { background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.status-pill { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px; }
+.status-pill--green { background: #dcfce7; color: #15803d; }
+.status-pill--gray  { background: #f3f4f6; color: #6b7280; }
+.aksi-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.btn-aksi { border: none; border-radius: 7px; padding: 5px 11px; font-size: 11.5px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; transition: opacity .15s; }
+.btn-aksi--ghost { background: #f3f4f6; color: #374151; }
+.btn-aksi--ghost:hover { background: #e5e7eb; }
+.btn-aksi--green { background: #dcfce7; color: #15803d; }
+.btn-aksi--green:hover { background: #bbf7d0; }
+.btn-aksi--warn  { background: #fef9c3; color: #92400e; }
+.btn-aksi--warn:hover { background: #fde68a; }
+.btn-aksi--red   { background: #fee2e2; color: #dc2626; }
+.btn-aksi--red:hover { background: #fecaca; }
+
+/* ── Divisi modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.divisi-modal { background: #fff; border-radius: 18px; width: min(440px, 100%); box-shadow: 0 24px 80px rgba(0,0,0,0.22); display: flex; flex-direction: column; overflow: hidden; }
+.divisi-modal__header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 14px; border-bottom: 1px solid #f0faf0; }
+.divisi-modal__title  { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+.divisi-modal__body   { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.divisi-modal__footer { display: flex; gap: 10px; padding: 14px 24px; border-top: 1px solid #f0faf0; }
+.modal-close { background: #f3f4f6; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; }
+.modal-close:hover { background: #e5e7eb; }
+.dform-group { display: flex; flex-direction: column; gap: 5px; }
+.dform-label { font-size: 12px; font-weight: 600; color: #374151; }
+.dform-req   { color: #dc2626; }
+.dform-opt   { color: #9ca3af; font-weight: 400; }
+.dform-input { border: 1px solid #e5e7eb; border-radius: 9px; padding: 9px 12px; font-size: 13px; font-family: inherit; color: #111827; outline: none; transition: border-color .15s; }
+.dform-input:focus { border-color: #48AF4A; box-shadow: 0 0 0 3px rgba(72,175,74,.12); }
+.dform-input:disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+.dform-hint  { font-size: 11px; color: #9ca3af; }
+.dform-error { font-size: 12.5px; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 9px 13px; }
+.btn-cancel { flex: 1; background: #f3f4f6; color: #374151; border: none; border-radius: 9px; padding: 10px 16px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.btn-cancel:hover:not(:disabled) { background: #e5e7eb; }
+.btn-cancel:disabled { opacity: .5; cursor: default; }
+.btn-green  { flex: 1; background: #48AF4A; color: #fff; border: none; border-radius: 9px; padding: 10px 22px; font-size: 13px; font-weight: 600; font-family: "Poppins",sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.btn-green:hover:not(:disabled) { background: #3d9e3f; }
+.btn-green:disabled { opacity: .5; cursor: not-allowed; }
 </style>

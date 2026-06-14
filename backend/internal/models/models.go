@@ -431,3 +431,15 @@ type NotifBadgeCount struct {
         TotalUnread  int `json:"total_unread"`
         ChatMenunggu int `json:"chat_menunggu"`
 }
+
+// ============================================================
+// DIVISI
+// ============================================================
+
+type Divisi struct {
+        ID        uuid.UUID `json:"id" db:"id"`
+        Nama      string    `json:"nama" db:"nama"`
+        IsActive  bool      `json:"is_active" db:"is_active"`
+        Urutan    int       `json:"urutan" db:"urutan"`
+        CreatedAt time.Time `json:"created_at" db:"created_at"`
+}

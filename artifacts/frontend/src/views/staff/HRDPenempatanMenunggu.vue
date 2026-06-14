@@ -91,7 +91,10 @@
           </div>
           <div class="jform-group">
             <label class="jform-label">Divisi / Unit Kerja <span class="jform-req">*</span></label>
-            <input v-model="form.divisi" type="text" class="jform-input" placeholder="contoh: IT, Produksi, Keuangan…" :disabled="modalLoading"/>
+            <select v-model="form.divisi" class="jform-input" :disabled="modalLoading || divisiLoading">
+              <option value="" disabled>{{ divisiLoading ? 'Memuat divisi…' : '— Pilih divisi —' }}</option>
+              <option v-for="d in divisiOptions" :key="d.id" :value="d.nama">{{ d.nama }}</option>
+            </select>
           </div>
           <div class="jform-group">
             <label class="jform-label">Nama Pembimbing <span class="jform-opt">(opsional)</span></label>
@@ -134,6 +137,20 @@ const allPelaksanaan = ref<Pelaksanaan[]>([]);
 const loading       = ref(false);
 const error         = ref<string | null>(null);
 
+// divisi dropdown
+interface DivisiOption { id: string; nama: string; }
+const divisiOptions = ref<DivisiOption[]>([]);
+const divisiLoading = ref(false);
+
+async function fetchDivisi() {
+  divisiLoading.value = true;
+  try {
+    const r = await api.get('/api/divisi');
+    divisiOptions.value = Array.isArray(r.data?.data) ? r.data.data : [];
+  } catch { divisiOptions.value = []; }
+  finally { divisiLoading.value = false; }
+}
+
 const penerimaanTanpaJadwal = computed(() => {
   const scheduled = new Set(allPelaksanaan.value.map(p => p.pengajuan_id));
   return allPengajuan.value.filter(p => p.status === "diterima" && !scheduled.has(p.id));
@@ -165,6 +182,7 @@ function openJadwalModal(p: Pengajuan) {
   modalTarget.value = p;
   form.value = { tanggal_mulai: "", tanggal_selesai: "", divisi: "", pembimbing: "" };
   modalError.value = null; modalSuccess.value = false; showModal.value = true;
+  if (divisiOptions.value.length === 0) fetchDivisi();
 }
 function closeModal() { showModal.value = false; modalTarget.value = null; modalError.value = null; }
 

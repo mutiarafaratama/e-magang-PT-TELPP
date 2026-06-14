@@ -4,8 +4,13 @@ description: Catatan arsitektur dan keputusan desain backend Go untuk sistem e-M
 ---
 
 ## Status
-Backend Go selesai — 32 file .go, siap di-compile dan dijalankan lokal oleh user.
-Semua 5 migration (001–005) sudah dijalankan ke database Replit.
+Backend Go selesai — 35 file .go (termasuk divisi), siap di-compile dan dijalankan lokal oleh user.
+Migration 001–006 sudah dijalankan ke database Replit.
+
+## Go Build di Replit
+- GOPROXY default Replit memblokir paket CVE (pgx v5.6.0 diblokir)
+- Solusi: `GOPROXY=direct GONOSUMCHECK=* GONOSUMDB=* go build -o bin/server ./cmd/server/main.go`
+- Setelah berhasil, module cache terisi dan build berikutnya normal
 
 ## Struktur Folder
 

@@ -39,6 +39,7 @@ func Setup() *gin.Engine {
         chatRepo            := repository.NewChatRepository(database.DB)
         notifRepo           := repository.NewNotifikasiRepository(database.DB)
         landingRepo         := repository.NewLandingRepository(database.DB)
+        divisiRepo          := repository.NewDivisiRepository(database.DB)
 
         // Set global DB pointer (dibutuhkan oleh beberapa helper di repository)
         repository.SetDB(database.DB)
@@ -63,6 +64,7 @@ func Setup() *gin.Engine {
         notifH       := handler.NewNotifikasiHandler(notifSvc, chatRepo)
         landingH     := handler.NewLandingHandler(landingRepo)
         adminH       := handler.NewAdminHandler(userRepo)
+        divisiH      := handler.NewDivisiHandler(divisiRepo)
 
         // ============================================================
         // HEALTH CHECK
@@ -110,6 +112,7 @@ func Setup() *gin.Engine {
         routes.RegisterNotifikasiRoutes(api, notifH)
         routes.RegisterLandingRoutes(public, hrd, admin, landingH)
         routes.RegisterAdminRoutes(hrd, admin, adminH)
+        routes.RegisterDivisiRoutes(api, admin, divisiH)
 
         // ============================================================
         // AUTO-UPDATE STATUS PELAKSANAAN BERDASARKAN TANGGAL
