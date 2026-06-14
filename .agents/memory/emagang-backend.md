@@ -5,6 +5,7 @@ description: Catatan arsitektur dan keputusan desain backend Go untuk sistem e-M
 
 ## Status
 Backend Go selesai — 32 file .go, siap di-compile dan dijalankan lokal oleh user.
+Semua 5 migration (001–005) sudah dijalankan ke database Replit.
 
 ## Struktur Folder
 
@@ -20,7 +21,7 @@ backend/
 ├── internal/handler/             ← 9 handler (auth, pengajuan, dokumen, pelaksanaan, absensi, chat, notifikasi, landing, admin)
 ├── internal/websocket/hub.go     ← GlobalHub singleton, ServeWS handler
 ├── internal/router/router.go     ← Semua route terdaftar di sini
-└── migrations/001_init.sql       ← DDL + seed (admin/hrd password: Admin@123!)
+└── migrations/                   ← 001–005 SQL (semua idempotent, sudah dirun ke Replit DB)
 ```
 
 ## Keputusan Penting
@@ -41,6 +42,8 @@ backend/
 
 **Landing page CMS**: Key-value di tabel `landing_content`. Frontend baca via `GET /api/landing/content` → dapat map `{kunci: nilai}`.
 
+**Geofencing absensi**: koordinat kantor disimpan di `absensi_config` (kolom `kantor_lat`, `kantor_lng`, `radius_meter`). Default: -3.432194, 104.035361, radius 1500m.
+
 ## Seed Accounts
 - admin@telpp.co.id / Admin@123!
 - hrd@telpp.co.id / Admin@123!
@@ -51,11 +54,15 @@ Lihat backend/README.md untuk tutorial lengkap.
 
 **Why**: Proyek ini berjalan di mesin lokal user (bukan Replit), sehingga tidak ada workflow Replit untuk backend Go.
 
-## Workflow Preferences User
+## Workflow Preferences User (WAJIB DIIKUTI)
 
-- **DB**: User pakai PostgreSQL lokal. Replit hanya untuk testing/preview. Setiap perubahan schema → beritahu SQL-nya agar bisa dijalankan lokal.
-- **Inform sebelum eksekusi**: Setiap file baru atau perubahan penting → beritahu user dulu sebelum dieksekusi.
+- **DB lokal**: User pakai PostgreSQL lokal. Replit hanya untuk testing/preview.
+  - Setiap perubahan schema (tabel baru, kolom baru, dll) → beritahu SQL-nya agar bisa dijalankan lokal juga.
+  - Jalankan migration dari `backend/migrations/` ke database Replit via `psql "$DATABASE_URL" -f ...`
+- **Inform sebelum eksekusi**: Setiap file baru atau perubahan penting → beritahu user dulu sebelum dieksekusi/dibuat.
 - **Struktur lokal vs Replit**:
-  - Lokal: `backend/` (Go) dan `frontend/` (Vue 3, di root project)
+  - Lokal: `E-MAGANG PT TELPP/backend/` (Go) dan `E-MAGANG PT TELPP/frontend/` (Vue 3, di root project, bukan di artifacts/)
   - Replit: `backend/` (Go) dan `artifacts/frontend/` (Vue 3)
-  - Pastikan semua perubahan relevan bisa diterapkan ke struktur lokal.
+  - `artifacts/api-server/` (Node.js proxy) HANYA ada di Replit, tidak ada di lokal — jangan anggap ini backend utama.
+  - Semua perubahan relevan harus bisa diterapkan ke struktur lokal user.
+- **Sinkronisasi routes**: Jika ada perubahan di `artifacts/api-server/src/routes/`, wajib juga ubah `backend/internal/routes/` menggunakan Go.
