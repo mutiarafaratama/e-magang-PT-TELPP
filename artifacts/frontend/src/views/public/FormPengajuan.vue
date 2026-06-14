@@ -141,44 +141,81 @@
             <div class="fp-section__sub">Data institusi dan program studi Anda</div>
           </div>
 
+          <!-- Dropdown kategori -->
           <div class="fp-field fp-field--full" style="margin-bottom:20px">
             <label>Kategori Magang <span class="req">*</span></label>
-            <div class="fp-radio-list">
-              <label
-                v-for="k in KATEGORI"
-                :key="k.value"
-                class="fp-radio-row"
-                :class="{ 'fp-radio-row--active': akademis.kategori_magang === k.value }"
-              >
-                <input type="radio" :value="k.value" v-model="akademis.kategori_magang" />
-                <div class="fp-radio-row__dot">
-                  <div v-if="akademis.kategori_magang === k.value" class="fp-radio-row__dot-inner"></div>
-                </div>
-                <span>{{ k.label }}</span>
-              </label>
-            </div>
+            <select v-model="akademis.kategori_magang" @change="onKategoriChange">
+              <option value="">-- Pilih Kategori --</option>
+              <option value="smk">SMK / Sekolah Menengah Kejuruan</option>
+              <option value="d3">D3 (Diploma Tiga)</option>
+              <option value="s1">S1 (Sarjana)</option>
+              <option value="s2">S2 (Magister)</option>
+              <option value="penelitian">Penelitian / Riset</option>
+              <option value="lainnya">Lainnya</option>
+            </select>
           </div>
 
-          <div class="fp-grid">
+          <!-- Lainnya: input bebas -->
+          <div v-if="isLainnya" class="fp-field fp-field--full" style="margin-bottom:20px">
+            <label>Sebutkan Kategori Anda <span class="req">*</span></label>
+            <input v-model="kategoriLainnya" type="text" placeholder="Contoh: Magang Industri, PKL Teknik, dll." />
+          </div>
+
+          <!-- Form dinamis sesuai kategori -->
+          <div class="fp-grid" v-if="akademis.kategori_magang">
+
+            <!-- Asal Institusi (semua) -->
             <div class="fp-field">
-              <label>Asal Institusi / Sekolah <span class="req">*</span></label>
-              <input v-model="akademis.asal_institusi" type="text" placeholder="Nama sekolah / universitas" />
+              <label>{{ labelInstitusi }} <span class="req">*</span></label>
+              <input v-model="akademis.asal_institusi" type="text" :placeholder="placeholderInstitusi" />
             </div>
+
+            <!-- Jurusan / Bidang (semua) -->
             <div class="fp-field">
-              <label>Jurusan / Program Studi <span class="req">*</span></label>
-              <input v-model="akademis.jurusan" type="text" placeholder="Teknik Informatika" />
+              <label>{{ labelJurusan }} <span class="req">*</span></label>
+              <input v-model="akademis.jurusan" type="text" :placeholder="placeholderJurusan" />
             </div>
-            <div class="fp-field">
+
+            <!-- Kelas — hanya SMK -->
+            <div v-if="isSmk" class="fp-field">
+              <label>Kelas <span class="req">*</span></label>
+              <select v-model="akademis.kelas_semester">
+                <option value="">-- Pilih Kelas --</option>
+                <option value="Kelas X">Kelas X</option>
+                <option value="Kelas XI">Kelas XI</option>
+                <option value="Kelas XII">Kelas XII</option>
+              </select>
+            </div>
+
+            <!-- Semester — hanya D3/S1/S2 -->
+            <div v-if="isPT" class="fp-field">
               <label>Semester <span class="req">*</span></label>
-              <input v-model="akademis.kelas_semester" type="text" placeholder="Semester 5" />
+              <select v-model="akademis.kelas_semester">
+                <option value="">-- Pilih Semester --</option>
+                <option v-for="n in semesterMax" :key="n" :value="`Semester ${n}`">Semester {{ n }}</option>
+              </select>
             </div>
-            <div class="fp-field">
-              <label>NIM <span class="req">*</span></label>
-              <input v-model="akademis.nomor_induk" type="text" placeholder="Nomor induk" />
+
+            <!-- Nomor Induk — SMK / PT / Lainnya -->
+            <div v-if="!isPenelitian" class="fp-field">
+              <label>{{ labelNomorInduk }} <span class="req">*</span></label>
+              <input v-model="akademis.nomor_induk" type="text" :placeholder="placeholderNomorInduk" />
+            </div>
+
+            <!-- Judul Penelitian — hanya Penelitian (full width) -->
+            <div v-if="isPenelitian" class="fp-field fp-field--full">
+              <label>Judul / Topik Penelitian <span class="req">*</span></label>
+              <input v-model="akademis.kelas_semester" type="text" placeholder="Contoh: Analisis Efisiensi Produksi Kertas..." />
+            </div>
+
+            <!-- Nomor Identitas — hanya Penelitian -->
+            <div v-if="isPenelitian" class="fp-field">
+              <label>Nomor Identitas (NIK / NIM / NIP) <span class="req">*</span></label>
+              <input v-model="akademis.nomor_induk" type="text" placeholder="Nomor identitas resmi" />
             </div>
           </div>
 
-          <div class="fp-notice">
+          <div class="fp-notice" v-if="akademis.kategori_magang">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Kategori magang menentukan dokumen yang perlu diunggah pada langkah berikutnya.
           </div>
@@ -195,7 +232,7 @@
             <!-- Proposal Magang -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                Proposal Magang
+                Proposal Magang <span class="req">*</span>
                 <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
@@ -217,10 +254,10 @@
               <input ref="pick_proposal_magang" type="file" accept=".pdf,.doc,.docx" style="display:none" @change="onFilePick('proposal_magang', $event)" />
             </div>
 
-            <!-- KTP / KTM -->
+            <!-- KTP -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                {{ akademis.kategori_magang === 'smk' ? 'KTP / Kartu Identitas' : 'KTP / Kartu Identitas' }}
+                KTP / Kartu Identitas <span class="req">*</span>
                 <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
@@ -242,13 +279,11 @@
               <input ref="pick_ktp" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none" @change="onFilePick('ktp', $event)" />
             </div>
 
-            <!-- KTM (wajib untuk mahasiswa / penelitian) -->
+            <!-- KTM / Kartu Pelajar -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                KTM / Kartu Pelajar
-                <span
-                  :class="['fp-badge', isKtmRequired ? 'fp-badge--required' : 'fp-badge--optional']"
-                >{{ isKtmRequired ? 'Wajib' : 'Opsional' }}</span>
+                {{ isSmk ? 'Kartu Pelajar' : 'KTM (Kartu Tanda Mahasiswa)' }} <span class="req">*</span>
+                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -272,7 +307,7 @@
             <!-- Pasfoto -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                Pasfoto 3x4
+                Pasfoto 3x4 <span class="req">*</span>
                 <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
@@ -297,8 +332,8 @@
             <!-- BPJS / KIS -->
             <div class="fp-doc">
               <div class="fp-doc__label">
-                BPJS / KIS
-                <span class="fp-badge fp-badge--optional">Opsional</span>
+                BPJS / KIS <span class="req">*</span>
+                <span class="fp-badge fp-badge--required">Wajib</span>
               </div>
               <div
                 class="fp-dropzone"
@@ -346,9 +381,10 @@
             <div class="fp-review-grid">
               <div class="fp-review-cell"><span>Kategori</span><strong>{{ labelKategori(akademis.kategori_magang) }}</strong></div>
               <div class="fp-review-cell"><span>Institusi</span><strong>{{ akademis.asal_institusi }}</strong></div>
-              <div class="fp-review-cell"><span>Jurusan</span><strong>{{ akademis.jurusan }}</strong></div>
-              <div class="fp-review-cell"><span>Kelas / Semester</span><strong>{{ akademis.kelas_semester }}</strong></div>
-              <div class="fp-review-cell"><span>Nomor Induk</span><strong>{{ akademis.nomor_induk }}</strong></div>
+              <div class="fp-review-cell"><span>{{ labelJurusan }}</span><strong>{{ akademis.jurusan }}</strong></div>
+              <div class="fp-review-cell" v-if="!isPenelitian"><span>{{ isSmk ? 'Kelas' : 'Semester' }}</span><strong>{{ akademis.kelas_semester }}</strong></div>
+              <div class="fp-review-cell" v-if="isPenelitian"><span>Judul Penelitian</span><strong>{{ akademis.kelas_semester }}</strong></div>
+              <div class="fp-review-cell"><span>{{ labelNomorInduk }}</span><strong>{{ akademis.nomor_induk }}</strong></div>
             </div>
           </div>
 
@@ -357,9 +393,8 @@
             <div class="fp-review-docs">
               <div v-for="d in docsReviewList" :key="d.jenis" class="fp-review-doc">
                 <svg v-if="d.done" width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="#16a34a" stroke-width="2"/></svg>
-                <svg v-else-if="d.required" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>
-                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#9ca3af" stroke-width="2"/><path d="M8 12h8" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/></svg>
-                <span :class="d.done ? 'fp-review-doc--ok' : d.required ? 'fp-review-doc--miss' : 'fp-review-doc--skip'">{{ d.label }}</span>
+                <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>
+                <span :class="d.done ? 'fp-review-doc--ok' : 'fp-review-doc--miss'">{{ d.label }}</span>
               </div>
             </div>
           </div>
@@ -408,12 +443,6 @@ import api from "@/lib/api";
 
 const STEPS = ["Data Diri", "Akademis", "Dokumen", "Review & Kirim"];
 
-const KATEGORI = [
-  { value: "smk",        label: "SMK / Sekolah Menengah Kejuruan" },
-  { value: "d3_s1_s2",   label: "D3 / S1 / S2 (Perguruan Tinggi)"  },
-  { value: "penelitian", label: "Penelitian / Riset"                },
-];
-
 const step = ref(0);
 const submitted = ref(false);
 const submitting = ref(false);
@@ -421,6 +450,9 @@ const submitError = ref<string | null>(null);
 const uploadStatus = ref("");
 const uploadPct = ref(0);
 const docsUploaded = ref(0);
+
+// Input bebas untuk kategori "Lainnya"
+const kategoriLainnya = ref("");
 
 const diri = reactive({
   nama_lengkap: "",
@@ -447,6 +479,69 @@ const dokumenFiles = reactive<Record<string, File | null>>({
   pasfoto: null,
   bpjs_kis: null,
 });
+
+// ── Computed helpers kategori ──
+const isSmk       = computed(() => akademis.kategori_magang === "smk");
+const isPT        = computed(() => ["d3", "s1", "s2"].includes(akademis.kategori_magang));
+const isPenelitian = computed(() => akademis.kategori_magang === "penelitian");
+const isLainnya   = computed(() => akademis.kategori_magang === "lainnya");
+
+// Max semester sesuai jenjang
+const semesterMax = computed(() => {
+  if (akademis.kategori_magang === "d3") return 6;
+  if (akademis.kategori_magang === "s2") return 4;
+  return 8; // s1 default
+});
+
+// Label dinamis
+const labelInstitusi = computed(() => {
+  if (isSmk.value) return "Nama Sekolah";
+  if (isPenelitian.value) return "Asal Institusi / Lembaga";
+  if (isLainnya.value) return "Nama Institusi / Organisasi";
+  return "Nama Universitas / Politeknik";
+});
+
+const placeholderInstitusi = computed(() => {
+  if (isSmk.value) return "Nama lengkap sekolah";
+  if (isPenelitian.value) return "Nama universitas / lembaga riset";
+  if (isLainnya.value) return "Nama institusi atau organisasi";
+  return "Nama universitas atau politeknik";
+});
+
+const labelJurusan = computed(() => {
+  if (isSmk.value) return "Kompetensi Keahlian";
+  if (isPenelitian.value) return "Bidang Penelitian";
+  if (isLainnya.value) return "Bidang / Jurusan";
+  return "Program Studi";
+});
+
+const placeholderJurusan = computed(() => {
+  if (isSmk.value) return "Contoh: Teknik Komputer dan Jaringan";
+  if (isPenelitian.value) return "Contoh: Lingkungan Hidup, Pulp & Paper";
+  if (isLainnya.value) return "Bidang atau jurusan yang relevan";
+  return "Contoh: Teknik Informatika";
+});
+
+const labelNomorInduk = computed(() => {
+  if (isSmk.value) return "NISN";
+  if (isPenelitian.value) return "Nomor Identitas (NIK / NIM / NIP)";
+  return "NIM";
+});
+
+const placeholderNomorInduk = computed(() => {
+  if (isSmk.value) return "Nomor Induk Siswa Nasional";
+  if (isPenelitian.value) return "Nomor identitas resmi";
+  return "Nomor Induk Mahasiswa";
+});
+
+// Reset fields saat kategori berubah
+function onKategoriChange() {
+  akademis.asal_institusi = "";
+  akademis.jurusan = "";
+  akademis.kelas_semester = "";
+  akademis.nomor_induk = "";
+  kategoriLainnya.value = "";
+}
 
 // Refs untuk hidden file inputs
 const pick_proposal_magang = ref<HTMLInputElement | null>(null);
@@ -476,16 +571,13 @@ function removeFile(jenis: string) {
   dokumenFiles[jenis] = null;
 }
 
-const isKtmRequired = computed(() =>
-  akademis.kategori_magang === "d3_s1_s2" || akademis.kategori_magang === "penelitian"
-);
-
+// Semua dokumen wajib
 const docsReviewList = computed(() => [
-  { jenis: "proposal_magang", label: "Proposal Magang",      required: true,           done: !!dokumenFiles.proposal_magang },
-  { jenis: "ktp",             label: "KTP / Kartu Identitas", required: true,           done: !!dokumenFiles.ktp },
-  { jenis: "ktm",             label: "KTM / Kartu Pelajar",   required: isKtmRequired.value, done: !!dokumenFiles.ktm },
-  { jenis: "pasfoto",         label: "Pasfoto 3x4",           required: true,           done: !!dokumenFiles.pasfoto },
-  { jenis: "bpjs_kis",        label: "BPJS / KIS",            required: false,          done: !!dokumenFiles.bpjs_kis },
+  { jenis: "proposal_magang", label: "Proposal Magang",                                        done: !!dokumenFiles.proposal_magang },
+  { jenis: "ktp",             label: "KTP / Kartu Identitas",                                  done: !!dokumenFiles.ktp },
+  { jenis: "ktm",             label: isSmk.value ? "Kartu Pelajar" : "KTM",                   done: !!dokumenFiles.ktm },
+  { jenis: "pasfoto",         label: "Pasfoto 3x4",                                            done: !!dokumenFiles.pasfoto },
+  { jenis: "bpjs_kis",        label: "BPJS / KIS",                                             done: !!dokumenFiles.bpjs_kis },
 ]);
 
 function formatDate(d: string) {
@@ -494,7 +586,22 @@ function formatDate(d: string) {
 }
 
 function labelKategori(v: string) {
-  return KATEGORI.find((k) => k.value === v)?.label ?? v;
+  const MAP: Record<string, string> = {
+    smk:        "SMK / Sekolah Menengah Kejuruan",
+    d3:         "D3 (Diploma Tiga)",
+    s1:         "S1 (Sarjana)",
+    s2:         "S2 (Magister)",
+    penelitian: "Penelitian / Riset",
+    lainnya:    kategoriLainnya.value ? `Lainnya — ${kategoriLainnya.value}` : "Lainnya",
+  };
+  return MAP[v] ?? v;
+}
+
+// Map nilai frontend → enum backend
+function backendKategori(v: string): string {
+  if (v === "smk") return "smk";
+  if (v === "d3" || v === "s1" || v === "s2") return "d3_s1_s2";
+  return "penelitian"; // penelitian & lainnya
 }
 
 function validateStep0(): string | null {
@@ -509,19 +616,23 @@ function validateStep0(): string | null {
 }
 
 function validateStep1(): string | null {
-  if (!akademis.kategori_magang)        return "Kategori magang wajib dipilih";
-  if (!akademis.asal_institusi.trim())  return "Nama institusi wajib diisi";
-  if (!akademis.jurusan.trim())         return "Jurusan wajib diisi";
-  if (!akademis.kelas_semester.trim())  return "Semester wajib diisi";
-  if (!akademis.nomor_induk.trim())     return "NIM wajib diisi";
+  if (!akademis.kategori_magang)       return "Kategori magang wajib dipilih";
+  if (isLainnya.value && !kategoriLainnya.value.trim()) return "Sebutkan kategori Anda";
+  if (!akademis.asal_institusi.trim()) return `${labelInstitusi.value} wajib diisi`;
+  if (!akademis.jurusan.trim())        return `${labelJurusan.value} wajib diisi`;
+  if (isSmk.value && !akademis.kelas_semester)  return "Kelas wajib dipilih";
+  if (isPT.value && !akademis.kelas_semester)   return "Semester wajib dipilih";
+  if (isPenelitian.value && !akademis.kelas_semester.trim()) return "Judul / Topik penelitian wajib diisi";
+  if (!akademis.nomor_induk.trim())    return `${labelNomorInduk.value} wajib diisi`;
   return null;
 }
 
 function validateStep2(): string | null {
   if (!dokumenFiles.proposal_magang) return "Proposal Magang wajib diupload";
   if (!dokumenFiles.ktp)             return "KTP / Kartu Identitas wajib diupload";
-  if (isKtmRequired.value && !dokumenFiles.ktm) return "KTM wajib diupload untuk mahasiswa / peneliti";
+  if (!dokumenFiles.ktm)             return isSmk.value ? "Kartu Pelajar wajib diupload" : "KTM wajib diupload";
   if (!dokumenFiles.pasfoto)         return "Pasfoto wajib diupload";
+  if (!dokumenFiles.bpjs_kis)        return "BPJS / KIS wajib diupload";
   return null;
 }
 
@@ -542,7 +653,11 @@ async function submitForm() {
   try {
     const res = await api.post("/api/pengajuan/publik", {
       step1: { ...diri },
-      step2: { ...akademis },
+      step2: {
+        ...akademis,
+        kategori_magang: backendKategori(akademis.kategori_magang),
+        kelas_semester: isLainnya.value ? (kategoriLainnya.value || "Lainnya") : akademis.kelas_semester,
+      },
     });
 
     const pengajuanId = res.data?.data?.id;
@@ -734,29 +849,6 @@ async function submitForm() {
 }
 .fp-field textarea { resize: vertical; }
 
-/* ── radio list (kategori) ── */
-.fp-radio-list { display: flex; flex-direction: column; gap: 8px; }
-.fp-radio-row {
-  display: flex; align-items: center; gap: 12px;
-  border: 1px solid #d1d5db; border-radius: 8px;
-  padding: 12px 16px; cursor: pointer; transition: all 0.15s;
-  font-size: 13.5px; font-weight: 500; color: #374151;
-  user-select: none;
-}
-.fp-radio-row input { display: none; }
-.fp-radio-row:hover { border-color: #4ade80; }
-.fp-radio-row--active { border-color: #16a34a; background: #f0fdf4; color: #111827; }
-.fp-radio-row__dot {
-  width: 18px; height: 18px; border-radius: 50%;
-  border: 2px solid #d1d5db; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.15s;
-}
-.fp-radio-row--active .fp-radio-row__dot { border-color: #16a34a; }
-.fp-radio-row__dot-inner {
-  width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
-}
-
 /* ── notice ── */
 .fp-notice {
   display: flex; align-items: center; gap: 8px;
@@ -829,7 +921,6 @@ async function submitForm() {
 }
 .fp-review-doc--ok   { color: #16a34a; }
 .fp-review-doc--miss { color: #dc2626; }
-.fp-review-doc--skip { color: #9ca3af; }
 
 /* ── progress ── */
 .fp-progress { margin: 16px 0 4px; }
