@@ -185,12 +185,6 @@ const navGroups = [
       { key: "chat", label: "Chat Helpdesk", icon: ICON.chat },
     ],
   },
-  {
-    label: "Akun",
-    items: [
-      { key: "profil", label: "Profil Saya", icon: ICON.profil },
-    ],
-  },
 ];
 
 onMounted(fetchBeranda);

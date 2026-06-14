@@ -242,6 +242,11 @@
       <!-- ── STATISTIK ── -->
       <AdminStatistik v-else-if="activeTab === 'statistik'" />
 
+      <!-- ── PROFIL ── -->
+      <template v-else-if="activeTab === 'profil'">
+        <StaffProfil />
+      </template>
+
     </template>
 
   </DashboardLayout>
@@ -286,6 +291,7 @@ import { useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import AdminUsers      from "./AdminUsers.vue";
 import AdminStatistik  from "./AdminStatistik.vue";
+import StaffProfil     from "@/views/staff/StaffProfil.vue";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 

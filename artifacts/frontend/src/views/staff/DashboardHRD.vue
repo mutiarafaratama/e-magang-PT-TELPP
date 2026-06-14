@@ -166,6 +166,10 @@
         </div>
       </template>
 
+      <template v-else-if="activeTab === 'profil'">
+        <StaffProfil />
+      </template>
+
     </template>
   </DashboardLayout>
 </template>
@@ -179,6 +183,7 @@ import HRDVerifikasi from "./HRDVerifikasi.vue";
 import HRDPenempatanMenunggu from "./HRDPenempatanMenunggu.vue";
 import HRDBerlangsung from "./HRDBerlangsung.vue";
 import HRDRekapAbsen from "./HRDRekapAbsen.vue";
+import StaffProfil from "./StaffProfil.vue";
 
 // ── auth ────────────────────────────────────────────────────────────
 const { user } = useAuth();
