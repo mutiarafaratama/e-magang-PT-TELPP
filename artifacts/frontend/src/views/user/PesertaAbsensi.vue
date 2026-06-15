@@ -14,6 +14,18 @@
         <p>Absensi tersedia setelah jadwal magang dikonfirmasi oleh HRD.</p>
       </div>
 
+      <div v-else-if="absensiState === 'magang_selesai'" class="absensi-panel">
+        <div class="ap-icon" style="background:#f0fdf4;color:#16a34a">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="ap-title">Periode Magang Telah Selesai</div>
+        <div class="ap-desc">
+          <span v-if="pelaksanaanSaya?.status === 'upload_laporan'">Silakan upload laporan akhir magang kamu.</span>
+          <span v-else-if="pelaksanaanSaya?.status === 'penilaian'">Laporan sedang dalam proses penilaian.</span>
+          <span v-else>Selamat! Proses magang kamu sudah selesai.</span>
+        </div>
+      </div>
+
       <div v-else-if="absensiState === 'locked'" class="absensi-panel">
         <div class="ap-icon ap-icon--locked"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
         <div class="ap-title">Sesi Absen Masuk Belum Dibuka</div>
@@ -474,7 +486,14 @@ const todayAbsensi = computed(() =>
 
 const absensiState = computed(() => {
   if (absensiLoading.value) return 'loading';
-  if (!pelaksanaanSaya.value || pelaksanaanSaya.value.status !== 'aktif') return 'no_magang';
+  if (!pelaksanaanSaya.value) return 'no_magang';
+  const st = pelaksanaanSaya.value.status;
+  // Magang belum dikonfirmasi sama sekali
+  if (st === 'menunggu_mulai') return 'no_magang';
+  // Magang sudah selesai / dalam proses penilaian / upload laporan
+  if (st === 'upload_laporan' || st === 'penilaian' || st === 'selesai') return 'magang_selesai';
+  // Hanya status 'aktif' yang tampilkan kontrol absensi
+  if (st !== 'aktif') return 'no_magang';
   if (!cfg.value) return 'loading';
   const now = nowWIB.value;
   const masukBuka   = parseWinTime(cfg.value.jam_masuk_buka,   now);
