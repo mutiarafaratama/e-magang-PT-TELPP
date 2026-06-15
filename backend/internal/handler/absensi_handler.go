@@ -5,6 +5,7 @@ import (
         "fmt"
         "math"
         "net/http"
+        "strings"
         "time"
 
         "github.com/gin-gonic/gin"
@@ -313,6 +314,29 @@ func (h *AbsensiHandler) DownloadPDF(c *gin.Context) {
         c.Data(http.StatusOK, "application/pdf", buf.Bytes())
 }
 
+// formatJamShort memotong format PostgreSQL "HH:MM:SS.ffffff" menjadi "HH:MM"
+func formatJamShort(s string) string {
+        if len(s) >= 5 {
+                return s[:5]
+        }
+        return s
+}
+
+// splitKegiatan memecah teks kegiatan per baris (filter baris kosong)
+func splitKegiatan(s string) []string {
+        if s == "" {
+                return nil
+        }
+        var result []string
+        for _, line := range strings.Split(s, "\n") {
+                line = strings.TrimSpace(line)
+                if line != "" {
+                        result = append(result, line)
+                }
+        }
+        return result
+}
+
 // absensiRowPDF mewakili satu baris pada tabel absensi di PDF
 type absensiRowPDF struct {
         No        int
@@ -353,10 +377,10 @@ func buildAbsensiRows(pel *models.PelaksanaanMagang, list []models.Absensi) []ab
                 }
                 if a, ok := absensiMap[dateStr]; ok {
                         if a.JamMasuk != nil {
-                                row.JamMasuk = *a.JamMasuk
+                                row.JamMasuk = formatJamShort(*a.JamMasuk)
                         }
                         if a.JamKeluar != nil {
-                                row.JamKeluar = *a.JamKeluar
+                                row.JamKeluar = formatJamShort(*a.JamKeluar)
                         }
                         switch a.Keterangan {
                         case "hadir":
@@ -534,22 +558,45 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
         rows := buildAbsensiRows(pel, list)
         pdf.SetFont("Helvetica", "", 8)
 
+        const (
+                lineH   = 4.5  // tinggi satu baris kegiatan
+                minRowH = 5.5  // tinggi minimum baris (1 baris kosong)
+        )
+        // kegiatanX = leftX + lebar kolom 0-5
+        kegiatanX := leftX + colWidths[0] + colWidths[1] + colWidths[2] +
+                colWidths[3] + colWidths[4] + colWidths[5]
+        ttdX := kegiatanX + colWidths[6]
+
+        pdf.SetDrawColor(209, 213, 219)
+        pdf.SetLineWidth(0.2)
+
         for rowIdx, row := range rows {
-                if yPos > 262 {
+                poinList := splitKegiatan(row.Kegiatan)
+                numLines := len(poinList)
+                if numLines == 0 {
+                        numLines = 1
+                }
+                rowH := math.Max(minRowH, float64(numLines)*lineH)
+
+                if yPos+rowH > 262 {
                         pdf.AddPage()
                         yPos = 18
                         printTableHeader(yPos)
                         yPos += 6
                         pdf.SetFont("Helvetica", "", 8)
+                        pdf.SetDrawColor(209, 213, 219)
+                        pdf.SetLineWidth(0.2)
                 }
 
+                // Latar belakang baris
                 if rowIdx%2 == 0 {
                         pdf.SetFillColor(249, 250, 251)
                 } else {
                         pdf.SetFillColor(255, 255, 255)
                 }
+                pdf.Rect(leftX, yPos, pageW, rowH, "F")
 
-                // Warnai baris berdasarkan status
+                // Warna teks berdasarkan status
                 switch row.Status {
                 case "Alpha":
                         pdf.SetTextColor(190, 18, 60)
@@ -566,22 +613,47 @@ func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.Pelaksana
                         ttdStr = "V"
                 }
 
-                cells := []string{
+                // Kolom 0–5 (No, Tanggal, Hari, Masuk, Pulang, Status) — tinggi penuh
+                nonKeg := []string{
                         fmt.Sprintf("%d", row.No),
                         row.Tanggal, row.Hari,
                         row.JamMasuk, row.JamKeluar,
-                        row.Status, row.Kegiatan, ttdStr,
+                        row.Status,
+                }
+                pdf.SetXY(leftX, yPos)
+                for i, cell := range nonKeg {
+                        pdf.CellFormat(colWidths[i], rowH, cell, "1", 0, "C", false, 0, "")
                 }
 
-                pdf.SetXY(leftX, yPos)
-                for i, cell := range cells {
-                        align := "C"
-                        if i == 6 {
-                                align = "L"
+                // Kolom Kegiatan — border kotak, tiap poin per baris
+                pdf.Rect(kegiatanX, yPos, colWidths[6], rowH, "D")
+                pdf.SetTextColor(55, 65, 81)
+                maxKegW := colWidths[6] - 3.0
+                for j, poin := range poinList {
+                        lineText := fmt.Sprintf("%d. %s", j+1, poin)
+                        // Potong teks jika terlalu panjang
+                        for pdf.GetStringWidth(lineText) > maxKegW && len(lineText) > 4 {
+                                lineText = lineText[:len(lineText)-1]
                         }
-                        pdf.CellFormat(colWidths[i], 5.5, cell, "1", 0, align, true, 0, "")
+                        pdf.SetXY(kegiatanX+1.5, yPos+float64(j)*lineH+0.5)
+                        pdf.CellFormat(maxKegW, lineH, lineText, "", 0, "L", false, 0, "")
                 }
-                yPos += 5.5
+
+                // Kolom TTD — kembalikan warna status
+                switch row.Status {
+                case "Alpha":
+                        pdf.SetTextColor(190, 18, 60)
+                case "Izin":
+                        pdf.SetTextColor(161, 98, 7)
+                case "Sakit":
+                        pdf.SetTextColor(29, 78, 216)
+                default:
+                        pdf.SetTextColor(55, 65, 81)
+                }
+                pdf.SetXY(ttdX, yPos)
+                pdf.CellFormat(colWidths[7], rowH, ttdStr, "1", 0, "C", false, 0, "")
+
+                yPos += rowH
         }
 
         // ── TANDA TANGAN ─────────────────────────────────────────
