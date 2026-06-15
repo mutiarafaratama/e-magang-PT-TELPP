@@ -85,14 +85,12 @@
     <!-- ALUR PENDAFTARAN -->
     <section id="alur" class="section section--white">
       <div class="container">
-        <div class="section-header">
+        <div class="section-header alur-header">
           <div class="section-label">Cara Daftar</div>
           <h2>Alur Pendaftaran</h2>
-          <p>Ikuti prosedur digital kami untuk monitoring status pengajuan secara real-time.</p>
         </div>
 
-        <div class="alur-tabs-wrap" v-if="alurItems.length > 0">
-          <!-- Tab bar -->
+        <div v-if="alurItems.length > 0">
           <div class="alur-tabs">
             <button
               v-for="(item, i) in alurItems"
@@ -103,37 +101,22 @@
             >Tahap {{ i + 1 }}</button>
           </div>
 
-          <!-- Content area -->
-          <div class="alur-content">
-            <div class="alur-content__text">
-              <div class="alur-content__step">Tahap {{ alurIdx + 1 }} dari {{ alurItems.length }}</div>
-              <h3 class="alur-content__title">{{ alurItems[alurIdx]?.judul }}</h3>
-              <p class="alur-content__desc">{{ alurItems[alurIdx]?.paragraf }}</p>
+          <div class="alur-zigzag" :class="{ 'alur-zigzag--flip': alurIdx % 2 === 1 }" :key="alurIdx">
+            <div class="alur-zig-text">
+              <div class="alur-zig-watermark">{{ String(alurIdx + 1).padStart(2, '0') }}</div>
+              <div class="alur-zig-step">Tahap {{ alurIdx + 1 }}</div>
+              <h3 class="alur-zig-title">{{ alurItems[alurIdx]?.judul }}</h3>
+              <p class="alur-zig-desc">{{ alurItems[alurIdx]?.paragraf }}</p>
             </div>
-
-            <div class="alur-mockup-wrap">
-              <div class="alur-mockup" v-if="alurItems[alurIdx]?.gambar_url">
-                <div class="alur-mockup__topbar">
-                  <span class="alur-mockup__dot alur-mockup__dot--red"></span>
-                  <span class="alur-mockup__dot alur-mockup__dot--yellow"></span>
-                  <span class="alur-mockup__dot alur-mockup__dot--green"></span>
-                  <div class="alur-mockup__url">e-magang.telpp.co.id</div>
-                </div>
-                <div class="alur-mockup__screen">
-                  <img :src="alurItems[alurIdx].gambar_url" :alt="alurItems[alurIdx].judul" />
-                </div>
-              </div>
-              <div class="alur-mockup alur-mockup--empty" v-else>
-                <div class="alur-mockup__topbar">
-                  <span class="alur-mockup__dot alur-mockup__dot--red"></span>
-                  <span class="alur-mockup__dot alur-mockup__dot--yellow"></span>
-                  <span class="alur-mockup__dot alur-mockup__dot--green"></span>
-                  <div class="alur-mockup__url">e-magang.telpp.co.id</div>
-                </div>
-                <div class="alur-mockup__screen alur-mockup__screen--placeholder">
-                  <div class="alur-placeholder-num">{{ String(alurIdx + 1).padStart(2, '0') }}</div>
-                  <div class="alur-placeholder-label">{{ alurItems[alurIdx]?.judul }}</div>
-                </div>
+            <div class="alur-zig-img">
+              <img
+                v-if="alurItems[alurIdx]?.gambar_url"
+                :src="alurItems[alurIdx].gambar_url"
+                :alt="alurItems[alurIdx].judul"
+              />
+              <div v-else class="alur-zig-empty">
+                <span>{{ String(alurIdx + 1).padStart(2, '0') }}</span>
+                <p>{{ alurItems[alurIdx]?.judul }}</p>
               </div>
             </div>
           </div>
@@ -549,73 +532,90 @@ const footerCols = [
 }
 .section-label--light { color: #86efac; }
 
-/* ── ALUR TABS ── */
-.alur-tabs-wrap { display: flex; flex-direction: column; align-items: center; gap: 40px; }
+/* ── ALUR ZIGZAG ── */
+.alur-header { margin-bottom: 36px; }
+
 .alur-tabs {
-  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-  background: #f1f5f9; border-radius: 14px; padding: 6px;
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 56px;
 }
 .alur-tab {
-  padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
-  font-size: 14px; font-weight: 600; font-family: "Poppins", sans-serif;
-  color: #64748b; background: transparent; transition: all 0.18s;
+  padding: 9px 26px; border-radius: 100px; border: 1.5px solid #e2e8f0;
+  cursor: pointer; font-size: 13px; font-weight: 600;
+  font-family: "Poppins", sans-serif; color: #64748b;
+  background: #fff; transition: all 0.18s;
 }
-.alur-tab:hover { color: #0b1c30; background: rgba(255,255,255,0.7); }
-.alur-tab--active { background: #0b1c30; color: #fff; box-shadow: 0 4px 14px rgba(11,28,48,0.18); }
-.alur-content {
-  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 32px;
+.alur-tab:hover { border-color: #48AF4A; color: #48AF4A; }
+.alur-tab--active {
+  background: #0b1c30; color: #fff; border-color: #0b1c30;
+  box-shadow: 0 4px 14px rgba(11,28,48,0.18);
 }
-.alur-content__text { text-align: center; max-width: 620px; }
-.alur-content__step {
+
+.alur-zigzag {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 72px; align-items: center;
+  padding: 0 0 64px;
+  animation: alurFade 0.3s ease;
+}
+.alur-zigzag--flip { direction: rtl; }
+.alur-zigzag--flip > * { direction: ltr; }
+
+@keyframes alurFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.alur-zig-text {
+  position: relative; display: flex; flex-direction: column; gap: 16px;
+}
+.alur-zig-watermark {
+  position: absolute; top: -28px; left: -8px;
+  font-size: 120px; font-weight: 900; line-height: 1;
+  color: rgba(72,175,74,0.07); font-family: "Poppins", sans-serif;
+  pointer-events: none; user-select: none; letter-spacing: -4px;
+}
+.alur-zig-step {
   font-size: 11px; font-weight: 700; color: #48AF4A;
-  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;
+  letter-spacing: 0.12em; text-transform: uppercase;
 }
-.alur-content__title {
-  font-size: 28px; font-weight: 700; color: #0b1c30; line-height: 1.3; margin: 0 0 14px;
+.alur-zig-title {
+  font-size: 32px; font-weight: 800; color: #0b1c30;
+  line-height: 1.25; margin: 0;
 }
-.alur-content__desc {
+.alur-zig-desc {
   font-size: 16px; color: #64748b; line-height: 1.75; margin: 0;
+  max-width: 420px;
 }
-.alur-mockup-wrap {
-  width: 100%; max-width: 820px;
-  filter: drop-shadow(0 24px 48px rgba(11,28,48,0.16));
+
+.alur-zig-img {
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 20px 56px rgba(11,28,48,0.12);
+  background: #f1f5f9;
 }
-.alur-mockup {
-  background: #1e293b; border-radius: 16px; overflow: hidden;
-  border: 1.5px solid rgba(255,255,255,0.08);
+.alur-zig-img img {
+  width: 100%; height: 340px;
+  object-fit: cover; display: block;
 }
-.alur-mockup__topbar {
-  display: flex; align-items: center; gap: 6px;
-  padding: 10px 16px; background: #0f172a;
+.alur-zig-empty {
+  width: 100%; height: 340px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(135deg, #f8fafc, #e8f5e9);
 }
-.alur-mockup__dot {
-  width: 11px; height: 11px; border-radius: 50%; display: inline-block;
+.alur-zig-empty span {
+  font-size: 80px; font-weight: 900; color: rgba(72,175,74,0.2);
+  font-family: "Poppins", sans-serif; line-height: 1;
 }
-.alur-mockup__dot--red { background: #ef4444; }
-.alur-mockup__dot--yellow { background: #f59e0b; }
-.alur-mockup__dot--green { background: #22c55e; }
-.alur-mockup__url {
-  margin-left: 10px; background: #1e293b; border-radius: 6px;
-  padding: 3px 14px; font-size: 11px; color: #94a3b8;
+.alur-zig-empty p {
+  font-size: 15px; font-weight: 600; color: #94a3b8; margin: 0;
 }
-.alur-mockup__screen { width: 100%; overflow: hidden; }
-.alur-mockup__screen img { width: 100%; height: auto; display: block; max-height: 460px; object-fit: cover; }
-.alur-mockup__screen--placeholder {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 320px; gap: 12px;
-}
-.alur-placeholder-num {
-  font-size: 72px; font-weight: 800; color: rgba(72,175,74,0.15);
-  line-height: 1; font-family: "Poppins", sans-serif;
-}
-.alur-placeholder-label {
-  font-size: 16px; font-weight: 600; color: #475569;
-}
+
 @media (max-width: 768px) {
-  .alur-tabs { gap: 6px; padding: 4px; }
-  .alur-tab { padding: 8px 16px; font-size: 13px; }
-  .alur-content__title { font-size: 22px; }
-  .alur-content__desc { font-size: 14px; }
+  .alur-zigzag { grid-template-columns: 1fr; gap: 32px; }
+  .alur-zigzag--flip { direction: ltr; }
+  .alur-zig-title { font-size: 24px; }
+  .alur-zig-watermark { font-size: 80px; }
+  .alur-zig-img img, .alur-zig-empty { height: 220px; }
 }
 
 /* ── JADWAL ── */
