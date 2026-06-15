@@ -166,7 +166,7 @@
               <td class="td-jam">{{ row.jamKeluar }}</td>
               <td>
                 <span v-if="row.status !== 'belum'" :class="['ket-badge', `ket-badge--${row.status}`]">
-                  {{ { hadir:'Hadir', izin:'Izin', sakit:'Sakit', alpha:'Alpha' }[row.status] ?? row.status }}
+                  {{ ({ hadir:'Hadir', izin:'Izin', sakit:'Sakit', alpha:'Alpha' } as Record<string,string>)[row.status] ?? row.status }}
                 </span>
                 <span v-else class="ket-badge ket-badge--belum">–</span>
               </td>

@@ -289,7 +289,7 @@ async function preview(d: DokumenItem) {
   previewModal.value = { show: true, loading: true, blobUrl: '', type: 'other', nama: d.nama_file, jenis: d.jenis };
   try {
     const r = await api.get(`/api/admin/dokumen/${d.id}/download`, { responseType: 'blob' });
-    const mimeType = r.headers['content-type'] || d.mime_type || '';
+    const mimeType = String(r.headers['content-type'] || d.mime_type || '');
     const blob = new Blob([r.data], { type: mimeType });
     const url  = URL.createObjectURL(blob);
     const type = isPDF(mimeType) ? 'pdf' : isImage(mimeType) ? 'image' : 'other';
@@ -310,7 +310,7 @@ function closePreview() {
 async function downloadFile(d: DokumenItem) {
   try {
     const r = await api.get(`/api/admin/dokumen/${d.id}/download`, { responseType: 'blob' });
-    const mimeType = r.headers['content-type'] || d.mime_type || 'application/octet-stream';
+    const mimeType = String(r.headers['content-type'] || d.mime_type || 'application/octet-stream');
     const blob = new Blob([r.data], { type: mimeType });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');

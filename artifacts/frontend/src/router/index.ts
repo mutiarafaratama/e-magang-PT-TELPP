@@ -89,6 +89,8 @@ router.beforeEach((to) => {
     if (user?.role === "hrd") return { name: "dashboard-hrd" };
     return { name: "dashboard-peserta" };
   }
+
+  return;
 });
 
 export default router;

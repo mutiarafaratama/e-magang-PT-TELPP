@@ -378,7 +378,7 @@ async function fetchJam() {
   } catch { /* gunakan default */ } finally { cfgLoading.value = false; }
 }
 
-function autoFormatTime(field: keyof typeof jamForm.value, e: Event) {
+function autoFormatTime(field: 'jam_masuk_buka' | 'jam_masuk_tutup' | 'jam_pulang_buka' | 'jam_pulang_tutup', e: Event) {
   let v = (e.target as HTMLInputElement).value.replace(/[^0-9]/g, '');
   if (v.length > 4) v = v.slice(0, 4);
   if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
