@@ -3,14 +3,8 @@
     <!-- ── ABSENSI HARI INI ─────────────────────────────────── -->
     <div class="card">
       <div class="card-header">
-        <div>
-          <h3 class="card-title">Absensi Hari Ini</h3>
-          <span class="today-label">{{ todayLabel }}</span>
-        </div>
-        <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-outline-sm" @click="openIzinModal">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          Ajukan Izin/Sakit
-        </button>
+        <h3 class="card-title">Absensi Hari Ini</h3>
+        <span class="today-label">{{ todayLabel }}</span>
       </div>
 
       <div v-if="absensiLoading" class="empty-state"><div class="spinner"></div></div>
@@ -25,6 +19,10 @@
         <div class="ap-title">Sesi Absen Masuk Belum Dibuka</div>
         <div class="ap-desc">Dibuka pukul <strong>{{ cfg?.jam_masuk_buka }}</strong> WIB</div>
         <div class="ap-countdown">{{ countdownMasukText }}</div>
+        <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan-sm" @click="openIzinModal">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Ajukan Izin/Sakit
+        </button>
       </div>
 
       <div v-else-if="absensiState === 'checkin_open'" class="absensi-panel">
@@ -32,11 +30,20 @@
         <div class="ap-title">Sesi Absen Masuk Dibuka</div>
         <div class="ap-desc">{{ cfg?.jam_masuk_buka }} – {{ cfg?.jam_masuk_tutup }} WIB</div>
         <div v-if="absensiError" class="ap-error">{{ absensiError }}</div>
-        <div v-if="gpsError" class="ap-error">{{ gpsError }}</div>
-        <button class="btn-absen" :disabled="gpsLoading" @click="openCheckinModal">
-          <span v-if="gpsLoading" class="btn-spinner"></span>
-          {{ gpsLoading ? 'Mendapatkan lokasi...' : 'Absen Masuk Sekarang' }}
-        </button>
+        <div v-if="gpsError" class="ap-error ap-error--with-retry">
+          <span>{{ gpsError }}</span>
+          <button class="ap-retry-btn" @click="openCheckinModal">Coba Lagi</button>
+        </div>
+        <div class="ap-btn-row">
+          <button class="btn-absen" :disabled="gpsLoading" @click="openCheckinModal">
+            <span v-if="gpsLoading" class="btn-spinner"></span>
+            {{ gpsLoading ? 'Mendapatkan lokasi...' : 'Absen Masuk Sekarang' }}
+          </button>
+          <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan" @click="openIzinModal">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            Ajukan
+          </button>
+        </div>
       </div>
 
       <div v-else-if="absensiState === 'waiting_pulang'" class="absensi-panel">
@@ -45,6 +52,10 @@
         <div class="ap-title">Menunggu Sesi Absen Pulang</div>
         <div class="ap-desc">Dibuka pukul <strong>{{ cfg?.jam_pulang_buka }}</strong> WIB</div>
         <div class="ap-countdown">{{ countdownPulangText }}</div>
+        <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan-sm" @click="openIzinModal">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Ajukan Izin/Sakit
+        </button>
       </div>
 
       <div v-else-if="absensiState === 'checkout_open'" class="absensi-panel">
@@ -54,9 +65,15 @@
           <textarea v-model="kegiatanInput" class="ap-textarea" placeholder="Tuliskan kegiatan yang kamu lakukan hari ini..." rows="3"></textarea>
         </div>
         <div v-if="absensiError" class="ap-error">{{ absensiError }}</div>
-        <button class="btn-absen btn-absen--pulang" @click="doCheckout" :disabled="checkingOut || !kegiatanInput.trim()">
-          {{ checkingOut ? 'Memproses...' : 'Absen Pulang' }}
-        </button>
+        <div class="ap-btn-row">
+          <button class="btn-absen btn-absen--pulang" @click="doCheckout" :disabled="checkingOut || !kegiatanInput.trim()">
+            {{ checkingOut ? 'Memproses...' : 'Absen Pulang' }}
+          </button>
+          <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan" @click="openIzinModal">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            Ajukan
+          </button>
+        </div>
       </div>
 
       <div v-else-if="absensiState === 'done'" class="absensi-panel absensi-panel--done">
@@ -68,12 +85,20 @@
           <div class="ap-kegiatan__label">Kegiatan</div>
           <div class="ap-kegiatan__text">{{ todayAbsensi?.kegiatan || '–' }}</div>
         </div>
+        <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan-sm" style="margin-top:8px" @click="openIzinModal">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Ajukan Izin/Sakit
+        </button>
       </div>
 
       <div v-else-if="absensiState === 'missed_checkin' || absensiState === 'missed_checkout'" class="absensi-panel">
         <div class="ap-icon ap-icon--miss"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
         <div class="ap-title">{{ absensiState === 'missed_checkin' ? 'Sesi Absen Masuk Terlewat' : 'Sesi Absen Pulang Terlewat' }}</div>
-        <div class="ap-desc">Jika ada keperluan, gunakan tombol Ajukan Izin/Sakit di atas.</div>
+        <div class="ap-desc">Jika ada keterangan izin atau sakit, ajukan di bawah ini.</div>
+        <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan" style="margin-top:4px" @click="openIzinModal">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Ajukan Izin/Sakit
+        </button>
       </div>
     </div>
 
@@ -544,26 +569,58 @@ function openCheckinModal() {
     return;
   }
   gpsLoading.value = true;
-  navigator.geolocation.getCurrentPosition(
+
+  let bestPos: GeolocationPosition | null = null;
+  let watchId = -1;
+  let timerId: ReturnType<typeof setTimeout>;
+  let settled = false;
+
+  const settle = (pos: GeolocationPosition | null) => {
+    if (settled) return;
+    settled = true;
+    navigator.geolocation.clearWatch(watchId);
+    clearTimeout(timerId);
+    gpsLoading.value = false;
+
+    if (!pos) {
+      gpsError.value = 'Tidak dapat mendapatkan lokasi GPS. Pastikan GPS aktif dan coba lagi.';
+      return;
+    }
+
+    userLat.value = pos.coords.latitude;
+    userLng.value = pos.coords.longitude;
+    const kantorLat = cfg.value?.kantor_lat  ?? -3.432194;
+    const kantorLng = cfg.value?.kantor_lng  ?? 104.035361;
+    const radiusM   = cfg.value?.radius_meter ?? 1500;
+    const jarakM    = haversineM(userLat.value, userLng.value, kantorLat, kantorLng);
+    userDistanceM.value = Math.round(jarakM);
+
+    if (jarakM > radiusM) {
+      const lebih   = Math.round(jarakM - radiusM);
+      const akurasi = Math.round(pos.coords.accuracy);
+      gpsError.value =
+        `Lokasi kamu berada ${lebih.toLocaleString('id-ID')} meter di luar area kantor (radius ${radiusM}m). ` +
+        `Akurasi GPS: ±${akurasi}m. ` +
+        `Koordinat: ${userLat.value.toFixed(5)}, ${userLng.value.toFixed(5)}. ` +
+        `Jika kamu yakin sedang di kantor, coba tekan Coba Lagi setelah beberapa detik, atau hubungi admin untuk menyesuaikan radius.`;
+      return;
+    }
+
+    showCheckinModal.value = true;
+  };
+
+  watchId = navigator.geolocation.watchPosition(
     (pos) => {
-      userLat.value = pos.coords.latitude;
-      userLng.value = pos.coords.longitude;
-      gpsLoading.value = false;
-      const kantorLat  = cfg.value?.kantor_lat  ?? -3.432194;
-      const kantorLng  = cfg.value?.kantor_lng  ?? 104.035361;
-      const radiusM    = cfg.value?.radius_meter ?? 1500;
-      const jarakM     = haversineM(userLat.value, userLng.value, kantorLat, kantorLng);
-      userDistanceM.value = Math.round(jarakM);
-      if (jarakM > radiusM) {
-        const lebih = Math.round(jarakM - radiusM);
-        gpsError.value = `Lokasi terdeteksi ${lebih.toLocaleString('id-ID')} meter di luar area kantor (radius ${radiusM}m). `
-          + `Jika kamu yakin sedang di kantor, coba aktifkan GPS di perangkat atau hubungi admin untuk menyesuaikan radius. `
-          + `Koordinat terdeteksi: ${userLat.value.toFixed(5)}, ${userLng.value.toFixed(5)}.`;
-        return;
+      if (!bestPos || pos.coords.accuracy < bestPos.coords.accuracy) {
+        bestPos = pos;
       }
-      showCheckinModal.value = true;
+      if (pos.coords.accuracy <= 50) settle(bestPos);
     },
     (err) => {
+      if (settled) return;
+      settled = true;
+      navigator.geolocation.clearWatch(watchId);
+      clearTimeout(timerId);
       gpsLoading.value = false;
       if (err.code === 1)
         gpsError.value = 'Izin lokasi ditolak. Aktifkan izin lokasi di pengaturan browser untuk absen.';
@@ -572,8 +629,10 @@ function openCheckinModal() {
       else
         gpsError.value = 'Gagal mendapatkan lokasi. Coba lagi.';
     },
-    { timeout: 12000, enableHighAccuracy: true, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
   );
+
+  timerId = setTimeout(() => settle(bestPos), 10000);
 }
 
 async function doCheckin() {
@@ -732,9 +791,17 @@ onUnmounted(() => {
 .ap-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; }
 .ap-textarea:focus { border-color: #48AF4A; }
 
-.btn-absen { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 11px 28px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: inherit; }
+.ap-btn-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+.btn-absen { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 11px 28px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; }
 .btn-absen:disabled { opacity: .6; cursor: not-allowed; }
 .btn-absen--pulang { background: #2563eb; }
+.btn-ajukan { background: #f9fafb; color: #374151; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 11px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; white-space: nowrap; }
+.btn-ajukan:hover { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+.btn-ajukan-sm { background: transparent; color: #6b7280; border: 1px dashed #d1d5db; border-radius: 8px; padding: 5px 14px; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: inherit; margin-top: 8px; }
+.btn-ajukan-sm:hover { background: #f9fafb; color: #374151; border-color: #9ca3af; }
+.ap-error--with-retry { display: flex; flex-direction: column; gap: 8px; }
+.ap-retry-btn { align-self: flex-start; background: #fff; color: #be123c; border: 1.5px solid #fecdd3; border-radius: 7px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.ap-retry-btn:hover { background: #fff1f2; }
 .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 

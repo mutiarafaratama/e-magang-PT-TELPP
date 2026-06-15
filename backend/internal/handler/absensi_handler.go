@@ -313,120 +313,302 @@ func (h *AbsensiHandler) DownloadPDF(c *gin.Context) {
         c.Data(http.StatusOK, "application/pdf", buf.Bytes())
 }
 
+// absensiRowPDF mewakili satu baris pada tabel absensi di PDF
+type absensiRowPDF struct {
+        No        int
+        Tanggal   string
+        Hari      string
+        JamMasuk  string
+        JamKeluar string
+        Status    string
+        Kegiatan  string
+        TTD       bool
+}
+
+// buildAbsensiRows membuat semua baris dari rentang tanggal mulai–selesai (hanya hari kerja)
+func buildAbsensiRows(pel *models.PelaksanaanMagang, list []models.Absensi) []absensiRowPDF {
+        absensiMap := make(map[string]models.Absensi)
+        for _, a := range list {
+                absensiMap[a.Tanggal.Format("2006-01-02")] = a
+        }
+
+        today := wibNow().Format("2006-01-02")
+        dayNames := []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
+
+        start := time.Date(pel.TanggalMulai.Year(), pel.TanggalMulai.Month(), pel.TanggalMulai.Day(), 0, 0, 0, 0, time.UTC)
+        end := time.Date(pel.TanggalSelesai.Year(), pel.TanggalSelesai.Month(), pel.TanggalSelesai.Day(), 0, 0, 0, 0, time.UTC)
+
+        var rows []absensiRowPDF
+        no := 1
+        for cur := start; !cur.After(end); cur = cur.AddDate(0, 0, 1) {
+                dow := int(cur.Weekday())
+                if dow == 0 || dow == 6 {
+                        continue
+                }
+                dateStr := cur.Format("2006-01-02")
+                row := absensiRowPDF{
+                        No:      no,
+                        Tanggal: cur.Format("02/01/2006"),
+                        Hari:    dayNames[dow],
+                }
+                if a, ok := absensiMap[dateStr]; ok {
+                        if a.JamMasuk != nil {
+                                row.JamMasuk = *a.JamMasuk
+                        }
+                        if a.JamKeluar != nil {
+                                row.JamKeluar = *a.JamKeluar
+                        }
+                        switch a.Keterangan {
+                        case "hadir":
+                                row.Status = "Hadir"
+                        case "izin":
+                                row.Status = "Izin"
+                        case "sakit":
+                                row.Status = "Sakit"
+                        case "alpha":
+                                row.Status = "Alpha"
+                        default:
+                                row.Status = a.Keterangan
+                        }
+                        if a.Kegiatan != nil {
+                                row.Kegiatan = *a.Kegiatan
+                        }
+                        row.TTD = a.TTDPembimbing
+                } else if dateStr < today {
+                        row.Status = "Alpha"
+                }
+                rows = append(rows, row)
+                no++
+        }
+        return rows
+}
+
 func generateAbsensiPDF(pengajuan *models.PengajuanMagang, pel *models.PelaksanaanMagang, list []models.Absensi, hadir, izin, sakit, alpha int) *gofpdf.Fpdf {
         pdf := gofpdf.New("P", "mm", "A4", "")
+        pdf.SetMargins(18, 14, 18)
+        pdf.SetAutoPageBreak(true, 18)
         pdf.AddPage()
 
-        pdf.SetFillColor(0, 128, 0)
-        pdf.Rect(0, 0, 210, 25, "F")
-        pdf.SetTextColor(255, 255, 255)
-        pdf.SetFont("Helvetica", "B", 14)
-        pdf.SetXY(10, 5)
-        pdf.CellFormat(190, 8, "PT TANJUNGENIM LESTARI PULP AND PAPER", "", 0, "C", false, 0, "")
-        pdf.SetFont("Helvetica", "", 10)
-        pdf.SetXY(10, 14)
-        pdf.CellFormat(190, 8, "REKAP ABSENSI MAGANG", "", 0, "C", false, 0, "")
+        const (
+                leftX = 18.0
+                pageW = 174.0 // 210 - 18 - 18
+        )
 
-        pdf.SetTextColor(0, 0, 0)
-        pdf.SetFont("Helvetica", "B", 11)
-        pdf.SetXY(10, 32)
-        pdf.CellFormat(190, 7, "DATA PESERTA", "", 0, "L", false, 0, "")
+        // ── LETTERHEAD ────────────────────────────────────────────
+        // Kotak hijau tua di kiri sebagai aksen
+        pdf.SetFillColor(22, 101, 52)
+        pdf.Rect(leftX, 14, 6, 24, "F")
 
-        pdf.SetFont("Helvetica", "", 10)
-        info := [][]string{
-                {"Nama", pengajuan.NamaLengkap},
-                {"Asal Institusi", pengajuan.AsalInstitusi},
-                {"Jurusan", pengajuan.Jurusan},
-                {"Periode", fmt.Sprintf("%s s/d %s", pel.TanggalMulai.Format("02/01/2006"), pel.TanggalSelesai.Format("02/01/2006"))},
-        }
+        // Nama perusahaan
+        pdf.SetTextColor(22, 101, 52)
+        pdf.SetFont("Helvetica", "B", 13)
+        pdf.SetXY(27, 15)
+        pdf.CellFormat(165, 7, "PT TANJUNGENIM LESTARI PULP AND PAPER", "", 2, "L", false, 0, "")
+
+        // Sub-judul
+        pdf.SetTextColor(75, 85, 99)
+        pdf.SetFont("Helvetica", "", 9)
+        pdf.SetX(27)
+        pdf.CellFormat(165, 5, "Sistem Manajemen Magang  —  e-Magang PT TELPP", "", 2, "L", false, 0, "")
+        pdf.SetX(27)
+        pdf.CellFormat(165, 5, "Muara Enim, Sumatera Selatan", "", 0, "L", false, 0, "")
+
+        // Garis pembatas hijau
+        pdf.SetDrawColor(22, 101, 52)
+        pdf.SetLineWidth(0.6)
+        pdf.Line(leftX, 40, leftX+pageW, 40)
+
+        // ── JUDUL DOKUMEN ─────────────────────────────────────────
+        pdf.SetTextColor(17, 24, 39)
+        pdf.SetFont("Helvetica", "B", 13)
+        pdf.SetXY(leftX, 43)
+        pdf.CellFormat(pageW, 8, "REKAP ABSENSI MAGANG", "", 1, "C", false, 0, "")
+
+        pdf.SetDrawColor(209, 213, 219)
+        pdf.SetLineWidth(0.2)
+        pdf.Line(leftX, 52, leftX+pageW, 52)
+
+        // ── DATA PESERTA ─────────────────────────────────────────
+        yPos := 56.0
+
+        pdf.SetTextColor(107, 114, 128)
+        pdf.SetFont("Helvetica", "B", 8)
+        pdf.SetXY(leftX, yPos)
+        pdf.CellFormat(pageW, 5, "DATA PESERTA", "", 1, "L", false, 0, "")
+        yPos += 6
+
+        divisiVal := "-"
         if pel.Divisi != nil {
-                info = append(info, []string{"Divisi", *pel.Divisi})
+                divisiVal = *pel.Divisi
         }
 
-        yPos := 40.0
-        for _, row := range info {
-                pdf.SetXY(10, yPos)
-                pdf.SetFont("Helvetica", "B", 10)
-                pdf.CellFormat(40, 6, row[0], "", 0, "L", false, 0, "")
-                pdf.SetFont("Helvetica", "", 10)
-                pdf.CellFormat(5, 6, ":", "", 0, "C", false, 0, "")
-                pdf.CellFormat(145, 6, row[1], "", 0, "L", false, 0, "")
-                yPos += 7
+        infoRows := [][]string{
+                {"Nama Peserta", pengajuan.NamaLengkap},
+                {"Asal Institusi", pengajuan.AsalInstitusi},
+                {"Jurusan / Program Studi", pengajuan.Jurusan},
+                {"Divisi / Bagian", divisiVal},
+                {"Periode Magang", fmt.Sprintf("%s  s/d  %s",
+                        pel.TanggalMulai.Format("02 Januari 2006"),
+                        pel.TanggalSelesai.Format("02 Januari 2006"))},
+                {"Tanggal Dicetak", wibNow().Format("02 Januari 2006")},
+        }
+
+        for _, row := range infoRows {
+                pdf.SetFont("Helvetica", "", 9)
+                pdf.SetTextColor(75, 85, 99)
+                pdf.SetXY(leftX, yPos)
+                pdf.CellFormat(54, 5.5, row[0], "", 0, "L", false, 0, "")
+                pdf.SetTextColor(55, 65, 81)
+                pdf.CellFormat(5, 5.5, ":", "", 0, "C", false, 0, "")
+                pdf.SetFont("Helvetica", "B", 9)
+                pdf.SetTextColor(17, 24, 39)
+                pdf.CellFormat(115, 5.5, row[1], "", 1, "L", false, 0, "")
+                yPos += 5.5
         }
 
         yPos += 5
-        pdf.SetFillColor(240, 255, 240)
-        pdf.SetDrawColor(0, 128, 0)
-        pdf.Rect(10, yPos, 190, 10, "FD")
-        pdf.SetFont("Helvetica", "B", 10)
-        pdf.SetXY(10, yPos+2)
-        pdf.CellFormat(47, 6, fmt.Sprintf("Hadir: %d", hadir), "", 0, "C", false, 0, "")
-        pdf.CellFormat(47, 6, fmt.Sprintf("Izin: %d", izin), "", 0, "C", false, 0, "")
-        pdf.CellFormat(47, 6, fmt.Sprintf("Sakit: %d", sakit), "", 0, "C", false, 0, "")
-        pdf.CellFormat(47, 6, fmt.Sprintf("Alpha: %d", alpha), "", 0, "C", false, 0, "")
-        yPos += 15
 
-        pdf.SetFillColor(0, 100, 0)
-        pdf.SetTextColor(255, 255, 255)
-        pdf.SetFont("Helvetica", "B", 9)
-        pdf.SetXY(10, yPos)
-        headers := []string{"No", "Tanggal", "Masuk", "Keluar", "Ket", "Kegiatan", "TTD"}
-        widths := []float64{10, 28, 18, 18, 15, 75, 18}
-        for i, h := range headers {
-                pdf.CellFormat(widths[i], 7, h, "1", 0, "C", true, 0, "")
+        // ── RINGKASAN KEHADIRAN ───────────────────────────────────
+        pdf.SetTextColor(107, 114, 128)
+        pdf.SetFont("Helvetica", "B", 8)
+        pdf.SetXY(leftX, yPos)
+        pdf.CellFormat(pageW, 5, "RINGKASAN KEHADIRAN", "", 1, "L", false, 0, "")
+        yPos += 6
+
+        type statBox struct {
+                label     string
+                val       int
+                fr, fg, fb int // fill color
+                tr, tg, tb int // text color
         }
-        yPos += 7
+        boxes := []statBox{
+                {"Hadir", hadir, 240, 253, 244, 22, 101, 52},
+                {"Izin", izin, 254, 252, 232, 161, 98, 7},
+                {"Sakit", sakit, 239, 246, 255, 29, 78, 216},
+                {"Alpha", alpha, 255, 241, 242, 190, 18, 60},
+        }
+        boxW := pageW / 4
+        for i, b := range boxes {
+                x := leftX + float64(i)*boxW
+                pdf.SetFillColor(b.fr, b.fg, b.fb)
+                pdf.SetDrawColor(209, 213, 219)
+                pdf.SetLineWidth(0.2)
+                pdf.Rect(x, yPos, boxW-0.5, 14, "FD")
+                pdf.SetTextColor(b.tr, b.tg, b.tb)
+                pdf.SetFont("Helvetica", "B", 15)
+                pdf.SetXY(x, yPos+1)
+                pdf.CellFormat(boxW-0.5, 7, fmt.Sprintf("%d", b.val), "", 1, "C", false, 0, "")
+                pdf.SetFont("Helvetica", "", 8)
+                pdf.SetTextColor(107, 114, 128)
+                pdf.SetXY(x, yPos+8)
+                pdf.CellFormat(boxW-0.5, 5, b.label, "", 0, "C", false, 0, "")
+        }
+        yPos += 20
 
-        pdf.SetTextColor(0, 0, 0)
+        // ── TABEL DETAIL ABSENSI ──────────────────────────────────
+        pdf.SetTextColor(107, 114, 128)
+        pdf.SetFont("Helvetica", "B", 8)
+        pdf.SetXY(leftX, yPos)
+        pdf.CellFormat(pageW, 5, "DETAIL ABSENSI", "", 1, "L", false, 0, "")
+        yPos += 6
+
+        colWidths := []float64{8, 22, 16, 15, 15, 17, 71, 10}
+        tblHeaders := []string{"No", "Tanggal", "Hari", "Masuk", "Pulang", "Status", "Kegiatan", "TTD"}
+
+        printTableHeader := func(y float64) {
+                pdf.SetFillColor(22, 101, 52)
+                pdf.SetTextColor(255, 255, 255)
+                pdf.SetFont("Helvetica", "B", 8)
+                pdf.SetXY(leftX, y)
+                for i, h := range tblHeaders {
+                        align := "C"
+                        if i == 6 {
+                                align = "L"
+                        }
+                        pdf.CellFormat(colWidths[i], 6, h, "1", 0, align, true, 0, "")
+                }
+        }
+        printTableHeader(yPos)
+        yPos += 6
+
+        rows := buildAbsensiRows(pel, list)
         pdf.SetFont("Helvetica", "", 8)
-        for i, a := range list {
-                pdf.SetFillColor(255, 255, 255)
-                if i%2 == 0 {
-                        pdf.SetFillColor(245, 255, 245)
-                }
-                pdf.SetXY(10, yPos)
-                masuk := "-"
-                if a.JamMasuk != nil {
-                        masuk = *a.JamMasuk
-                }
-                keluar := "-"
-                if a.JamKeluar != nil {
-                        keluar = *a.JamKeluar
-                }
-                kegiatan := "-"
-                if a.Kegiatan != nil {
-                        kegiatan = *a.Kegiatan
-                }
-                ttd := "Belum"
-                if a.TTDPembimbing {
-                        ttd = "V"
-                }
-                row := []string{
-                        fmt.Sprintf("%d", i+1),
-                        a.Tanggal.Format("02/01/2006"),
-                        masuk, keluar, a.Keterangan, kegiatan, ttd,
-                }
-                for j, val := range row {
-                        pdf.CellFormat(widths[j], 6, val, "1", 0, "C", true, 0, "")
-                }
-                yPos += 6
-                if yPos > 270 {
+
+        for rowIdx, row := range rows {
+                if yPos > 262 {
                         pdf.AddPage()
-                        yPos = 20
+                        yPos = 18
+                        printTableHeader(yPos)
+                        yPos += 6
+                        pdf.SetFont("Helvetica", "", 8)
                 }
+
+                if rowIdx%2 == 0 {
+                        pdf.SetFillColor(249, 250, 251)
+                } else {
+                        pdf.SetFillColor(255, 255, 255)
+                }
+
+                // Warnai baris berdasarkan status
+                switch row.Status {
+                case "Alpha":
+                        pdf.SetTextColor(190, 18, 60)
+                case "Izin":
+                        pdf.SetTextColor(161, 98, 7)
+                case "Sakit":
+                        pdf.SetTextColor(29, 78, 216)
+                default:
+                        pdf.SetTextColor(55, 65, 81)
+                }
+
+                ttdStr := ""
+                if row.TTD {
+                        ttdStr = "V"
+                }
+
+                cells := []string{
+                        fmt.Sprintf("%d", row.No),
+                        row.Tanggal, row.Hari,
+                        row.JamMasuk, row.JamKeluar,
+                        row.Status, row.Kegiatan, ttdStr,
+                }
+
+                pdf.SetXY(leftX, yPos)
+                for i, cell := range cells {
+                        align := "C"
+                        if i == 6 {
+                                align = "L"
+                        }
+                        pdf.CellFormat(colWidths[i], 5.5, cell, "1", 0, align, true, 0, "")
+                }
+                yPos += 5.5
         }
 
-        yPos += 15
+        // ── TANDA TANGAN ─────────────────────────────────────────
+        yPos += 14
+        if yPos > 256 {
+                pdf.AddPage()
+                yPos = 30
+        }
+
+        pdf.SetTextColor(55, 65, 81)
         pdf.SetFont("Helvetica", "", 10)
-        pdf.SetXY(120, yPos)
-        pdf.CellFormat(80, 6, "Mengetahui,", "", 0, "C", false, 0, "")
-        pdf.SetXY(120, yPos+6)
-        pdf.CellFormat(80, 6, "Pembimbing Magang", "", 0, "C", false, 0, "")
-        pdf.SetXY(120, yPos+30)
-        pdf.SetDrawColor(0, 0, 0)
-        pdf.Line(125, yPos+30, 195, yPos+30)
-        pdf.SetXY(120, yPos+32)
-        pdf.CellFormat(80, 6, "PT TanjungEnim Lestari", "", 0, "C", false, 0, "")
+        pdf.SetXY(128, yPos)
+        pdf.CellFormat(64, 5, fmt.Sprintf("Muara Enim, %s", wibNow().Format("02 Januari 2006")), "", 1, "C", false, 0, "")
+        pdf.SetXY(128, yPos+6)
+        pdf.CellFormat(64, 5, "Mengetahui,", "", 1, "C", false, 0, "")
+        pdf.SetXY(128, yPos+11)
+        pdf.SetFont("Helvetica", "I", 9)
+        pdf.SetTextColor(107, 114, 128)
+        pdf.CellFormat(64, 5, "Pembimbing Magang", "", 0, "C", false, 0, "")
+
+        pdf.SetDrawColor(107, 114, 128)
+        pdf.SetLineWidth(0.3)
+        pdf.Line(133, yPos+34, 190, yPos+34)
+        pdf.SetXY(128, yPos+36)
+        pdf.SetFont("Helvetica", "", 9)
+        pdf.SetTextColor(55, 65, 81)
+        pdf.CellFormat(64, 5, "PT TanjungEnim Lestari Pulp and Paper", "", 0, "C", false, 0, "")
 
         return pdf
 }
