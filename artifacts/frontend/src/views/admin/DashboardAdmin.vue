@@ -89,13 +89,45 @@
       <template v-else-if="activeTab === 'landing'">
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Landing Page Settings</h3>
-            <button class="btn-green-sm" @click="goToLandingSettings">Buka Editor →</button>
+            <div>
+              <h3 class="card-title">Alur Pendaftaran</h3>
+              <p class="card-sub">Tampil sebagai carousel di landing page — tiap item memiliki judul, paragraf, dan gambar</p>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a href="/" target="_blank" class="btn-preview-sm">Lihat Landing ↗</a>
+              <button class="btn-green-sm" @click="openAlurModal(null)">+ Tambah Alur</button>
+            </div>
           </div>
-          <div class="empty-state">
-            <div class="empty-state__icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#d1d5db" stroke-width="1.5"/><line x1="2" y1="12" x2="22" y2="12" stroke="#d1d5db" stroke-width="1.5"/></svg></div>
-            <p>Kelola konten hero, syarat, FAQ, dan kontak dari halaman editor.</p>
-            <button class="btn-green" @click="goToLandingSettings">Buka Editor Landing Page</button>
+
+          <div v-if="alurLoading" class="empty-state"><div class="spinner"></div></div>
+          <div v-else-if="alurList.length === 0" class="empty-state">
+            <div class="empty-state__icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p>Belum ada item alur. Klik <strong>+ Tambah Alur</strong> untuk mulai.</p>
+          </div>
+          <div v-else class="alur-admin-list">
+            <div v-for="(item, idx) in alurList" :key="item.id" class="alur-admin-item">
+              <div class="alur-admin-item__num">{{ idx + 1 }}</div>
+              <div class="alur-admin-item__img" v-if="item.gambar_url">
+                <img :src="item.gambar_url" alt="" />
+              </div>
+              <div class="alur-admin-item__img alur-admin-item__img--empty" v-else>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="#d1d5db" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="alur-admin-item__content">
+                <div class="alur-admin-item__judul">{{ item.judul }}</div>
+                <div class="alur-admin-item__paragraf">{{ item.paragraf }}</div>
+              </div>
+              <div class="alur-admin-item__actions">
+                <button class="btn-aksi btn-aksi--ghost" @click="openAlurModal(item)">Edit</button>
+                <button class="btn-aksi btn-aksi--red" @click="deleteAlur(item)">Hapus</button>
+              </div>
+            </div>
           </div>
         </div>
       </template>
@@ -254,6 +286,47 @@
 
   </DashboardLayout>
 
+  <!-- ── MODAL TAMBAH/EDIT ALUR ── -->
+  <Teleport to="body">
+    <div v-if="showAlurModal" class="modal-overlay" @click.self="showAlurModal = false">
+      <div class="divisi-modal" style="width:min(520px,100%)">
+        <div class="divisi-modal__header">
+          <h3 class="divisi-modal__title">{{ alurForm.id ? 'Edit Item Alur' : 'Tambah Item Alur' }}</h3>
+          <button class="modal-close" @click="showAlurModal = false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="divisi-modal__body" style="gap:14px">
+          <div class="dform-group">
+            <label class="dform-label">Judul <span class="dform-req">*</span></label>
+            <input v-model="alurForm.judul" type="text" class="dform-input" placeholder="contoh: Isi Formulir Pendaftaran" :disabled="alurSaving"/>
+          </div>
+          <div class="dform-group">
+            <label class="dform-label">Paragraf / Deskripsi</label>
+            <textarea v-model="alurForm.paragraf" class="dform-input" rows="3" placeholder="Penjelasan singkat tentang langkah ini..." :disabled="alurSaving" style="resize:vertical"></textarea>
+          </div>
+          <div class="dform-group">
+            <label class="dform-label">URL Gambar <span class="dform-opt">(opsional)</span></label>
+            <input v-model="alurForm.gambar_url" type="url" class="dform-input" placeholder="https://..." :disabled="alurSaving"/>
+            <span class="dform-hint">Kosongkan jika tidak menggunakan gambar — icon default akan tampil</span>
+          </div>
+          <div class="dform-group">
+            <label class="dform-label">Urutan Tampil <span class="dform-opt">(opsional)</span></label>
+            <input v-model.number="alurForm.urutan" type="number" class="dform-input" min="1" :disabled="alurSaving" style="width:100px"/>
+          </div>
+          <div v-if="alurFormError" class="dform-error">{{ alurFormError }}</div>
+        </div>
+        <div class="divisi-modal__footer">
+          <button class="btn-cancel" @click="showAlurModal = false" :disabled="alurSaving">Batal</button>
+          <button class="btn-green" @click="saveAlur" :disabled="alurSaving || !alurForm.judul.trim()">
+            <div v-if="alurSaving" class="spinner-sm"></div>
+            {{ alurSaving ? 'Menyimpan…' : (alurForm.id ? 'Simpan Perubahan' : 'Tambah Alur') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- ── MODAL TAMBAH/EDIT DIVISI (di luar DashboardLayout agar tidak bentrok slot) ── -->
   <Teleport to="body">
     <div v-if="showDivisiModal" class="modal-overlay" @click.self="showDivisiModal = false">
@@ -290,7 +363,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import AdminUsers      from "./AdminUsers.vue";
 import AdminStatistik  from "./AdminStatistik.vue";
@@ -300,16 +372,12 @@ import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 
 const { user } = useAuth();
-const router   = useRouter();
 const layout   = ref<InstanceType<typeof DashboardLayout> | null>(null);
 const activeTab = computed(() => layout.value?.activeTab ?? "beranda");
 const firstName = computed(() => user.value?.nama_lengkap?.split(" ")[0] ?? "");
 
 function setTab(tab: string) {
   if (layout.value) layout.value.activeTab = tab;
-}
-function goToLandingSettings() {
-  router.push("/admin/landing-settings");
 }
 
 const ICON = {
@@ -417,7 +485,68 @@ async function saveJam() {
 watch(activeTab, (tab) => {
   if (tab === 'jamabsen') fetchJam();
   if (tab === 'divisi') fetchDivisi();
+  if (tab === 'landing') fetchAlur();
 });
+
+// ── Alur landing page ──────────────────────────────────────────
+interface AlurItem { id: string; judul: string; paragraf: string; gambar_url: string; urutan: number; }
+const alurList      = ref<AlurItem[]>([]);
+const alurLoading   = ref(false);
+const showAlurModal = ref(false);
+const alurSaving    = ref(false);
+const alurFormError = ref('');
+const alurForm      = ref<{ id: string | null; judul: string; paragraf: string; gambar_url: string; urutan: number }>({
+  id: null, judul: '', paragraf: '', gambar_url: '', urutan: 1,
+});
+
+async function fetchAlur() {
+  alurLoading.value = true;
+  try {
+    const r = await api.get('/api/landing/alur');
+    alurList.value = Array.isArray(r.data?.data) ? r.data.data : [];
+  } catch { alurList.value = []; }
+  finally { alurLoading.value = false; }
+}
+
+function openAlurModal(item: AlurItem | null) {
+  alurFormError.value = '';
+  if (item) {
+    alurForm.value = { id: item.id, judul: item.judul, paragraf: item.paragraf, gambar_url: item.gambar_url, urutan: item.urutan };
+  } else {
+    alurForm.value = { id: null, judul: '', paragraf: '', gambar_url: '', urutan: alurList.value.length + 1 };
+  }
+  showAlurModal.value = true;
+}
+
+async function saveAlur() {
+  if (!alurForm.value.judul.trim()) { alurFormError.value = 'Judul wajib diisi'; return; }
+  alurSaving.value = true; alurFormError.value = '';
+  try {
+    const payload = {
+      judul: alurForm.value.judul.trim(),
+      paragraf: alurForm.value.paragraf.trim(),
+      gambar_url: alurForm.value.gambar_url.trim(),
+      urutan: alurForm.value.urutan,
+    };
+    if (alurForm.value.id) {
+      await api.put(`/api/admin/alur/${alurForm.value.id}`, payload);
+    } else {
+      await api.post('/api/admin/alur', payload);
+    }
+    showAlurModal.value = false;
+    await fetchAlur();
+  } catch (e: any) {
+    alurFormError.value = e.response?.data?.message ?? 'Gagal menyimpan item alur';
+  } finally { alurSaving.value = false; }
+}
+
+async function deleteAlur(item: AlurItem) {
+  if (!confirm(`Hapus alur "${item.judul}"?`)) return;
+  try {
+    await api.delete(`/api/admin/alur/${item.id}`);
+    await fetchAlur();
+  } catch { /* ignore */ }
+}
 
 // ── Kelola Divisi ─────────────────────────────────────────────
 interface Divisi { id: string; nama: string; is_active: boolean; urutan: number; created_at: string; }
@@ -522,6 +651,48 @@ function formatDate(s: string) {
 
 @media (max-width: 700px) { .stats-row, .quick-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 420px) { .stats-row, .quick-grid { grid-template-columns: 1fr; } }
+
+/* ── Alur admin list ── */
+.btn-preview-sm {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  border: 1.5px solid #48AF4A; color: #48AF4A; border-radius: 8px;
+  text-decoration: none; font-family: "Poppins", sans-serif;
+  transition: background 0.15s;
+}
+.btn-preview-sm:hover { background: #f0fdf4; }
+
+.alur-admin-list { display: flex; flex-direction: column; }
+.alur-admin-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 20px; border-bottom: 1px solid #f9fafb;
+  transition: background 0.1s;
+}
+.alur-admin-item:last-child { border-bottom: none; }
+.alur-admin-item:hover { background: #fafffe; }
+
+.alur-admin-item__num {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%;
+  background: #e8f5e9; color: #15803d; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.alur-admin-item__img {
+  width: 52px; height: 52px; flex-shrink: 0; border-radius: 10px; overflow: hidden;
+  background: #f3f4f6; display: flex; align-items: center; justify-content: center;
+}
+.alur-admin-item__img img { width: 100%; height: 100%; object-fit: cover; }
+.alur-admin-item__img--empty { background: #f9fafb; }
+
+.alur-admin-item__content { flex: 1; min-width: 0; }
+.alur-admin-item__judul {
+  font-size: 13.5px; font-weight: 700; color: #111827;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.alur-admin-item__paragraf {
+  font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.alur-admin-item__actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── Jam Absen Form ───────────────────────── */
 .badge-info { font-size: 11px; font-weight: 600; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 100px; padding: 4px 12px; }

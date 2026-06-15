@@ -363,6 +363,16 @@ type FAQ struct {
         CreatedAt  time.Time `json:"created_at" db:"created_at"`
 }
 
+type AlurItem struct {
+        ID        uuid.UUID `json:"id" db:"id"`
+        Judul     string    `json:"judul" db:"judul"`
+        Paragraf  string    `json:"paragraf" db:"paragraf"`
+        GambarURL string    `json:"gambar_url" db:"gambar_url"`
+        Urutan    int       `json:"urutan" db:"urutan"`
+        CreatedAt time.Time `json:"created_at" db:"created_at"`
+        UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
 // ============================================================
 // REQUEST / RESPONSE STRUCTS
 // ============================================================

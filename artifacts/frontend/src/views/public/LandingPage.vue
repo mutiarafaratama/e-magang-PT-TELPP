@@ -90,14 +90,40 @@
           <h2>Alur Pendaftaran</h2>
           <p>Ikuti prosedur digital kami untuk monitoring status pengajuan secara real-time.</p>
         </div>
-        <div class="alur-grid">
-          <div v-for="(s, i) in steps" :key="s.n" class="alur-step">
-            <div class="alur-step__circle" :class="i < 2 ? 'circle--active' : ''">
-              <span>{{ s.n }}</span>
+
+        <div class="alur-carousel" v-if="alurItems.length > 0">
+          <button class="alur-carousel__btn alur-carousel__btn--prev" @click="alurPrev" :disabled="alurIdx === 0" aria-label="Sebelumnya">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <div class="alur-carousel__viewport">
+            <div class="alur-carousel__track" :style="{ transform: `translateX(-${alurIdx * 100}%)` }">
+              <div v-for="(item, i) in alurItems" :key="item.id || i" class="alur-carousel__slide">
+                <div class="alur-card">
+                  <div class="alur-card__media" v-if="item.gambar_url">
+                    <img :src="item.gambar_url" :alt="item.judul" />
+                  </div>
+                  <div class="alur-card__icon-circle" :class="i < 2 ? 'circle--active' : ''" v-else>
+                    <span>{{ String(i + 1).padStart(2, '0') }}</span>
+                  </div>
+                  <div class="alur-card__step-label">Langkah {{ i + 1 }} dari {{ alurItems.length }}</div>
+                  <h3 class="alur-card__title">{{ item.judul }}</h3>
+                  <p class="alur-card__desc">{{ item.paragraf }}</p>
+                </div>
+              </div>
             </div>
-            <div class="alur-step__label">Langkah {{ s.n }}</div>
-            <div class="alur-step__title">{{ s.title }}</div>
-            <div class="alur-step__desc">{{ s.desc }}</div>
+          </div>
+
+          <button class="alur-carousel__btn alur-carousel__btn--next" @click="alurNext" :disabled="alurIdx >= alurItems.length - 1" aria-label="Berikutnya">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <div class="alur-carousel__dots">
+            <button v-for="(_, i) in alurItems" :key="i" class="alur-dot" :class="{ 'alur-dot--active': i === alurIdx }" @click="alurIdx = i" :aria-label="`Alur ${i + 1}`"></button>
           </div>
         </div>
       </div>
@@ -262,9 +288,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, h } from "vue";
+import { ref, computed, defineComponent, h, onMounted } from "vue";
 
 const openFaq = ref(-1);
+
+// ── Alur carousel ────────────────────────────────────────────
+interface AlurSlide { id?: string; judul: string; paragraf: string; gambar_url: string; urutan?: number; }
+const alurItems = ref<AlurSlide[]>([]);
+const alurIdx   = ref(0);
+
+function alurPrev() { if (alurIdx.value > 0) alurIdx.value--; }
+function alurNext() { if (alurIdx.value < alurItems.value.length - 1) alurIdx.value++; }
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/landing/alur');
+    const data = await res.json();
+    if (Array.isArray(data.data) && data.data.length > 0) {
+      alurItems.value = data.data;
+    } else {
+      alurItems.value = steps.map(s => ({ judul: s.title, paragraf: s.desc, gambar_url: '' }));
+    }
+  } catch {
+    alurItems.value = steps.map(s => ({ judul: s.title, paragraf: s.desc, gambar_url: '' }));
+  }
+});
 
 const currentUser = computed<{ nama_lengkap: string; role: string } | null>(() => {
   try {
@@ -489,29 +537,70 @@ const footerCols = [
 }
 .section-label--light { color: #86efac; }
 
-/* ── ALUR ── */
-.alur-grid {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px;
+/* ── ALUR CAROUSEL ── */
+.alur-carousel {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  margin-top: 52px;
+  padding: 0 56px;
 }
-.alur-grid::before {
-  content: ""; position: absolute; top: 38px; left: 12%; right: 12%;
-  height: 2px; background: linear-gradient(to right, #48AF4A, #ffc857); z-index: 0;
+.alur-carousel__viewport {
+  width: 100%; max-width: 700px;
+  overflow: hidden; border-radius: 24px;
 }
-.alur-step { text-align: center; position: relative; z-index: 1; }
-.alur-step__circle {
-  width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 14px;
-  background: #f0f0f0; border: 2px solid #e5e7eb;
+.alur-carousel__track {
+  display: flex;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.alur-carousel__slide { flex: 0 0 100%; }
+.alur-card {
+  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 22px;
+  padding: 52px 48px 44px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 14px; min-height: 310px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+}
+.alur-card__media { width: 180px; height: 130px; border-radius: 14px; overflow: hidden; }
+.alur-card__media img { width: 100%; height: 100%; object-fit: cover; }
+.alur-card__icon-circle {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: #f0f4f8; border: 2.5px solid #e2e8f0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px; font-weight: 800; color: #9ca3af;
+  font-size: 24px; font-weight: 800; color: #94a3b8;
 }
-.alur-step__circle.circle--active {
-  background: #48AF4A; border-color: #48AF4A; color: #fff;
-  box-shadow: 0 6px 20px rgba(72,175,74,0.25);
+.alur-card__icon-circle.circle--active { background: #48AF4A; border-color: #48AF4A; color: #fff; box-shadow: 0 6px 20px rgba(72,175,74,0.25); }
+.alur-card__step-label { font-size: 11px; font-weight: 700; color: #48AF4A; letter-spacing: 0.08em; text-transform: uppercase; }
+.alur-card__title { font-size: 22px; font-weight: 700; color: #0b1c30; line-height: 1.3; margin: 0; }
+.alur-card__desc { font-size: 15px; color: #64748b; line-height: 1.75; margin: 0; max-width: 500px; }
+.alur-carousel__btn {
+  position: absolute; top: calc(50% - 28px); transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #fff; border: 1.5px solid #e5e7eb;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #374151; transition: all 0.15s; z-index: 2;
 }
-.alur-step__label { font-size: 10px; font-weight: 700; color: #9ca3af; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-.alur-step__title { font-weight: 700; font-size: 14px; color: #0b1c30; margin-bottom: 4px; }
-.alur-step__desc { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+.alur-carousel__btn:hover:not(:disabled) { border-color: #48AF4A; color: #48AF4A; box-shadow: 0 4px 14px rgba(72,175,74,0.2); }
+.alur-carousel__btn:disabled { opacity: 0.28; cursor: not-allowed; }
+.alur-carousel__btn--prev { left: 0; }
+.alur-carousel__btn--next { right: 0; }
+.alur-carousel__dots { display: flex; gap: 8px; justify-content: center; }
+.alur-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #d1d5db; border: none; cursor: pointer; transition: all 0.2s; padding: 0;
+}
+.alur-dot--active { background: #48AF4A; width: 24px; border-radius: 4px; }
+@media (max-width: 640px) {
+  .alur-carousel { padding: 0 40px; gap: 20px; }
+  .alur-card { padding: 36px 28px 32px; min-height: 260px; }
+  .alur-card__title { font-size: 18px; }
+  .alur-card__desc { font-size: 13.5px; }
+  .alur-carousel__btn { width: 36px; height: 36px; }
+}
 
 /* ── JADWAL ── */
 .jadwal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }

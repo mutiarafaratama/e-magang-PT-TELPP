@@ -38,12 +38,6 @@ const routes = [
     meta: { requiresAuth: true, role: "admin" },
   },
   {
-    path: "/admin/landing-settings",
-    name: "admin-landing-settings",
-    component: () => import("@/views/admin/LandingSettings.vue"),
-    meta: { requiresAuth: true, role: "admin" },
-  },
-  {
     path: "/dashboard",
     redirect: () => {
       const userStr = localStorage.getItem("user");
