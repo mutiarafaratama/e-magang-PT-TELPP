@@ -59,7 +59,7 @@
       </div>
 
       <div v-else-if="absensiState === 'waiting_pulang'" class="absensi-panel">
-        <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ todayAbsensi?.jam_masuk }} WIB</span></div>
+        <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ formatJam(todayAbsensi?.jam_masuk) }} WIB</span></div>
         <div class="ap-icon ap-icon--wait" style="margin-top:16px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
         <div class="ap-title">Menunggu Sesi Absen Pulang</div>
         <div class="ap-desc">Dibuka pukul <strong>{{ cfg?.jam_pulang_buka }}</strong> WIB</div>
@@ -71,10 +71,11 @@
       </div>
 
       <div v-else-if="absensiState === 'checkout_open'" class="absensi-panel">
-        <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ todayAbsensi?.jam_masuk }} WIB</span></div>
+        <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ formatJam(todayAbsensi?.jam_masuk) }} WIB</span></div>
         <div class="ap-form">
           <div class="ap-form-label">Catatan Kegiatan Hari Ini <span class="ap-required">*</span></div>
-          <textarea v-model="kegiatanInput" class="ap-textarea" placeholder="Tuliskan kegiatan yang kamu lakukan hari ini..." rows="3"></textarea>
+          <textarea v-model="kegiatanInput" class="ap-textarea" placeholder="Tulis satu kegiatan per baris, contoh:&#10;Membuat laporan mingguan&#10;Rapat koordinasi tim&#10;Input data ke sistem" rows="4"></textarea>
+          <div class="ap-form-hint">Tulis satu kegiatan per baris</div>
         </div>
         <div v-if="absensiError" class="ap-error">{{ absensiError }}</div>
         <div class="ap-btn-row">
@@ -90,12 +91,15 @@
 
       <div v-else-if="absensiState === 'done'" class="absensi-panel absensi-panel--done">
         <div class="ap-done-rows">
-          <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ todayAbsensi?.jam_masuk }} WIB</span></div>
-          <div class="ap-done-row"><span class="ap-badge ap-badge--pulang">✓ Pulang</span><span class="ap-done-time">{{ todayAbsensi?.jam_keluar }} WIB</span></div>
+          <div class="ap-done-row"><span class="ap-badge ap-badge--masuk">✓ Masuk</span><span class="ap-done-time">{{ formatJam(todayAbsensi?.jam_masuk) }} WIB</span></div>
+          <div class="ap-done-row"><span class="ap-badge ap-badge--pulang">✓ Pulang</span><span class="ap-done-time">{{ formatJam(todayAbsensi?.jam_keluar) }} WIB</span></div>
         </div>
         <div class="ap-kegiatan">
-          <div class="ap-kegiatan__label">Kegiatan</div>
-          <div class="ap-kegiatan__text">{{ todayAbsensi?.kegiatan || '–' }}</div>
+          <div class="ap-kegiatan__label">Kegiatan Hari Ini</div>
+          <ol v-if="kegiatanPoin(todayAbsensi?.kegiatan).length" class="kegiatan-ol">
+            <li v-for="(poin, i) in kegiatanPoin(todayAbsensi?.kegiatan)" :key="i">{{ poin }}</li>
+          </ol>
+          <div v-else class="ap-kegiatan__text">–</div>
         </div>
         <button v-if="pelaksanaanSaya?.status === 'aktif'" class="btn-ajukan-sm" style="margin-top:8px" @click="openIzinModal">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -170,7 +174,12 @@
                 </span>
                 <span v-else class="ket-badge ket-badge--belum">–</span>
               </td>
-              <td class="td-kegiatan">{{ row.kegiatan }}</td>
+              <td class="td-kegiatan">
+                <ul v-if="kegiatanPoin(row.kegiatan).length" class="kegiatan-ul">
+                  <li v-for="(poin, i) in kegiatanPoin(row.kegiatan)" :key="i">{{ poin }}</li>
+                </ul>
+                <span v-else class="td-empty">–</span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -536,9 +545,9 @@ const tabelHarian = computed(() => {
         no: no++,
         tanggal: dateStr,
         hari: HARI_SHORT[dow],
-        jamMasuk:  absensi?.jam_masuk  || '–',
-        jamKeluar: absensi?.jam_keluar || '–',
-        kegiatan:  absensi?.kegiatan   || '–',
+        jamMasuk:  formatJam(absensi?.jam_masuk),
+        jamKeluar: formatJam(absensi?.jam_keluar),
+        kegiatan:  absensi?.kegiatan   || '',
         status,
         isToday: dateStr === today,
       });
@@ -547,6 +556,16 @@ const tabelHarian = computed(() => {
   }
   return rows;
 });
+
+function formatJam(t: string | null | undefined): string {
+  if (!t) return '–';
+  return t.slice(0, 5);
+}
+
+function kegiatanPoin(text: string | null | undefined): string[] {
+  if (!text || text === '–') return [];
+  return text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+}
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return '–';
@@ -869,13 +888,21 @@ onUnmounted(() => {
 .ap-done-time { font-size: 13px; font-weight: 600; color: #374151; }
 
 .ap-kegiatan { background: #f9fafb; border-radius: 10px; padding: 12px 14px; align-self: stretch; text-align: left; margin-top: 8px; }
-.ap-kegiatan__label { font-size: 10.5px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.ap-kegiatan__label { font-size: 10.5px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
 .ap-kegiatan__text  { font-size: 13px; color: #374151; line-height: 1.6; }
+
+.kegiatan-ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.kegiatan-ol li { font-size: 13px; color: #374151; line-height: 1.6; padding-left: 2px; }
 
 .ap-form { align-self: stretch; text-align: left; }
 .ap-form-label { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
-.ap-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; }
+.ap-form-hint  { font-size: 11px; color: #9ca3af; margin-top: 5px; }
+.ap-textarea { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 10px 13px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; color: #111827; box-sizing: border-box; line-height: 1.7; }
 .ap-textarea:focus { border-color: #48AF4A; }
+
+.kegiatan-ul { margin: 0; padding-left: 14px; list-style: disc; display: flex; flex-direction: column; gap: 2px; }
+.kegiatan-ul li { font-size: 11.5px; color: #374151; line-height: 1.5; padding-left: 2px; }
+.td-empty { color: #d1d5db; }
 
 .ap-btn-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
 .btn-absen { background: #48AF4A; color: #fff; border: none; border-radius: 10px; padding: 11px 28px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; }
