@@ -1,10 +1,16 @@
 package handler
 
 import (
+        "fmt"
         "net/http"
+        "os"
+        "path/filepath"
+        "strings"
+        "time"
 
         "github.com/gin-gonic/gin"
         "github.com/google/uuid"
+        "github.com/telpp/emagang/internal/config"
         "github.com/telpp/emagang/internal/middleware"
         "github.com/telpp/emagang/internal/models"
         "github.com/telpp/emagang/internal/repository"
@@ -233,4 +239,41 @@ func (h *LandingHandler) DeleteAlur(c *gin.Context) {
         }
         h.repo.DeleteAlur(c.Request.Context(), id)
         c.JSON(http.StatusOK, models.SuccessResponse{Message: "Item alur berhasil dihapus"})
+}
+
+// POST /api/admin/alur/upload — Admin upload gambar untuk item alur
+func (h *LandingHandler) UploadGambarAlur(c *gin.Context) {
+        header, err := c.FormFile("gambar")
+        if err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "no_file", Message: "File gambar tidak ditemukan (field: gambar)"})
+                return
+        }
+
+        ext := strings.ToLower(filepath.Ext(header.Filename))
+        allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}
+        if !allowed[ext] {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_type", Message: "Format tidak didukung. Gunakan jpg/png/webp/gif"})
+                return
+        }
+
+        if header.Size > 5*1024*1024 {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "file_too_large", Message: "Ukuran gambar maksimal 5 MB"})
+                return
+        }
+
+        uploadDir := filepath.Join(config.App.UploadDir, "alur")
+        if err := os.MkdirAll(uploadDir, 0755); err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal membuat folder upload"})
+                return
+        }
+
+        filename := fmt.Sprintf("%d_alur%s", time.Now().UnixMilli(), ext)
+        savePath := filepath.Join(uploadDir, filename)
+        if err := c.SaveUploadedFile(header, savePath); err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal menyimpan gambar"})
+                return
+        }
+
+        url := "/uploads/alur/" + filename
+        c.JSON(http.StatusOK, models.SuccessResponse{Message: "Gambar berhasil diupload", Data: map[string]string{"url": url}})
 }

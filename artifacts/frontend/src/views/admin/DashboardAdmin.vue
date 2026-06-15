@@ -54,9 +54,9 @@
           </button>
           <button class="quick-card" @click="setTab('landing')">
             <div class="quick-card__icon" style="background:#fefce8;color:#ca8a04">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <div class="quick-card__label">Landing Page</div>
+            <div class="quick-card__label">Alur Pendaftaran</div>
           </button>
           <button class="quick-card" @click="setTab('statistik')">
             <div class="quick-card__icon" style="background:#fdf4ff;color:#9333ea">
@@ -306,9 +306,35 @@
             <textarea v-model="alurForm.paragraf" class="dform-input" rows="3" placeholder="Penjelasan singkat tentang langkah ini..." :disabled="alurSaving" style="resize:vertical"></textarea>
           </div>
           <div class="dform-group">
-            <label class="dform-label">URL Gambar <span class="dform-opt">(opsional)</span></label>
-            <input v-model="alurForm.gambar_url" type="url" class="dform-input" placeholder="https://..." :disabled="alurSaving"/>
-            <span class="dform-hint">Kosongkan jika tidak menggunakan gambar — icon default akan tampil</span>
+            <label class="dform-label">Gambar <span class="dform-opt">(opsional)</span></label>
+            <div class="alur-upload-area" @click="triggerFileInput" :class="{ 'alur-upload-area--uploading': alurUploading }">
+              <input
+                ref="alurFileInput"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.gif"
+                style="display:none"
+                @change="onAlurFileChange"
+              />
+              <template v-if="alurUploadPreview">
+                <img :src="alurUploadPreview" class="alur-upload-preview" alt="Preview" />
+                <div class="alur-upload-change">Klik untuk ganti gambar</div>
+              </template>
+              <template v-else-if="alurForm.gambar_url && !alurUploadPreview">
+                <img :src="alurForm.gambar_url" class="alur-upload-preview" alt="Gambar saat ini" />
+                <div class="alur-upload-change">Klik untuk ganti gambar</div>
+              </template>
+              <template v-else>
+                <div class="alur-upload-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <div class="alur-upload-text">Klik untuk upload gambar</div>
+                <div class="alur-upload-hint">JPG, PNG, WebP · Maks 5 MB</div>
+              </template>
+              <div v-if="alurUploading" class="alur-upload-overlay">
+                <div class="spinner"></div>
+              </div>
+            </div>
+            <div v-if="alurUploadError" class="dform-error" style="margin-top:6px">{{ alurUploadError }}</div>
           </div>
           <div class="dform-group">
             <label class="dform-label">Urutan Tampil <span class="dform-opt">(opsional)</span></label>
@@ -407,8 +433,7 @@ const navGroups = [
   {
     label: "Konten Web",
     items: [
-      { key: "landing", label: "Landing Page", icon: ICON.globe },
-      { key: "faq",     label: "Kelola FAQ",   icon: ICON.faq },
+      { key: "landing", label: "Alur Pendaftaran", icon: ICON.globe },
     ],
   },
   {
@@ -498,6 +523,10 @@ const alurFormError = ref('');
 const alurForm      = ref<{ id: string | null; judul: string; paragraf: string; gambar_url: string; urutan: number }>({
   id: null, judul: '', paragraf: '', gambar_url: '', urutan: 1,
 });
+const alurFileInput   = ref<HTMLInputElement | null>(null);
+const alurUploadPreview = ref('');
+const alurUploading   = ref(false);
+const alurUploadError = ref('');
 
 async function fetchAlur() {
   alurLoading.value = true;
@@ -510,12 +539,38 @@ async function fetchAlur() {
 
 function openAlurModal(item: AlurItem | null) {
   alurFormError.value = '';
+  alurUploadPreview.value = '';
+  alurUploadError.value = '';
   if (item) {
     alurForm.value = { id: item.id, judul: item.judul, paragraf: item.paragraf, gambar_url: item.gambar_url, urutan: item.urutan };
   } else {
     alurForm.value = { id: null, judul: '', paragraf: '', gambar_url: '', urutan: alurList.value.length + 1 };
   }
   showAlurModal.value = true;
+}
+
+function triggerFileInput() {
+  if (!alurUploading.value) alurFileInput.value?.click();
+}
+
+async function onAlurFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+  alurUploadError.value = '';
+  alurUploadPreview.value = URL.createObjectURL(file);
+  alurUploading.value = true;
+  try {
+    const fd = new FormData();
+    fd.append('gambar', file);
+    const r = await api.post('/api/admin/alur/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    alurForm.value.gambar_url = r.data?.data?.url ?? '';
+  } catch (err: any) {
+    alurUploadError.value = err.response?.data?.message ?? 'Gagal upload gambar';
+    alurUploadPreview.value = '';
+  } finally {
+    alurUploading.value = false;
+    (e.target as HTMLInputElement).value = '';
+  }
 }
 
 async function saveAlur() {
@@ -707,6 +762,33 @@ function formatDate(s: string) {
 .jam-actions { display: flex; justify-content: flex-end; padding-top: 4px; }
 .cfg-error   { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; font-size: 12.5px; padding: 8px 14px; border-radius: 8px; }
 .cfg-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 12.5px; padding: 8px 14px; border-radius: 8px; }
+
+/* ── Alur image upload area ── */
+.alur-upload-area {
+  position: relative; border: 2px dashed #d1d5db; border-radius: 12px;
+  min-height: 140px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  overflow: hidden; background: #fafafa;
+}
+.alur-upload-area:hover { border-color: #48AF4A; background: #f0fdf4; }
+.alur-upload-area--uploading { cursor: wait; pointer-events: none; }
+.alur-upload-icon { color: #94a3b8; }
+.alur-upload-text { font-size: 13px; font-weight: 600; color: #374151; }
+.alur-upload-hint { font-size: 11px; color: #9ca3af; }
+.alur-upload-preview {
+  width: 100%; max-height: 200px; object-fit: cover;
+  border-radius: 10px; display: block;
+}
+.alur-upload-change {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); color: #fff; font-size: 11px;
+  font-weight: 600; text-align: center; padding: 6px; letter-spacing: 0.03em;
+}
+.alur-upload-overlay {
+  position: absolute; inset: 0; background: rgba(255,255,255,0.75);
+  display: flex; align-items: center; justify-content: center;
+}
 
 /* Spinner (shared) */
 .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #48AF4A; border-radius: 50%; animation: spin .8s linear infinite; margin: 40px auto; }

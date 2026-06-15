@@ -31,6 +31,7 @@ func RegisterLandingRoutes(public, hrd, admin *gin.RouterGroup, h *handler.Landi
         public.GET("/landing/alur", h.GetAlur)
 
         // Admin only — kelola item alur
+        admin.POST("/alur/upload", h.UploadGambarAlur)
         admin.POST("/alur", h.CreateAlur)
         admin.PUT("/alur/:id", h.UpdateAlur)
         admin.DELETE("/alur/:id", h.DeleteAlur)

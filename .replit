@@ -40,13 +40,13 @@ waitForPort = 5000
 name = "Go API Server"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd backend && ./bin/server"
 waitForPort = 8080
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -66,11 +66,7 @@ externalPort = 5000
 
 [[ports]]
 localPort = 8080
-externalPort = 80
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
+externalPort = 8080
 
 [[ports]]
 localPort = 18130

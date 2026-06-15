@@ -91,39 +91,51 @@
           <p>Ikuti prosedur digital kami untuk monitoring status pengajuan secara real-time.</p>
         </div>
 
-        <div class="alur-carousel" v-if="alurItems.length > 0">
-          <button class="alur-carousel__btn alur-carousel__btn--prev" @click="alurPrev" :disabled="alurIdx === 0" aria-label="Sebelumnya">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+        <div class="alur-tabs-wrap" v-if="alurItems.length > 0">
+          <!-- Tab bar -->
+          <div class="alur-tabs">
+            <button
+              v-for="(item, i) in alurItems"
+              :key="item.id || i"
+              class="alur-tab"
+              :class="{ 'alur-tab--active': i === alurIdx }"
+              @click="alurIdx = i"
+            >Tahap {{ i + 1 }}</button>
+          </div>
 
-          <div class="alur-carousel__viewport">
-            <div class="alur-carousel__track" :style="{ transform: `translateX(-${alurIdx * 100}%)` }">
-              <div v-for="(item, i) in alurItems" :key="item.id || i" class="alur-carousel__slide">
-                <div class="alur-card">
-                  <div class="alur-card__media" v-if="item.gambar_url">
-                    <img :src="item.gambar_url" :alt="item.judul" />
-                  </div>
-                  <div class="alur-card__icon-circle" :class="i < 2 ? 'circle--active' : ''" v-else>
-                    <span>{{ String(i + 1).padStart(2, '0') }}</span>
-                  </div>
-                  <div class="alur-card__step-label">Langkah {{ i + 1 }} dari {{ alurItems.length }}</div>
-                  <h3 class="alur-card__title">{{ item.judul }}</h3>
-                  <p class="alur-card__desc">{{ item.paragraf }}</p>
+          <!-- Content area -->
+          <div class="alur-content">
+            <div class="alur-content__text">
+              <div class="alur-content__step">Tahap {{ alurIdx + 1 }} dari {{ alurItems.length }}</div>
+              <h3 class="alur-content__title">{{ alurItems[alurIdx]?.judul }}</h3>
+              <p class="alur-content__desc">{{ alurItems[alurIdx]?.paragraf }}</p>
+            </div>
+
+            <div class="alur-mockup-wrap">
+              <div class="alur-mockup" v-if="alurItems[alurIdx]?.gambar_url">
+                <div class="alur-mockup__topbar">
+                  <span class="alur-mockup__dot alur-mockup__dot--red"></span>
+                  <span class="alur-mockup__dot alur-mockup__dot--yellow"></span>
+                  <span class="alur-mockup__dot alur-mockup__dot--green"></span>
+                  <div class="alur-mockup__url">e-magang.telpp.co.id</div>
+                </div>
+                <div class="alur-mockup__screen">
+                  <img :src="alurItems[alurIdx].gambar_url" :alt="alurItems[alurIdx].judul" />
+                </div>
+              </div>
+              <div class="alur-mockup alur-mockup--empty" v-else>
+                <div class="alur-mockup__topbar">
+                  <span class="alur-mockup__dot alur-mockup__dot--red"></span>
+                  <span class="alur-mockup__dot alur-mockup__dot--yellow"></span>
+                  <span class="alur-mockup__dot alur-mockup__dot--green"></span>
+                  <div class="alur-mockup__url">e-magang.telpp.co.id</div>
+                </div>
+                <div class="alur-mockup__screen alur-mockup__screen--placeholder">
+                  <div class="alur-placeholder-num">{{ String(alurIdx + 1).padStart(2, '0') }}</div>
+                  <div class="alur-placeholder-label">{{ alurItems[alurIdx]?.judul }}</div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <button class="alur-carousel__btn alur-carousel__btn--next" @click="alurNext" :disabled="alurIdx >= alurItems.length - 1" aria-label="Berikutnya">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-
-          <div class="alur-carousel__dots">
-            <button v-for="(_, i) in alurItems" :key="i" class="alur-dot" :class="{ 'alur-dot--active': i === alurIdx }" @click="alurIdx = i" :aria-label="`Alur ${i + 1}`"></button>
           </div>
         </div>
       </div>
@@ -537,69 +549,73 @@ const footerCols = [
 }
 .section-label--light { color: #86efac; }
 
-/* ── ALUR CAROUSEL ── */
-.alur-carousel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  margin-top: 52px;
-  padding: 0 56px;
+/* ── ALUR TABS ── */
+.alur-tabs-wrap { display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.alur-tabs {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  background: #f1f5f9; border-radius: 14px; padding: 6px;
 }
-.alur-carousel__viewport {
-  width: 100%; max-width: 700px;
-  overflow: hidden; border-radius: 24px;
+.alur-tab {
+  padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; font-family: "Poppins", sans-serif;
+  color: #64748b; background: transparent; transition: all 0.18s;
 }
-.alur-carousel__track {
-  display: flex;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
+.alur-tab:hover { color: #0b1c30; background: rgba(255,255,255,0.7); }
+.alur-tab--active { background: #0b1c30; color: #fff; box-shadow: 0 4px 14px rgba(11,28,48,0.18); }
+.alur-content {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 32px;
 }
-.alur-carousel__slide { flex: 0 0 100%; }
-.alur-card {
-  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 22px;
-  padding: 52px 48px 44px;
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 14px; min-height: 310px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+.alur-content__text { text-align: center; max-width: 620px; }
+.alur-content__step {
+  font-size: 11px; font-weight: 700; color: #48AF4A;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px;
 }
-.alur-card__media { width: 180px; height: 130px; border-radius: 14px; overflow: hidden; }
-.alur-card__media img { width: 100%; height: 100%; object-fit: cover; }
-.alur-card__icon-circle {
-  width: 76px; height: 76px; border-radius: 50%;
-  background: #f0f4f8; border: 2.5px solid #e2e8f0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 800; color: #94a3b8;
+.alur-content__title {
+  font-size: 28px; font-weight: 700; color: #0b1c30; line-height: 1.3; margin: 0 0 14px;
 }
-.alur-card__icon-circle.circle--active { background: #48AF4A; border-color: #48AF4A; color: #fff; box-shadow: 0 6px 20px rgba(72,175,74,0.25); }
-.alur-card__step-label { font-size: 11px; font-weight: 700; color: #48AF4A; letter-spacing: 0.08em; text-transform: uppercase; }
-.alur-card__title { font-size: 22px; font-weight: 700; color: #0b1c30; line-height: 1.3; margin: 0; }
-.alur-card__desc { font-size: 15px; color: #64748b; line-height: 1.75; margin: 0; max-width: 500px; }
-.alur-carousel__btn {
-  position: absolute; top: calc(50% - 28px); transform: translateY(-50%);
-  width: 44px; height: 44px; border-radius: 50%;
-  background: #fff; border: 1.5px solid #e5e7eb;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #374151; transition: all 0.15s; z-index: 2;
+.alur-content__desc {
+  font-size: 16px; color: #64748b; line-height: 1.75; margin: 0;
 }
-.alur-carousel__btn:hover:not(:disabled) { border-color: #48AF4A; color: #48AF4A; box-shadow: 0 4px 14px rgba(72,175,74,0.2); }
-.alur-carousel__btn:disabled { opacity: 0.28; cursor: not-allowed; }
-.alur-carousel__btn--prev { left: 0; }
-.alur-carousel__btn--next { right: 0; }
-.alur-carousel__dots { display: flex; gap: 8px; justify-content: center; }
-.alur-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #d1d5db; border: none; cursor: pointer; transition: all 0.2s; padding: 0;
+.alur-mockup-wrap {
+  width: 100%; max-width: 820px;
+  filter: drop-shadow(0 24px 48px rgba(11,28,48,0.16));
 }
-.alur-dot--active { background: #48AF4A; width: 24px; border-radius: 4px; }
-@media (max-width: 640px) {
-  .alur-carousel { padding: 0 40px; gap: 20px; }
-  .alur-card { padding: 36px 28px 32px; min-height: 260px; }
-  .alur-card__title { font-size: 18px; }
-  .alur-card__desc { font-size: 13.5px; }
-  .alur-carousel__btn { width: 36px; height: 36px; }
+.alur-mockup {
+  background: #1e293b; border-radius: 16px; overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.08);
+}
+.alur-mockup__topbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px; background: #0f172a;
+}
+.alur-mockup__dot {
+  width: 11px; height: 11px; border-radius: 50%; display: inline-block;
+}
+.alur-mockup__dot--red { background: #ef4444; }
+.alur-mockup__dot--yellow { background: #f59e0b; }
+.alur-mockup__dot--green { background: #22c55e; }
+.alur-mockup__url {
+  margin-left: 10px; background: #1e293b; border-radius: 6px;
+  padding: 3px 14px; font-size: 11px; color: #94a3b8;
+}
+.alur-mockup__screen { width: 100%; overflow: hidden; }
+.alur-mockup__screen img { width: 100%; height: auto; display: block; max-height: 460px; object-fit: cover; }
+.alur-mockup__screen--placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 320px; gap: 12px;
+}
+.alur-placeholder-num {
+  font-size: 72px; font-weight: 800; color: rgba(72,175,74,0.15);
+  line-height: 1; font-family: "Poppins", sans-serif;
+}
+.alur-placeholder-label {
+  font-size: 16px; font-weight: 600; color: #475569;
+}
+@media (max-width: 768px) {
+  .alur-tabs { gap: 6px; padding: 4px; }
+  .alur-tab { padding: 8px 16px; font-size: 13px; }
+  .alur-content__title { font-size: 22px; }
+  .alur-content__desc { font-size: 14px; }
 }
 
 /* ── JADWAL ── */
