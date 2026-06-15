@@ -233,6 +233,68 @@ func (h *DokumenHandler) GetByPengajuan(c *gin.Context) {
         c.JSON(http.StatusOK, models.SuccessResponse{Data: docs})
 }
 
+// GET /api/admin/dokumen — list semua dokumen (admin only)
+func (h *DokumenHandler) AdminList(c *gin.Context) {
+        jenis := c.Query("jenis")
+        page  := queryInt(c, "page", 1)
+        limit := queryInt(c, "limit", 20)
+
+        list, total, err := h.repo.FindAll(c.Request.Context(), jenis, page, limit)
+        if err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: err.Error()})
+                return
+        }
+
+        if list == nil {
+                list = []models.DokumenWithUser{}
+        }
+        c.JSON(http.StatusOK, models.PaginatedResponse{
+                Data: list, Total: total, Page: page, Limit: limit,
+        })
+}
+
+// GET /api/admin/dokumen/:id/download — download dokumen oleh admin
+func (h *DokumenHandler) AdminDownload(c *gin.Context) {
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+                return
+        }
+
+        doc, err := h.repo.FindByID(c.Request.Context(), id)
+        if err != nil {
+                c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: "Dokumen tidak ditemukan"})
+                return
+        }
+
+        c.FileAttachment(doc.PathFile, doc.NamaFile)
+}
+
+// DELETE /api/admin/dokumen/:id — hapus dokumen dari DB + filesystem (admin only)
+func (h *DokumenHandler) AdminHapus(c *gin.Context) {
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil {
+                c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid_id", Message: "ID tidak valid"})
+                return
+        }
+
+        doc, err := h.repo.FindByID(c.Request.Context(), id)
+        if err != nil {
+                c.JSON(http.StatusNotFound, models.ErrorResponse{Error: "not_found", Message: "Dokumen tidak ditemukan"})
+                return
+        }
+
+        if err := h.repo.DeleteByID(c.Request.Context(), id); err != nil {
+                c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "server_error", Message: "Gagal menghapus dokumen"})
+                return
+        }
+
+        // Hapus file fisik (best-effort, tidak gagalkan response jika file sudah tidak ada)
+        os.Remove(doc.PathFile)
+
+        c.JSON(http.StatusOK, models.SuccessResponse{Message: "Dokumen berhasil dihapus"})
+}
+
 // GET /api/dokumen/:id/download — download file
 func (h *DokumenHandler) Download(c *gin.Context) {
         id, err := uuid.Parse(c.Param("id"))

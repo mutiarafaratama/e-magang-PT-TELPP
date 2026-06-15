@@ -177,6 +177,13 @@ type Dokumen struct {
         UploadedAt  time.Time    `json:"uploaded_at" db:"uploaded_at"`
 }
 
+// DokumenWithUser — Dokumen + info pemilik, untuk tampilan admin
+type DokumenWithUser struct {
+        Dokumen
+        NamaPemilik  *string `json:"nama_pemilik"`
+        EmailPemilik *string `json:"email_pemilik"`
+}
+
 // ============================================================
 // PELAKSANAAN MAGANG
 // ============================================================

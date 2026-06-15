@@ -2,6 +2,7 @@ package repository
 
 import (
         "context"
+        "fmt"
 
         "github.com/google/uuid"
         "github.com/jackc/pgx/v5/pgxpool"
@@ -78,6 +79,63 @@ func (r *DokumenRepository) GetPathsByPengajuanID(ctx context.Context, pengajuan
                 paths = append(paths, p)
         }
         return paths, nil
+}
+
+// FindAll — admin: daftar semua dokumen dengan info pemilik, paginated + filter jenis
+func (r *DokumenRepository) FindAll(ctx context.Context, jenis string, page, limit int) ([]models.DokumenWithUser, int, error) {
+        if page < 1 {
+                page = 1
+        }
+        if limit < 1 || limit > 100 {
+                limit = 20
+        }
+        offset := (page - 1) * limit
+
+        where := ""
+        args := []any{}
+        argIdx := 1
+        if jenis != "" {
+                where = "WHERE d.jenis = $1"
+                args = append(args, jenis)
+                argIdx++
+        }
+
+        var total int
+        countQuery := "SELECT COUNT(*) FROM dokumen d " + where
+        if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+                return nil, 0, err
+        }
+
+        args = append(args, limit, offset)
+        query := `
+                SELECT d.id, d.pengajuan_id, d.user_id, d.jenis, d.nama_file, d.path_file,
+                       d.ukuran_bytes, d.mime_type, d.uploaded_at,
+                       u.nama_lengkap, u.email
+                FROM dokumen d
+                LEFT JOIN users u ON u.id = d.user_id
+                ` + where + `
+                ORDER BY d.uploaded_at DESC
+                LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
+
+        rows, err := r.db.Query(ctx, query, args...)
+        if err != nil {
+                return nil, 0, err
+        }
+        defer rows.Close()
+
+        var list []models.DokumenWithUser
+        for rows.Next() {
+                var dw models.DokumenWithUser
+                if err := rows.Scan(
+                        &dw.ID, &dw.PengajuanID, &dw.UserID, &dw.Jenis, &dw.NamaFile, &dw.PathFile,
+                        &dw.UkuranBytes, &dw.MimeType, &dw.UploadedAt,
+                        &dw.NamaPemilik, &dw.EmailPemilik,
+                ); err != nil {
+                        return nil, 0, err
+                }
+                list = append(list, dw)
+        }
+        return list, total, nil
 }
 
 // FindSuratBalasanPath — ambil path_file surat_balasan milik pengajuan tertentu

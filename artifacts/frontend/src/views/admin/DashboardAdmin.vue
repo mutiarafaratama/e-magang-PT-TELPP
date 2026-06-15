@@ -242,6 +242,9 @@
       <!-- ── STATISTIK ── -->
       <AdminStatistik v-else-if="activeTab === 'statistik'" />
 
+      <!-- ── KELOLA DOKUMEN ── -->
+      <AdminDokumen v-else-if="activeTab === 'dokumen'" />
+
       <!-- ── PROFIL ── -->
       <template v-else-if="activeTab === 'profil'">
         <StaffProfil />
@@ -291,6 +294,7 @@ import { useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import AdminUsers      from "./AdminUsers.vue";
 import AdminStatistik  from "./AdminStatistik.vue";
+import AdminDokumen    from "./AdminDokumen.vue";
 import StaffProfil     from "@/views/staff/StaffProfil.vue";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
@@ -318,7 +322,8 @@ const ICON = {
   clock:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
-const ICON_DIVISI = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="2"/></svg>`;
+const ICON_DIVISI   = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" stroke-width="2"/></svg>`;
+const ICON_DOKUMEN  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="2"/><polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2"/><line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2"/><line x1="8" y1="17" x2="16" y2="17" stroke="currentColor" stroke-width="2"/></svg>`;
 
 const navGroups = [
   { items: [{ key: "beranda", label: "Beranda", icon: ICON.home }] },
@@ -341,7 +346,8 @@ const navGroups = [
   {
     label: "Laporan",
     items: [
-      { key: "statistik", label: "Statistik", icon: ICON.stats },
+      { key: "statistik", label: "Statistik",       icon: ICON.stats },
+      { key: "dokumen",   label: "Kelola Dokumen",  icon: ICON_DOKUMEN },
     ],
   },
 ];

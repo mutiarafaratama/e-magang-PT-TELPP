@@ -118,7 +118,7 @@ func Setup() *gin.Engine {
         routes.RegisterChatRoutes(peserta, api, hrd, chatH)
         routes.RegisterNotifikasiRoutes(api, notifH)
         routes.RegisterLandingRoutes(public, hrd, admin, landingH)
-        routes.RegisterAdminRoutes(hrd, admin, adminH)
+        routes.RegisterAdminRoutes(hrd, admin, adminH, dokumenH)
         routes.RegisterDivisiRoutes(api, admin, divisiH)
 
         // ============================================================
