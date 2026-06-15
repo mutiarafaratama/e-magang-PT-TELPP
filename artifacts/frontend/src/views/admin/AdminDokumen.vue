@@ -9,6 +9,10 @@
         </div>
         <div class="header-actions">
           <span v-if="total > 0" class="badge-count">{{ total }} dokumen</span>
+          <button class="btn-refresh" @click="fetchDokumen" :disabled="loading" title="Muat Ulang">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" :class="{ spinning: loading }"><polyline points="1 4 1 10 7 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Muat Ulang
+          </button>
         </div>
       </div>
 
@@ -36,6 +40,13 @@
     <div class="card" style="border-top-left-radius:0;border-top-right-radius:0;border-top:none">
       <div v-if="loading" class="empty-state" style="padding:52px">
         <div class="spinner"></div>
+      </div>
+      <div v-else-if="fetchError" class="empty-state">
+        <div class="empty-state__icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#f87171" stroke-width="1.5"/><line x1="12" y1="8" x2="12" y2="12" stroke="#f87171" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="#f87171" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p style="color:#dc2626">{{ fetchError }}</p>
+        <button class="btn-retry" @click="fetchDokumen">Coba Lagi</button>
       </div>
       <div v-else-if="list.length === 0" class="empty-state">
         <div class="empty-state__icon">
@@ -219,6 +230,7 @@ const JENIS_LABEL: Record<string, string> = Object.fromEntries(
 
 const list         = ref<DokumenItem[]>([]);
 const loading      = ref(false);
+const fetchError   = ref('');
 const total        = ref(0);
 const currentPage  = ref(1);
 const limitVal     = ref(20);
@@ -231,6 +243,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limitVal.v
 
 async function fetchDokumen() {
   loading.value = true;
+  fetchError.value = '';
   try {
     const params: Record<string, string | number> = {
       page: currentPage.value,
@@ -240,9 +253,12 @@ async function fetchDokumen() {
     const r = await api.get('/api/admin/dokumen', { params });
     list.value  = Array.isArray(r.data?.data) ? r.data.data : [];
     total.value = r.data?.total ?? 0;
-  } catch {
+  } catch (e: any) {
     list.value  = [];
     total.value = 0;
+    fetchError.value = e?.code === 'ERR_NETWORK' || e?.message?.includes('ECONNREFUSED')
+      ? 'Koneksi ke server gagal. Klik Muat Ulang untuk mencoba lagi.'
+      : (e?.response?.data?.message ?? 'Gagal memuat data dokumen.');
   } finally {
     loading.value = false;
   }
@@ -363,6 +379,13 @@ onUnmounted(() => {
 .card-sub    { font-size: 11.5px; color: #9ca3af; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 .badge-count { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 3px 10px; }
+.btn-refresh { display: inline-flex; align-items: center; gap: 5px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; color: #374151; cursor: pointer; font-family: inherit; transition: background .15s; }
+.btn-refresh:hover:not(:disabled) { background: #e5e7eb; }
+.btn-refresh:disabled { opacity: .5; cursor: default; }
+.btn-refresh svg.spinning { animation: spin .8s linear infinite; }
+.btn-retry { background: #dc2626; color: #fff; border: none; border-radius: 7px; padding: 7px 18px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; transition: background .15s; }
+.btn-retry:hover { background: #b91c1c; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .filter-bar { display: flex; align-items: flex-end; gap: 16px; padding: 14px 20px; background: #f9fafb; border-bottom: 1px solid #f0faf0; flex-wrap: wrap; }
 .filter-group { display: flex; flex-direction: column; gap: 4px; }
