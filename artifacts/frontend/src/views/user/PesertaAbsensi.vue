@@ -115,10 +115,11 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Riwayat Izin
           </button>
-          <a href="/api/absensi/saya/pdf" class="btn-green-sm" target="_blank">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Unduh PDF
-          </a>
+          <button class="btn-green-sm" @click="openPDFModal" :disabled="pdfLoading">
+            <span v-if="pdfLoading" class="btn-spinner-sm" style="border-color:rgba(22,163,74,.3);border-top-color:#16a34a"></span>
+            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            {{ pdfLoading ? 'Memuat...' : 'Unduh PDF' }}
+          </button>
         </div>
       </div>
 
@@ -298,6 +299,31 @@
     </div>
   </Teleport>
 
+  <!-- ── PDF MODAL ─────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <Transition name="modal-fade">
+      <div v-if="showPDFModal" class="modal-backdrop" @click.self="closePDFModal">
+        <div class="modal-box modal-box--pdf">
+          <div class="modal-box__header">
+            <div class="modal-box__title">Rekap Absensi PDF</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <a v-if="pdfBlobUrl" :href="pdfBlobUrl" download="Rekap_Absensi.pdf" class="btn-confirm" style="text-decoration:none;font-size:12px;padding:7px 16px">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Download
+              </a>
+              <button class="modal-close-btn" @click="closePDFModal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="pdf-modal-body">
+            <iframe v-if="pdfBlobUrl" :src="pdfBlobUrl" class="pdf-modal-iframe"></iframe>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
   <!-- ── RIWAYAT IZIN / SAKIT — SIDE PANEL + BOTTOM SHEET ─────── -->
   <Teleport to="body">
     <Transition name="panel-fade">
@@ -405,6 +431,10 @@ const fileInputRef   = ref<HTMLInputElement | null>(null);
 const buktiModal = ref<{ show: boolean; url: string; type: 'image' | 'pdf' | 'other' }>({
   show: false, url: '', type: 'other'
 });
+
+const showPDFModal = ref(false);
+const pdfBlobUrl   = ref('');
+const pdfLoading   = ref(false);
 
 const nowWIB = ref(getNowWIB());
 let clockTimer: ReturnType<typeof setInterval> | null = null;
@@ -618,21 +648,38 @@ function openCheckinModal() {
     },
     (err) => {
       if (settled) return;
-      settled = true;
-      navigator.geolocation.clearWatch(watchId);
-      clearTimeout(timerId);
-      gpsLoading.value = false;
-      if (err.code === 1)
+      // Jika sudah dapat minimal 1 posisi sebelum error, pakai yang terbaik
+      if (bestPos) {
+        settle(bestPos);
+        return;
+      }
+      // Izin ditolak: langsung tampilkan error, tidak ada fallback
+      if (err.code === 1) {
+        settled = true;
+        navigator.geolocation.clearWatch(watchId);
+        clearTimeout(timerId);
+        gpsLoading.value = false;
         gpsError.value = 'Izin lokasi ditolak. Aktifkan izin lokasi di pengaturan browser untuk absen.';
-      else if (err.code === 2)
-        gpsError.value = 'Lokasi tidak dapat dideteksi. Pastikan GPS aktif di perangkatmu.';
-      else
-        gpsError.value = 'Gagal mendapatkan lokasi. Coba lagi.';
+        return;
+      }
+      // GPS tidak tersedia: fallback ke low-accuracy (WiFi/network)
+      navigator.geolocation.getCurrentPosition(
+        (pos) => settle(pos),
+        () => {
+          if (settled) return;
+          settled = true;
+          navigator.geolocation.clearWatch(watchId);
+          clearTimeout(timerId);
+          gpsLoading.value = false;
+          gpsError.value = 'Lokasi tidak dapat dideteksi. Pastikan GPS aktif dan izin lokasi diizinkan, lalu tekan Coba Lagi.';
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+      );
     },
     { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
   );
 
-  timerId = setTimeout(() => settle(bestPos), 10000);
+  timerId = setTimeout(() => settle(bestPos), 15000);
 }
 
 async function doCheckin() {
@@ -733,6 +780,25 @@ function formatTanggalShort(iso: string) {
   return d.toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
 }
 
+async function openPDFModal() {
+  if (pdfLoading.value) return;
+  pdfLoading.value = true;
+  try {
+    const r = await api.get('/api/absensi/saya/pdf', { responseType: 'blob' });
+    if (pdfBlobUrl.value) URL.revokeObjectURL(pdfBlobUrl.value);
+    pdfBlobUrl.value = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+    showPDFModal.value = true;
+  } catch {
+    showToast('Gagal memuat PDF. Coba lagi.');
+  } finally {
+    pdfLoading.value = false;
+  }
+}
+
+function closePDFModal() {
+  showPDFModal.value = false;
+}
+
 onMounted(() => {
   fetchAbsensi();
   fetchIzin();
@@ -741,6 +807,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer);
+  if (pdfBlobUrl.value) URL.revokeObjectURL(pdfBlobUrl.value);
 });
 </script>
 
@@ -845,6 +912,10 @@ onUnmounted(() => {
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; backdrop-filter: blur(2px); }
 .modal-box { background: #fff; border-radius: 18px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.18); }
 .modal-box--izin { max-width: 460px; }
+.modal-box--pdf { max-width: 900px; width: 95vw; padding: 0; overflow: hidden; border-radius: 16px; }
+.modal-box--pdf .modal-box__header { padding: 14px 18px; border-bottom: 1px solid #f0f0f0; border-radius: 16px 16px 0 0; }
+.pdf-modal-body { height: 78vh; background: #f3f4f6; }
+.pdf-modal-iframe { width: 100%; height: 100%; border: none; display: block; }
 .modal-box__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .modal-box__title { font-size: 16px; font-weight: 700; color: #111827; }
 .modal-close-btn { background: #f3f4f6; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; flex-shrink: 0; }
