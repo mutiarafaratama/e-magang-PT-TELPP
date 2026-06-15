@@ -549,24 +549,16 @@ async function submitIzin() {
   submittingIzin.value = true;
   izinError.value = '';
   try {
-    // Kalau ada file: kirim multipart (perlu binary baru hasil go build lokal)
-    // Kalau tidak ada file: kirim JSON (kompatibel dengan binary lama)
+    const fd = new FormData();
+    fd.append('tanggal', izinForm.value.tanggal);
+    fd.append('jenis', izinForm.value.jenis);
+    fd.append('alasan', izinForm.value.alasan.trim());
     if (izinForm.value.jenis === 'sakit' && izinForm.value.buktiFile) {
-      const fd = new FormData();
-      fd.append('tanggal', izinForm.value.tanggal);
-      fd.append('jenis', izinForm.value.jenis);
-      fd.append('alasan', izinForm.value.alasan.trim());
       fd.append('bukti', izinForm.value.buktiFile);
-      await api.post('/api/izin-sakit', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    } else {
-      await api.post('/api/izin-sakit', {
-        tanggal: izinForm.value.tanggal,
-        jenis: izinForm.value.jenis,
-        alasan: izinForm.value.alasan.trim(),
-      });
     }
+    await api.post('/api/izin-sakit', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     closeIzinModal();
     showToast(`Pengajuan ${izinForm.value.jenis} berhasil dikirim!`);
     await fetchIzin();
