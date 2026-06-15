@@ -21,9 +21,6 @@ func RegisterDokumenRoutes(public, peserta, api, hrd *gin.RouterGroup, h *handle
         // Shared — download (akses dikontrol di dalam handler berdasarkan role)
         api.GET("/dokumen/:id/download", h.Download)
 
-        // Peserta — lihat dokumen pengajuan milik sendiri (ownership dicek di handler)
-        peserta.GET("/dokumen/pengajuan/:id", h.GetByPengajuan)
-
-        // HRD / Admin
-        hrd.GET("/dokumen/pengajuan/:id", h.GetByPengajuan)
+        // Semua role login — ownership peserta dicek di dalam handler
+        api.GET("/dokumen/pengajuan/:id", h.GetByPengajuan)
 }

@@ -37,7 +37,7 @@ func Load() {
 		JWTSecret:     getEnv("JWT_SECRET", ""),
 		JWTExpiry:     getEnv("JWT_EXPIRY", "24h"),
 		RefreshExpiry: getEnv("REFRESH_EXPIRY", "168h"),
-		Port:          getEnv("PORT", "8080"),
+		Port:          getEnv("GO_PORT", "8081"),
 		UploadDir:     getEnv("UPLOAD_DIR", "./uploads"),
 		MaxUploadSize: maxSize,
 		AppEnv:        getEnv("APP_ENV", "development"),
